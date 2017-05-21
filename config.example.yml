@@ -1,0 +1,91 @@
+ 
+stores:
+
+  # CREATE TABLE stat.testlog (
+  #    timestamp        DateTime
+  #  , datemark         Date default toDate(timestamp)
+  #  , service          String
+  #  , msg              String
+  #  , error            String
+  #  , created_at       DateTime default now()
+  # ) Engine=MergeTree(datemark, (service), 8192);
+
+  clickhouse_1:
+    connect: clickhouse://clickhouse:9000/stat
+    options:
+      buffer:  1000 # Optional
+  hdfs_1:
+    connect: hdfs://hdfs:8020/
+    options:
+      buffer:  1000       # Optional
+      tmpdir:  /tmp/hdfs/ # Optional
+
+sources:
+  nats_1:
+    connect: nats://nats:4222/?topics=topic1,topic2
+    format:  json
+  kafka_1:
+    connect: nats://nats:4222/group?topics=topic1
+
+streams:
+  log_1:
+    store:   hdfs_1
+    source:  nats_1
+    target:  /path/log${date|2006-01-02_15}${iterator|_%iter%}.log.gz
+    fields:  service=srv:int,msg,timestamp:date|2006-01-02 15:04:05.999999-07:00
+    options:
+      timefield: timestamp
+      separator: ",\n"
+      maxsize: 100 # 1Mb = 1024 * 1024 * 1
+  # log_2:
+  #   store:   clickhouse_1
+  #   source:  nats_1
+  #   rawitem: INSERT INTO testlog (service, msg, error, timestamp) VALUES(${srv}, ${msg}, ${err}, toTimestamp(${timestamp:date}))
+  # log_3:
+  #   store:   clickhouse_1
+  #   source:  nats_1
+  #   target:  testlog
+  #   fields:  service=srv,msg,error=err,timestamp=@toTimestamp(${timestamp:date}) # Optional if fields in log and in message the same
+  # log_4:
+  #   store:   clickhouse_1
+  #   source:  nats_1
+  #   target:  testlog
+  #   fields:
+  #     - service=srv
+  #     - msg
+  #     - error=err:string
+  #     - timestamp=@toTimestamp('${timestamp:date|2006-01-02 15:04:05}')
+
+  # kafka_1: # Internal name
+  #   # connect: kafka://zookeeper:2181
+  #   connect: nats://nats:4222
+
+  #   targets:
+  #     # - topics:  topic1,topic2
+  #     #   group:   maingroup
+  #     #   format:  json # jsonb, json as default
+  #     #   stream:  clickhouse_1
+  #     #   rawitem: INSERT INTO table1 (service, msg, error, timestamp) VALUES('${srv}', '${msg}', '${err}', toTimestamp('${timestamp}'))
+  #     # - topics:  topic3
+  #     #   group:   maingroup
+  #     #   stream:  clickhouse_1
+  #     #   target:  table1
+  #     #   fields:  service=srv,msg,error=err,timestamp=@toTimestamp('${timestamp}') # Optional if fields in log and in message the same
+  #     # - topics:  topic1,topic3
+  #     #   group:   secondgroup
+  #     #   target:  table2
+  #     #   stream:  clickhouse_1
+  #     #   fields:
+  #     #     - service=srv:int
+  #     #     - msg
+  #     #     - error=err:string
+  #     #     - timestamp=@toTimestamp('${timestamp:date|2006-01-02 15:04:05.999999-07:00}')
+  #     - topics:  topic2
+  #       group:   common
+  #       stream:  hdfs_1
+  #       target:  /path/log${date|2006-01-02_15}${iterator|_%iter%}.log.gz
+  #       fields:  service=srv:int,msg,timestamp:date|2006-01-02 15:04:05.999999-07:00
+  #       options:
+  #         timefield: timestamp
+  #         separator: ",\n"
+  #         maxsize: 100 # 1Mb = 1024 * 1024 * 1
