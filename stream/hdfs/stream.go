@@ -38,7 +38,7 @@ var (
 type StreamHDFS struct {
 	sync.Mutex
 	client                  *hdfs.Client             // Connection
-	fileNamePattern         string                   // example: path/${date}${iterator}.ext
+	fileNamePattern         string                   // example: path/{{date}}{{iterator}}.ext
 	fileNameDatePattern     string                   // default: '2006-01-02_15'
 	fileNameIteratorPattern string                   // default: '_%iter%' if it's zero then empty
 	maxFileSize             int                      //
@@ -97,10 +97,10 @@ func NewStreamHDFS(
 		for _, item := range all {
 			switch item[1] {
 			case "date":
-				fileNamePattern = strings.Replace(fileNamePattern, item[0], "${date}", -1)
+				fileNamePattern = strings.Replace(fileNamePattern, item[0], "{{date}}", -1)
 				fileNameDatePattern = item[2]
 			case "iterator":
-				fileNamePattern = strings.Replace(fileNamePattern, item[0], "${iterator}", -1)
+				fileNamePattern = strings.Replace(fileNamePattern, item[0], "{{iterator}}", -1)
 				fileNameIteratorPattern = item[2]
 			}
 		}
@@ -405,8 +405,8 @@ func (s *StreamHDFS) targetName() string {
 	}
 
 	return strings.NewReplacer(
-		"${date}", s.currentOutputTime.Format(s.fileNameDatePattern),
-		"${iterator}", iterator,
+		"{{date}}", s.currentOutputTime.Format(s.fileNameDatePattern),
+		"{{iterator}}", iterator,
 	).Replace(s.fileNamePattern)
 }
 

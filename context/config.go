@@ -10,13 +10,17 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
+
+	"github.com/hashicorp/hcl"
 
 	yaml "gopkg.in/yaml.v2"
 )
 
 var (
 	errInvalidConfig        = errors.New("Invalid config")
+	errInvalidConfigFile    = errors.New("Invalid config file format")
 	errInvalidStoreConnect  = errors.New("Invalid store config connect")
 	errInvalidSourceConnect = errors.New("Invalid source config connect")
 	errInvalidStreamTarget  = errors.New("Invalid stream target")
@@ -24,8 +28,8 @@ var (
 
 // StoreConfig description
 type StoreConfig struct {
-	Connect string  `yaml:"connect"`
-	Options options `jaml:"options"`
+	Connect string  `yaml:"connect" json:"connect"`
+	Options options `yaml:"options" json:"options"`
 }
 
 // Validate stream item
@@ -43,9 +47,9 @@ func (l StoreConfig) ConnectScheme() string {
 
 // SourceConfig description
 type SourceConfig struct {
-	Connect string  `yaml:"connect"`
-	Format  string  `yaml:"format"`
-	Options options `jaml:"options"`
+	Connect string  `yaml:"connect" json:"connect"`
+	Format  string  `yaml:"format" json:"format"`
+	Options options `yaml:"options" json:"options"`
 }
 
 // Validate stream item
@@ -63,12 +67,12 @@ func (l SourceConfig) ConnectScheme() string {
 
 // StreamConfig info
 type StreamConfig struct {
-	Store   string      `yaml:"store"`
-	Source  string      `yaml:"source" default:"default"`
-	RawItem string      `yaml:"rawitem"` // Depends from stream it could be SQL query or file raw
-	Target  string      `yaml:"target"`
-	Fields  interface{} `yaml:"fields"`
-	Options options     `jaml:"options"`
+	Store   string      `yaml:"store" json:"store"`
+	Source  string      `yaml:"source" json:"source" default:"default"`
+	RawItem string      `yaml:"rawitem" json:"rawitem"` // Depends from stream it could be SQL query or file raw
+	Target  string      `yaml:"target" json:"target"`
+	Fields  interface{} `yaml:"fields" json:"fields"`
+	Options options     `yaml:"options" json:"options"`
 }
 
 // Validate log item
@@ -83,9 +87,9 @@ func (l StreamConfig) Validate() error {
 }
 
 type config struct {
-	Stores  map[string]StoreConfig  `yaml:"stores"`
-	Sources map[string]SourceConfig `yaml:"sources"`
-	Streams map[string]StreamConfig `yaml:"streams"`
+	Stores  map[string]StoreConfig  `yaml:"stores" json:"stores"`
+	Sources map[string]SourceConfig `yaml:"sources" json:"sources"`
+	Streams map[string]StreamConfig `yaml:"streams" json:"streams"`
 }
 
 // Load config
@@ -101,7 +105,13 @@ func (c *config) Load(filename string) error {
 	}
 	file.Close()
 
-	return yaml.Unmarshal(data, c)
+	switch strings.ToLower(filepath.Ext(filename)) {
+	case ".yml", ".yaml":
+		return yaml.Unmarshal(data, c)
+	case ".hcl":
+		return hcl.Unmarshal(data, c)
+	}
+	return errInvalidConfigFile
 }
 
 // Validate config

@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	paramsSearch = regexp.MustCompile(`\$\{([^}:]+)(?::([^}|]+))?(?:\|([^}]+))?\}`)
+	paramsSearch = regexp.MustCompile(`\{\{([^}:]+)(?::([^}|]+))?(?:\|([^}]+))?\}\}`)
 	paramParser  = regexp.MustCompile(`([^}:]+)(?::([^}|]+))?(?:\|([^}]+))?`)
 )
 
@@ -60,8 +60,8 @@ func NewQueryByRaw(query string, fl interface{}) (q *Query, err error) {
 		}
 		q = &Query{
 			Q: strings.NewReplacer(
-				"${fields}", strings.Join(fields, ", "),
-				"${values}", strings.Join(inserts, ", "),
+				"{{fields}}", strings.Join(fields, ", "),
+				"{{values}}", strings.Join(inserts, ", "),
 			).Replace(query),
 			Values: values,
 		}
@@ -90,16 +90,16 @@ func NewQueryByPattern(pattern, target string, fl interface{}) (_ *Query, err er
 	}
 
 	fmt.Println("======== !Q", values, fields, inserts, strings.NewReplacer(
-		"${target}", target,
-		"${fields}", strings.Join(fields, ", "),
-		"${values}", strings.Join(inserts, ", "),
+		"{{target}}", target,
+		"{{fields}}", strings.Join(fields, ", "),
+		"{{values}}", strings.Join(inserts, ", "),
 	).Replace(pattern))
 
 	return &Query{
 		Q: strings.NewReplacer(
-			"${target}", target,
-			"${fields}", strings.Join(fields, ", "),
-			"${values}", strings.Join(inserts, ", "),
+			"{{target}}", target,
+			"{{fields}}", strings.Join(fields, ", "),
+			"{{values}}", strings.Join(inserts, ", "),
 		).Replace(pattern),
 		Values: values,
 	}, nil

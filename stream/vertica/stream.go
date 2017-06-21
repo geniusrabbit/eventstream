@@ -42,7 +42,7 @@ func NewStreamVerticaByRaw(conn *sql.DB, blockSize int, duration time.Duration, 
 
 // NewStreamVerticaByTarget params
 func NewStreamVerticaByTarget(conn *sql.DB, blockSize int, duration time.Duration, target string, fields interface{}) (stream.Streamer, error) {
-	q, err := stream.NewQueryByPattern(`COPY ${target} (${fields}) FROM STDIN DELIMITER '\t' NULL 'null'`, target, fields)
+	q, err := stream.NewQueryByPattern(`COPY {{target}} ({{fields}}) FROM STDIN DELIMITER '\t' NULL 'null'`, target, fields)
 	if nil != err {
 		return nil, err
 	}

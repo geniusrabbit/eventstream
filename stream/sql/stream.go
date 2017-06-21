@@ -3,6 +3,8 @@
 // @author Dmitry Ponomarev <demdxx@gmail.com> 2017
 //
 
+// TODO: Store all messages if not sended yet
+
 package eventstream
 
 import (
@@ -86,7 +88,7 @@ func (s *StreamSQL) Process() {
 
 	for _, ok := <-ch; ok; {
 		if err := s.writeBuffer(false); nil != err {
-			log.Error(err)
+			s.LogError(err)
 		}
 	}
 }
@@ -141,4 +143,15 @@ func (s *StreamSQL) writeBuffer(flush bool) (err error) {
 
 	s.writeLastTime = time.Now()
 	return
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/// Logs
+///////////////////////////////////////////////////////////////////////////////
+
+// LogError message
+func (s *StreamSQL) LogError(params ...interface{}) {
+	if len(params) > 0 {
+		log.Error(params...)
+	}
 }

@@ -37,7 +37,7 @@ func New(opt stream.Options) (stream.Streamer, error) {
 
 // NewStreamClickhouseByTarget params
 func NewStreamClickhouseByTarget(conn *sql.DB, blockSize int, duration time.Duration, target string, fields interface{}) (stream.Streamer, error) {
-	q, err := stream.NewQueryByPattern(`INSERT INTO ${target} (${fields}) VALUES(${values})`, target, fields)
+	q, err := stream.NewQueryByPattern(`INSERT INTO {{target}} ({{fields}}) VALUES({{values}})`, target, fields)
 	if nil != err {
 		return nil, err
 	}
