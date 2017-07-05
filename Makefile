@@ -2,7 +2,7 @@
 PROJDIR ?= $(CURDIR)/../../../../../www
 
 buildapp:
-	go build -o .build/eventstream cmd/eventstream/main.go
+	CGO_ENABLED=0 go build -a -installsuffix cgo -o .build/eventstream cmd/eventstream/main.go
 
 builddocker:
 	docker build -t geniusrabbit/eventstream .
