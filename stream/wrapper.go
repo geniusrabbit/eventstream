@@ -27,7 +27,7 @@ func NewWrapper(stream Streamer, converter converter.Converter) ExtStreamer {
 // Handle item processin
 func (l *Wrapper) Handle(item interface{}) error {
 	msg, err := eventstream.MessageDecode(item, l.converter)
-	if nil == err {
+	if err == nil && l.stream.Check(msg) {
 		err = l.stream.Put(msg)
 	}
 	return err

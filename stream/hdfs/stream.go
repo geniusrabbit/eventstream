@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Knetic/govaluate"
 	"github.com/colinmarc/hdfs"
 	"github.com/demdxx/gocast"
 	"github.com/geniusrabbit/eventstream"
@@ -37,24 +38,25 @@ var (
 // StreamHDFS object
 type StreamHDFS struct {
 	sync.Mutex
-	client                  *hdfs.Client             // Connection
-	fileNamePattern         string                   // example: path/{{date}}{{iterator}}.ext
-	fileNameDatePattern     string                   // default: '2006-01-02_15'
-	fileNameIteratorPattern string                   // default: '_%iter%' if it's zero then empty
-	maxFileSize             int                      //
-	blockSize               int                      //
-	writeMaxDuration        time.Duration            //
-	converter               converter.Converter      //
-	recordSeparator         []byte                   //
-	messageTimeParam        string                   // param name in Message object
-	tmpDirectoryPath        string                   //
-	record                  stream.Query             //
-	buffer                  chan eventstream.Message //
-	currentOutputName       string                   //
-	currentOutput           io.WriteCloser           //
-	currentOutputSize       int                      //
-	currentOutputIterator   int64                    //
-	currentOutputTime       time.Time                //
+	client                  *hdfs.Client                   // Connection
+	fileNamePattern         string                         // example: path/{{date}}{{iterator}}.ext
+	fileNameDatePattern     string                         // default: '2006-01-02_15'
+	fileNameIteratorPattern string                         // default: '_%iter%' if it's zero then empty
+	maxFileSize             int                            //
+	blockSize               int                            //
+	writeMaxDuration        time.Duration                  //
+	converter               converter.Converter            //
+	recordSeparator         []byte                         //
+	messageTimeParam        string                         // param name in Message object
+	tmpDirectoryPath        string                         //
+	when                    *govaluate.EvaluableExpression //
+	record                  stream.Query                   //
+	buffer                  chan eventstream.Message       //
+	currentOutputName       string                         //
+	currentOutput           io.WriteCloser                 //
+	currentOutputSize       int                            //
+	currentOutputIterator   int64                          //
+	currentOutputTime       time.Time                      //
 	processTimer            *time.Ticker
 }
 
@@ -70,6 +72,7 @@ func New(opt stream.Options) (stream.Streamer, error) {
 		[]byte(gocast.ToString(opt.Get("separator"))),
 		gocast.ToString(opt.Get("timefield")),
 		gocast.ToString(opt.Get("tmpdir")),
+		opt.When,
 		opt.Fields,
 	)
 }
@@ -85,8 +88,9 @@ func NewStreamHDFS(
 	recordSeparator []byte,
 	messageTimeParam string,
 	tmpDirectoryPath string,
+	whenCondition string,
 	fields interface{},
-) (stream.Streamer, error) {
+) (_ stream.Streamer, err error) {
 	var (
 		fileNameDatePattern     string
 		fileNameIteratorPattern string
@@ -131,6 +135,16 @@ func NewStreamHDFS(
 		return nil, err
 	}
 
+	var (
+		when *govaluate.EvaluableExpression
+	)
+
+	if len(strings.TrimSpace(whenCondition)) > 0 {
+		if when, err = govaluate.NewEvaluableExpression(whenCondition); nil != err {
+			return
+		}
+	}
+
 	return &StreamHDFS{
 		client:                  client,
 		fileNamePattern:         fileNamePattern,
@@ -143,9 +157,19 @@ func NewStreamHDFS(
 		recordSeparator:         recordSeparator,
 		messageTimeParam:        messageTimeParam,
 		tmpDirectoryPath:        tmpDirectoryPath,
+		when:                    when,
 		record:                  *query,
 		buffer:                  make(chan eventstream.Message, blockSize*2),
 	}, nil
+}
+
+// Check message value
+func (s *StreamHDFS) Check(msg eventstream.Message) bool {
+	if nil != s.when {
+		r, err := s.when.Evaluate(msg.Map())
+		return err == nil && gocast.ToBool(r)
+	}
+	return true
 }
 
 // Put message to stream

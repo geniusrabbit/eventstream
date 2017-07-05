@@ -58,6 +58,7 @@ streams {
       INSERT INTO testlog (service, msg, error, timestamp)
         VALUES({{srv}}, {{msg}}, {{err}}, toTimestamp({{timestamp:date}}))
     Q
+    when   = "service = ""info"""
   }
 
   log_3 {

@@ -22,6 +22,7 @@ func New(opt stream.Options) (stream.Streamer, error) {
 			storage.Get(opt.Connection).(*sql.DB),
 			gocast.ToInt(opt.Get("buffer")),
 			time.Duration(gocast.ToInt(opt.Get("duration"))),
+			opt.When,
 			opt.Target,
 			opt.Fields,
 		)
@@ -30,16 +31,24 @@ func New(opt stream.Options) (stream.Streamer, error) {
 		storage.Get(opt.Connection).(*sql.DB),
 		gocast.ToInt(opt.Get("buffer")),
 		time.Duration(gocast.ToInt(opt.Get("duration"))),
+		opt.When,
 		opt.RawItem,
 		opt.Fields,
 	)
 }
 
 // NewStreamClickhouseByTarget params
-func NewStreamClickhouseByTarget(conn *sql.DB, blockSize int, duration time.Duration, target string, fields interface{}) (stream.Streamer, error) {
+func NewStreamClickhouseByTarget(
+	conn *sql.DB,
+	blockSize int,
+	duration time.Duration,
+	when,
+	target string,
+	fields interface{},
+) (stream.Streamer, error) {
 	q, err := stream.NewQueryByPattern(`INSERT INTO {{target}} ({{fields}}) VALUES({{values}})`, target, fields)
 	if nil != err {
 		return nil, err
 	}
-	return bsql.NewStreamSQL(conn, blockSize, duration, *q), nil
+	return bsql.NewStreamSQL(conn, blockSize, duration, when, *q)
 }

@@ -8,7 +8,6 @@ package stream
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"regexp"
 	"strings"
 
@@ -89,12 +88,6 @@ func NewQueryByPattern(pattern, target string, fl interface{}) (_ *Query, err er
 		return nil, err
 	}
 
-	fmt.Println("======== !Q", values, fields, inserts, strings.NewReplacer(
-		"{{target}}", target,
-		"{{fields}}", strings.Join(fields, ", "),
-		"{{values}}", strings.Join(inserts, ", "),
-	).Replace(pattern))
-
 	return &Query{
 		Q: strings.NewReplacer(
 			"{{target}}", target,
@@ -108,7 +101,6 @@ func NewQueryByPattern(pattern, target string, fl interface{}) (_ *Query, err er
 // ParamsBy by message
 func (q *Query) ParamsBy(msg eventstream.Message) (params []interface{}) {
 	for _, v := range q.Values {
-		fmt.Println("==== ParamsBy", v.Key, v.Type, v.Format)
 		params = append(params, msg.ItemCast(v.Key, v.Type, v.Format))
 	}
 	return
@@ -168,15 +160,15 @@ func PrepareFields(fls interface{}) (values []Value, fields, inserts []string, e
 		err = errInvalidQueryFields
 	}
 
-	if len(inserts) < 1 {
+	if len(inserts) < 1 || len(fields) > len(values) {
 		err = errInvalidQueryFields
 	}
 	return
 }
 
 // PrepareFieldsByArray matching and returns raw fields for insert
-// Example: [service=srv:int]
-// Result: [srv:int], [service], [?]
+// Example: [service=srv:int, name:string]
+// Result: [srv:int, name:string], [service,name], [?,?]
 func PrepareFieldsByArray(fls []string) (values []Value, fields, inserts []string) {
 	for _, fl := range fls {
 		if "" == fl {
@@ -210,7 +202,8 @@ func PrepareFieldsByArray(fls []string) (values []Value, fields, inserts []strin
 				values = append(values, Value{Key: fl, TargetKey: fl})
 			} else {
 				match := paramParser.FindAllStringSubmatch(fl, -1)
-				values = append(values, valueFromArray(match[0][1], match[0]))
+				fields = append(fields, match[0][1])
+				values = append(values, valueFromArray(match[0][1], match[0][1:]))
 			}
 			inserts = append(inserts, "?")
 		}

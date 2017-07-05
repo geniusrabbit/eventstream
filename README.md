@@ -6,7 +6,7 @@
 
 Eventstream pipeline for storing and re-sending events inside the system.
 
-> License Apache 2.0 
+> License Apache 2.0
 > Copyright 2017 GeniusRabbit Dmitry Ponomarev <demdxx@gmail.com>
 
 ```sh
@@ -51,13 +51,16 @@ streams {
     source = "nats_1"
     target = "testlog"
     // Optional if fields in log and in message the same
-    fields = "service=srv,msg,error=err,timestamp=@toTimestamp({{timestamp:date}})"
+    fields = "service=srv,msg,error=err,timestamp=@toDateTime({{timestamp:date}})"
+    when   = "srv == ""main"""
   }
 }
 ```
 
 ## TODO
 
+ - [ ] Add metrics support
+ - [x] Add 'when' stream condition (http://github.com/Knetic/govaluate)
  - [ ] Ack message only if success
  - [ ] Buffering all data until be stored
  - [ ] Fix HDFS writer

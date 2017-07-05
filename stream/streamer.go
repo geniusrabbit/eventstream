@@ -18,6 +18,7 @@ type Options struct {
 	RawItem    string
 	Target     string
 	Fields     interface{}
+	When       string
 	Options    map[string]interface{}
 }
 
@@ -36,6 +37,9 @@ type NewConstructor func(opt Options) (Streamer, error)
 type Streamer interface {
 	// Close implementation
 	io.Closer
+
+	// Check message value
+	Check(msg eventstream.Message) bool
 
 	// Put message to stream
 	Put(msg eventstream.Message) error

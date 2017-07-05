@@ -6,7 +6,11 @@
 package eventstream
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
+	"math/big"
+	"net"
 	"time"
 	"unicode"
 
@@ -71,18 +75,28 @@ func (m Message) ItemCast(key string, t FieldType, format string) (v interface{}
 		return gocast.ToString(v)
 	case FieldTypeInt:
 		return gocast.ToInt64(v)
+	case FieldTypeUint:
+		return gocast.ToUint64(v)
 	case FieldTypeFloat:
 		return gocast.ToFloat64(v)
 	case FieldTypeBoolean:
 		return gocast.ToBool(v)
+	case FieldTypeIP:
+		var ip = net.ParseIP(gocast.ToString(v))
+		switch format {
+		case "binarystring":
+			v = ip2EscapeString(ip)
+		default:
+			v = ip
+		}
 	case FieldTypeDate:
 		var tm time.Time
 		if nil != v {
-			s := gocast.ToString(v)
-			if isInt(s) {
+			switch v.(type) {
+			case int64, uint64, float64:
 				tm = time.Unix(gocast.ToInt64(v), 0)
-			} else {
-				tm, _ = parseTime(s)
+			default:
+				tm, _ = parseTime(gocast.ToString(v))
 			}
 		}
 
@@ -90,8 +104,39 @@ func (m Message) ItemCast(key string, t FieldType, format string) (v interface{}
 			return tm.Format(format)
 		}
 		v = tm
+	case FieldTypeUnixnano:
+		var tm time.Time
+		if nil != v {
+			tm = time.Unix(0, gocast.ToInt64(v))
+		}
+
+		if "" != format {
+			return tm.Format(format)
+		}
+		v = tm
+	case FieldTypeArrayInt32:
+		if nil != v {
+			var arr = []int32{}
+			gocast.ToSlice(arr, v, "")
+			v = arr
+		} else {
+			v = []int32{}
+		}
+	case FieldTypeArrayInt64:
+		if nil != v {
+			var arr = []int64{}
+			gocast.ToSlice(arr, v, "")
+			v = arr
+		} else {
+			v = []int64{}
+		}
 	}
 	return v
+}
+
+// Map value
+func (m Message) Map() map[string]interface{} {
+	return map[string]interface{}(m)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -101,10 +146,29 @@ func (m Message) ItemCast(key string, t FieldType, format string) (v interface{}
 var typeList = []string{
 	"string",
 	"int",
+	"uint",
 	"float",
 	"bool",
+	"ip",
 	"date",
+	"unixnano",
+	"[]int32",
+	"[]int64",
 }
+
+// Types enum
+const (
+	FieldTypeString FieldType = iota
+	FieldTypeInt
+	FieldTypeUint
+	FieldTypeFloat
+	FieldTypeBoolean
+	FieldTypeIP
+	FieldTypeDate
+	FieldTypeUnixnano
+	FieldTypeArrayInt32
+	FieldTypeArrayInt64
+)
 
 // FieldType data
 type FieldType int
@@ -116,15 +180,6 @@ func (t FieldType) String() string {
 	}
 	return typeList[0]
 }
-
-// Types enum
-const (
-	FieldTypeString FieldType = iota
-	FieldTypeInt
-	FieldTypeFloat
-	FieldTypeBoolean
-	FieldTypeDate
-)
 
 // TypeByString name
 func TypeByString(t string) FieldType {
@@ -157,4 +212,27 @@ func isInt(s string) bool {
 		}
 	}
 	return true
+}
+
+func ip2EscapeString(ip net.IP) string {
+	var (
+		buff    bytes.Buffer
+		data    = make([]byte, 16)
+		ipBytes = ip2Int(ip).Bytes()
+	)
+
+	for i := range ipBytes {
+		data[15-i] = ipBytes[len(ipBytes)-i-1]
+	}
+
+	for _, b := range data {
+		buff.WriteString(fmt.Sprintf("\\%03o", b))
+	}
+	return buff.String()
+}
+
+func ip2Int(ip net.IP) *big.Int {
+	ipInt := big.NewInt(0)
+	ipInt.SetBytes(ip)
+	return ipInt
 }

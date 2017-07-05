@@ -9,7 +9,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"time"
 
 	_ "github.com/kshvakov/clickhouse"
 	_ "github.com/lib/pq"
@@ -37,7 +36,7 @@ var fabric = map[string]stream.NewConstructor{
 }
 
 var (
-	flagConfigFile = flag.String("config", "config.yml", "Configuration file path")
+	flagConfigFile = flag.String("config", "config.hcl", "Configuration file path")
 	flagDebug      = flag.Bool("debug", false, "is debug mode on")
 )
 
@@ -74,7 +73,6 @@ func main() {
 				break
 			}
 
-			go test(s)
 			go s.Process()
 		} else {
 			fatalError(err)
@@ -120,6 +118,7 @@ func newStreamBase(st context.StreamConfig) (stream.Streamer, error) {
 			RawItem:    st.RawItem,
 			Target:     st.Target,
 			Fields:     st.Fields,
+			When:       st.When,
 			Options:    opt,
 		})
 	}
@@ -134,16 +133,5 @@ func newStreamBase(st context.StreamConfig) (stream.Streamer, error) {
 func fatalError(err error) {
 	if nil != err {
 		log.Fatal(err)
-	}
-}
-
-func test(l stream.ExtStreamer) {
-	for _ = range time.Tick(time.Second) {
-		l.Handle(`{
-			"srv": "service",
-			"msg": "Msg",
-			"err": "Error",
-			"timestamp": "2017-05-05"
-		}`)
 	}
 }

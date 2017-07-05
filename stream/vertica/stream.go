@@ -22,6 +22,7 @@ func New(opt stream.Options) (stream.Streamer, error) {
 			storage.Get(opt.Connection).(*sql.DB),
 			gocast.ToInt(opt.Get("buffer")),
 			time.Duration(gocast.ToInt(opt.Get("duration"))),
+			opt.When,
 			opt.RawItem,
 			opt.Fields,
 		)
@@ -30,21 +31,22 @@ func New(opt stream.Options) (stream.Streamer, error) {
 		storage.Get(opt.Connection).(*sql.DB),
 		gocast.ToInt(opt.Get("buffer")),
 		time.Duration(gocast.ToInt(opt.Get("duration"))),
+		opt.When,
 		opt.Target,
 		opt.Fields,
 	)
 }
 
 // NewStreamVerticaByRaw query
-func NewStreamVerticaByRaw(conn *sql.DB, blockSize int, duration time.Duration, query string, fields interface{}) (stream.Streamer, error) {
-	return bsql.NewStreamSQLByRaw(conn, blockSize, duration, query, fields)
+func NewStreamVerticaByRaw(conn *sql.DB, blockSize int, duration time.Duration, when, query string, fields interface{}) (stream.Streamer, error) {
+	return bsql.NewStreamSQLByRaw(conn, blockSize, duration, when, query, fields)
 }
 
 // NewStreamVerticaByTarget params
-func NewStreamVerticaByTarget(conn *sql.DB, blockSize int, duration time.Duration, target string, fields interface{}) (stream.Streamer, error) {
+func NewStreamVerticaByTarget(conn *sql.DB, blockSize int, duration time.Duration, when, target string, fields interface{}) (stream.Streamer, error) {
 	q, err := stream.NewQueryByPattern(`COPY {{target}} ({{fields}}) FROM STDIN DELIMITER '\t' NULL 'null'`, target, fields)
 	if nil != err {
 		return nil, err
 	}
-	return bsql.NewStreamSQL(conn, blockSize, duration, *q), nil
+	return bsql.NewStreamSQL(conn, blockSize, duration, when, *q)
 }

@@ -72,6 +72,7 @@ type StreamConfig struct {
 	RawItem string      `yaml:"rawitem" json:"rawitem"` // Depends from stream it could be SQL query or file raw
 	Target  string      `yaml:"target" json:"target"`
 	Fields  interface{} `yaml:"fields" json:"fields"`
+	When    string      `yaml:"when" json:"when"`
 	Options options     `yaml:"options" json:"options"`
 }
 
