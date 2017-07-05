@@ -1,6 +1,8 @@
 FROM alpine:3.3
-MAINTAINER GeniusRabbit Dmitry Ponomarev
+MAINTAINER GeniusRabbitCo (Dmitry Ponomarev <demdxx@gmail.com>)
 
-COPY .build/logstream /
+ENV SERVICE_NAME=eventstream
+ENV SERVICE_WEIGHT=1
 
-CMD /lohstream --config=config.yml --debug
+COPY .build/eventstream /
+CMD /eventstream --config=/config.hcl --debug

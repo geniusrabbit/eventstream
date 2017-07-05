@@ -59,6 +59,7 @@ streams {
 
 ## TODO
 
+ - [ ] Add health check API
  - [ ] Add metrics support
  - [x] Add 'when' stream condition (http://github.com/Knetic/govaluate)
  - [ ] Ack message only if success
