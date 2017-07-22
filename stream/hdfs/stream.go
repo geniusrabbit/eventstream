@@ -408,7 +408,7 @@ func (s *StreamHDFS) writer() (io.Writer, error) {
 // get message time from message
 func (s *StreamHDFS) msgTime(msg eventstream.Message) (time.Time, error) {
 	if s.messageTimeParam != "" {
-		if v := msg.ItemCast(s.messageTimeParam, eventstream.FieldTypeDate, ""); nil != v {
+		if v := msg.ItemCast(s.messageTimeParam, eventstream.FieldTypeDate, 0, ""); nil != v {
 			return v.(time.Time), nil
 		}
 		return time.Time{}, eventstream.ErrInvalidMessageFieldType

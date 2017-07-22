@@ -16,6 +16,7 @@ import (
 
 	"github.com/demdxx/gocast"
 	"github.com/geniusrabbit/eventstream/converter"
+	"github.com/twinj/uuid"
 )
 
 var (
@@ -68,11 +69,41 @@ func (m Message) Item(key string, def interface{}) interface{} {
 }
 
 // ItemCast value
-func (m Message) ItemCast(key string, t FieldType, format string) (v interface{}) {
+func (m Message) ItemCast(key string, t FieldType, length int, format string) (v interface{}) {
 	v = m.Item(key, nil)
 	switch t {
 	case FieldTypeString:
 		return gocast.ToString(v)
+	case FieldTypeFixed:
+		switch vv := v.(type) {
+		case []byte:
+			v = bytesSize(vv, length)
+		default:
+			v = bytesSize([]byte(gocast.ToString(v)), length)
+		}
+		if format == "escape" {
+			return escapeBytes(v.([]byte), 0)
+		}
+	case FieldTypeUUID:
+		switch vv := v.(type) {
+		case []byte:
+			if len(vv) > 16 {
+				v, _ = uuid.Parse(string(vv))
+			} else {
+				v = bytesSize(vv, 16)
+			}
+		default:
+			if v == nil {
+				v = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+			} else {
+				if v, _ = uuid.Parse(gocast.ToString(v)); v != nil {
+					v = v.(uuid.Uuid).Bytes()
+				}
+			}
+		}
+		if v != nil && format == "escape" {
+			return escapeBytes(v.([]byte), 0)
+		}
 	case FieldTypeInt:
 		return gocast.ToInt64(v)
 	case FieldTypeUint:
@@ -145,6 +176,8 @@ func (m Message) Map() map[string]interface{} {
 
 var typeList = []string{
 	"string",
+	"fix", // String
+	"uuid",
 	"int",
 	"uint",
 	"float",
@@ -159,6 +192,8 @@ var typeList = []string{
 // Types enum
 const (
 	FieldTypeString FieldType = iota
+	FieldTypeFixed
+	FieldTypeUUID
 	FieldTypeInt
 	FieldTypeUint
 	FieldTypeFloat
@@ -216,7 +251,6 @@ func isInt(s string) bool {
 
 func ip2EscapeString(ip net.IP) string {
 	var (
-		buff    bytes.Buffer
 		data    = make([]byte, 16)
 		ipBytes = ip2Int(ip).Bytes()
 	)
@@ -225,10 +259,36 @@ func ip2EscapeString(ip net.IP) string {
 		data[15-i] = ipBytes[len(ipBytes)-i-1]
 	}
 
-	for _, b := range data {
+	return escapeBytes(data, 0)
+}
+
+func escapeBytes(data []byte, size int) string {
+	var buff bytes.Buffer
+	for i, b := range data {
+		if size > 0 && i > size {
+			break
+		}
 		buff.WriteString(fmt.Sprintf("\\%03o", b))
 	}
+
+	for i := len(data); i < size; i++ {
+		buff.WriteString(fmt.Sprintf("\\%03o", byte(0)))
+	}
+
 	return buff.String()
+}
+
+func bytesSize(data []byte, size int) []byte {
+	if size < 1 {
+		return data
+	}
+	if len(data) > size {
+		return data[:size]
+	}
+	for i := len(data); i < size; i++ {
+		data = append(data, 0)
+	}
+	return data
 }
 
 func ip2Int(ip net.IP) *big.Int {

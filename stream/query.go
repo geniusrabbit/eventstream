@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"errors"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/demdxx/gocast"
@@ -29,14 +30,41 @@ type Value struct {
 	Key       string
 	TargetKey string
 	Type      eventstream.FieldType
+	Length    int
 	Format    string
 }
 
 func valueFromArray(target string, a []string) Value {
+	var (
+		length   int64
+		typeName string
+	)
+
+	if len(a) > 1 {
+		vals := strings.Split(a[1], "*")
+		if len(vals) == 2 {
+			typeName = vals[0]
+			length, _ = strconv.ParseInt(vals[1], 10, 64)
+		} else {
+			typeName = a[1]
+		}
+	}
+
 	if len(a) > 2 {
-		return Value{Key: a[0], TargetKey: target, Type: eventstream.TypeByString(a[1]), Format: a[2]}
+		return Value{
+			Key:       a[0],
+			TargetKey: target,
+			Type:      eventstream.TypeByString(typeName),
+			Length:    int(length),
+			Format:    a[2],
+		}
 	} else if len(a) > 1 {
-		return Value{Key: a[0], TargetKey: target, Type: eventstream.TypeByString(a[1])}
+		return Value{
+			Key:       a[0],
+			TargetKey: target,
+			Type:      eventstream.TypeByString(typeName),
+			Length:    int(length),
+		}
 	}
 	return Value{Key: a[0], TargetKey: target}
 }
@@ -101,7 +129,7 @@ func NewQueryByPattern(pattern, target string, fl interface{}) (_ *Query, err er
 // ParamsBy by message
 func (q *Query) ParamsBy(msg eventstream.Message) (params []interface{}) {
 	for _, v := range q.Values {
-		params = append(params, msg.ItemCast(v.Key, v.Type, v.Format))
+		params = append(params, msg.ItemCast(v.Key, v.Type, v.Length, v.Format))
 	}
 	return
 }
@@ -111,7 +139,7 @@ func (q *Query) StringParamsBy(msg eventstream.Message) (params []string) {
 	for _, v := range q.Values {
 		params = append(
 			params,
-			gocast.ToString(msg.ItemCast(v.Key, v.Type, v.Format)),
+			gocast.ToString(msg.ItemCast(v.Key, v.Type, v.Length, v.Format)),
 		)
 	}
 	return
@@ -138,7 +166,7 @@ func (q *Query) StringByMessage(msg eventstream.Message) string {
 func (q *Query) Extract(msg eventstream.Message) map[string]interface{} {
 	var resp = make(map[string]interface{})
 	for _, v := range q.Values {
-		resp[v.TargetKey] = msg.ItemCast(v.Key, v.Type, v.Format)
+		resp[v.TargetKey] = msg.ItemCast(v.Key, v.Type, v.Length, v.Format)
 	}
 	return resp
 }
