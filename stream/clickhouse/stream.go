@@ -9,46 +9,38 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/demdxx/gocast"
-	"github.com/geniusrabbit/eventstream/storage"
+	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/stream"
 	bsql "github.com/geniusrabbit/eventstream/stream/sql"
 )
 
 // New clickhouse stream
-func New(opt stream.Options) (stream.Streamer, error) {
-	if "" == opt.RawItem {
-		return NewStreamClickhouseByTarget(
-			storage.Get(opt.Connection).(*sql.DB),
-			gocast.ToInt(opt.Get("buffer")),
-			time.Duration(gocast.ToInt(opt.Get("duration"))),
-			opt.When,
-			opt.Target,
-			opt.Fields,
+func New(store eventstream.Storager, conn *sql.DB, config eventstream.ConfigItem) (stream eventstream.SimpleStreamer, err error) {
+	if rawItem := config.String("raw_item", ""); rawItem != "" {
+		stream, err = bsql.NewStreamSQLByRaw(
+			conn,
+			int(config.Int("buffer", 0)),
+			time.Duration(config.Int("duration", 0)),
+			rawItem,
+			config.Item("fields", nil),
+		)
+	} else {
+		stream, err = newStreamClickhouseByTarget(
+			conn,
+			int(config.Int("buffer", 0)),
+			time.Duration(config.Int("duration", 0)),
+			config.String("target", ""),
+			config.Item("fields", nil),
 		)
 	}
-	return bsql.NewStreamSQLByRaw(
-		storage.Get(opt.Connection).(*sql.DB),
-		gocast.ToInt(opt.Get("buffer")),
-		time.Duration(gocast.ToInt(opt.Get("duration"))),
-		opt.When,
-		opt.RawItem,
-		opt.Fields,
-	)
+	return
 }
 
 // NewStreamClickhouseByTarget params
-func NewStreamClickhouseByTarget(
-	conn *sql.DB,
-	blockSize int,
-	duration time.Duration,
-	when,
-	target string,
-	fields interface{},
-) (stream.Streamer, error) {
+func newStreamClickhouseByTarget(conn *sql.DB, blockSize int, duration time.Duration, target string, fields interface{}) (eventstream.SimpleStreamer, error) {
 	q, err := stream.NewQueryByPattern(`INSERT INTO {{target}} ({{fields}}) VALUES({{values}})`, target, fields)
 	if nil != err {
 		return nil, err
 	}
-	return bsql.NewStreamSQL(conn, blockSize, duration, when, *q)
+	return bsql.NewStreamSQL(conn, blockSize, duration, *q)
 }

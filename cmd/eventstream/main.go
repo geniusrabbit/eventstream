@@ -13,27 +13,14 @@ import (
 	_ "github.com/kshvakov/clickhouse"
 	_ "github.com/lib/pq"
 
+	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/context"
-	"github.com/geniusrabbit/eventstream/converter"
 	"github.com/geniusrabbit/eventstream/source"
 	"github.com/geniusrabbit/eventstream/storage"
 	_ "github.com/geniusrabbit/eventstream/storage/clickhouse"
 	_ "github.com/geniusrabbit/eventstream/storage/hdfs"
 	_ "github.com/geniusrabbit/eventstream/storage/vertica"
-	"github.com/geniusrabbit/eventstream/stream"
-	"github.com/geniusrabbit/eventstream/stream/clickhouse"
-	"github.com/geniusrabbit/eventstream/stream/hdfs"
-	"github.com/geniusrabbit/eventstream/stream/vertica"
-	"github.com/geniusrabbit/notificationcenter"
 )
-
-var fabric = map[string]stream.NewConstructor{
-	"clickhouse": clickhouse.New,
-	"ch":         clickhouse.New,
-	"vertica":    vertica.New,
-	"vt":         vertica.New,
-	"hdfs":       hdfs.New,
-}
 
 var (
 	flagConfigFile = flag.String("config", "config.hcl", "Configuration file path")
@@ -50,14 +37,14 @@ func init() {
 	// Validate config
 	fatalError(context.Config.Validate())
 
-	// Register stures connections
-	for name, st := range context.Config.Stores {
-		fatalError(storage.Register(name, st.Connect, *flagDebug))
+	// Register stores connections
+	for name, conf := range context.Config.Stores {
+		fatalError(storage.Register(name, conf, *flagDebug))
 	}
 
 	// Register sources subscribers
-	for name, sr := range context.Config.Sources {
-		fatalError(source.Register(name, sr.Connect))
+	for name, conf := range context.Config.Sources {
+		fatalError(source.Register(name, conf, *flagDebug))
 	}
 }
 
@@ -65,73 +52,52 @@ func main() {
 	fmt.Println("> RUN APP")
 
 	// Register streams
-	for _, st := range context.Config.Streams {
-		if s, err := newStream(st); nil == err {
-			if err = source.Subscribe(st.Source, s); nil != err {
-				notificationcenter.Close()
+	for _, strmConf := range context.Config.Streams {
+		if strm, err := newStream(strmConf); err == nil {
+			sourceName := strmConf.String("source", "")
+
+			if err = source.Subscribe(sourceName, strm); nil != err {
 				fatalError(err)
 				break
 			}
 
-			go s.Process()
+			go func() {
+				if err = strm.Run(); err != nil {
+					fatalError(err)
+					return
+				}
+			}()
 		} else {
 			fatalError(err)
+			return
 		}
 	} // end for
 
-	// Run notification listener
-	notificationcenter.Listen()
+	// Run source listener's
+	source.Listen()
+	close()
 }
 
-func newStream(st context.StreamConfig) (s stream.ExtStreamer, err error) {
-	var baseStream stream.Streamer
-	if baseStream, err = newStreamBase(st); nil != err {
-		return
+func newStream(conf context.StreamConfig) (eventstream.Streamer, error) {
+	store := storage.Storage(conf.String("store", ""))
+	if store != nil {
+		return store.Stream(conf)
 	}
-
-	source := context.Config.Sources[st.Source]
-	s = stream.NewWrapper(baseStream, converter.ByName(source.Format))
-	return
-}
-
-func newStreamBase(st context.StreamConfig) (stream.Streamer, error) {
-	var (
-		opt   = map[string]interface{}{}
-		store = context.Config.Stores[st.Store]
-	)
-
-	if nil != st.Options {
-		for k, v := range st.Options {
-			opt[k] = v
-		}
-	}
-
-	if nil != store.Options {
-		for k, v := range store.Options {
-			opt[k] = v
-		}
-	}
-
-	if fb, _ := fabric[store.ConnectScheme()]; nil != fb {
-		return fb(stream.Options{
-			Connection: st.Store,
-			RawItem:    st.RawItem,
-			Target:     st.Target,
-			Fields:     st.Fields,
-			When:       st.When,
-			Options:    opt,
-		})
-	}
-
-	return nil, fmt.Errorf("Undefined stream scheme: %s", store.ConnectScheme())
+	return nil, fmt.Errorf("Undefined storage [%s]", conf.String("store", ""))
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Helpers
 ///////////////////////////////////////////////////////////////////////////////
 
+func close() {
+	source.Close()
+	storage.Close()
+}
+
 func fatalError(err error) {
-	if nil != err {
+	if err != nil {
+		close()
 		log.Fatal(err)
 	}
 }

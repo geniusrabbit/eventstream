@@ -9,13 +9,12 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/geniusrabbit/eventstream/storage"
 	"github.com/vladimirvivien/gowfs"
 )
 
-func init() {
-	storage.RegisterConnector(hdfsConnect, "hdfs")
-}
+// func init() {
+// 	storage.RegisterConnector(hdfsConnect, "hdfs")
+// }
 
 func hdfsConnect(u *url.URL, debug bool) (interface{}, error) {
 	// return hdfs.New(u.Host)

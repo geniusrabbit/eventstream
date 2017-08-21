@@ -7,12 +7,12 @@ package context
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/geniusrabbit/eventstream"
 	"github.com/hashicorp/hcl"
 
 	yaml "gopkg.in/yaml.v2"
@@ -23,74 +23,13 @@ var (
 	errInvalidConfigFile    = errors.New("Invalid config file format")
 	errInvalidStoreConnect  = errors.New("Invalid store config connect")
 	errInvalidSourceConnect = errors.New("Invalid source config connect")
-	errInvalidStreamTarget  = errors.New("Invalid stream target")
+	errInvalidSourceStream  = errors.New("Invalid stream config connect")
 )
 
-// StoreConfig description
-type StoreConfig struct {
-	Connect string  `yaml:"connect" json:"connect"`
-	Options options `yaml:"options" json:"options"`
-}
-
-// Validate stream item
-func (l StoreConfig) Validate() error {
-	if "" == l.Connect {
-		return errInvalidStoreConnect
-	}
-	return nil
-}
-
-// ConnectScheme name
-func (l StoreConfig) ConnectScheme() string {
-	return l.Connect[:strings.Index(l.Connect, "://")]
-}
-
-// SourceConfig description
-type SourceConfig struct {
-	Connect string  `yaml:"connect" json:"connect"`
-	Format  string  `yaml:"format" json:"format"`
-	Options options `yaml:"options" json:"options"`
-}
-
-// Validate stream item
-func (l SourceConfig) Validate() error {
-	if "" == l.Connect {
-		return errInvalidSourceConnect
-	}
-	return nil
-}
-
-// ConnectScheme name
-func (l SourceConfig) ConnectScheme() string {
-	return l.Connect[:strings.Index(l.Connect, "://")]
-}
-
-// StreamConfig info
-type StreamConfig struct {
-	Store   string      `yaml:"store" json:"store"`
-	Source  string      `yaml:"source" json:"source" default:"default"`
-	RawItem string      `yaml:"rawitem" json:"rawitem"` // Depends from stream it could be SQL query or file raw
-	Target  string      `yaml:"target" json:"target"`
-	Fields  interface{} `yaml:"fields" json:"fields"`
-	When    string      `yaml:"when" json:"when"`
-	Options options     `yaml:"options" json:"options"`
-}
-
-// Validate log item
-func (l StreamConfig) Validate() error {
-	if "" == l.RawItem && "" == l.Target {
-		return errInvalidStreamTarget
-	}
-	if "" == l.Source {
-		l.Source = "default"
-	}
-	return nil
-}
-
 type config struct {
-	Stores  map[string]StoreConfig  `yaml:"stores" json:"stores"`
-	Sources map[string]SourceConfig `yaml:"sources" json:"sources"`
-	Streams map[string]StreamConfig `yaml:"streams" json:"streams"`
+	Stores  map[string]eventstream.ConfigItem `yaml:"stores" json:"stores"`
+	Sources map[string]eventstream.ConfigItem `yaml:"sources" json:"sources"`
+	Streams map[string]eventstream.ConfigItem `yaml:"streams" json:"streams"`
 }
 
 // Load config
@@ -117,24 +56,17 @@ func (c *config) Load(filename string) error {
 
 // Validate config
 func (c *config) Validate() error {
-	if nil == c || len(c.Stores) < 1 || len(c.Sources) < 1 || len(c.Streams) < 1 {
+	if c == nil {
 		return errInvalidConfig
 	}
-
-	for name, stream := range c.Streams {
-		if err := stream.Validate(); nil != err {
-			return fmt.Errorf("Stream [%s] %s", name, err.Error())
-		}
+	if c.Stores == nil || len(c.Stores) < 1 {
+		return errInvalidStoreConnect
 	}
-
-	for name, stream := range c.Streams {
-		if err := stream.Validate(); nil != err {
-			return fmt.Errorf("Stream [%s] %s", name, err.Error())
-		} else if _, ok := c.Sources[stream.Source]; !ok {
-			return fmt.Errorf("Stream [%s] Invalid source: %s", name, stream.Source)
-		} else if _, ok := c.Stores[stream.Store]; !ok {
-			return fmt.Errorf("Stream [%s] Invalid store: %s", name, stream.Store)
-		}
+	if c.Sources == nil || len(c.Sources) < 1 {
+		return errInvalidSourceConnect
+	}
+	if c.Streams == nil || len(c.Streams) < 1 {
+		return errInvalidSourceStream
 	}
 	return nil
 }

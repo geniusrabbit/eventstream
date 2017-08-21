@@ -11,16 +11,28 @@ stores {
 
   clickhouse_1 {
     connect = "clickhouse://clickhouse:9000/stat"
-    options { # Optional
-      buffer = 1000
-    }
+    driver  = "clickhouse"
+    buffer  = 1000
   }
+
   hdfs_1 {
     connect = "hdfs://hdfs:8020/"
-    options { # Optional
-      buffer = 1000
-      tmpdir = "/tmp/hdfs/"
-    }
+    driver  = "hdfs"
+    buffer  = 1000
+    tmpdir  = "/tmp/hdfs/"
+  }
+
+  metric_1 {
+    connect = "nats://nats:4222/?topics=metrics"
+    driver  = "metrics"
+    format  = "influxdb"
+  }
+
+  metric_2 {
+    // Tags as GET params
+    connect = "statsd://statsd:8125/?service=myservice"
+    driver  = "metrics"
+    format  = "influxdb"
   }
 }
 
@@ -29,9 +41,11 @@ sources {
   nats_1 {
     connect = "nats://nats:4222/?topics=topic1,topic2"
     format  = "json"
+    driver  = "nats"
   }
   kafka_1 {
     connect = "nats://nats:4222/group?topics=topic1"
+    driver  = "nats"
   }
 }
 
@@ -54,30 +68,57 @@ streams {
   log_2 {
     store   = "clickhouse_1"
     source  = "nats_1"
-    rawitem = <<Q
-      INSERT INTO testlog (service, msg, error, timestamp)
-        VALUES({{srv}}, {{msg}}, {{err}}, toTimestamp({{timestamp:date}}))
-    Q
-    when   = "service = ""info"""
+    when    = "service = ""info"""
+
+    options {
+      rawitem = <<Q
+        INSERT INTO testlog (service, msg, error, timestamp)
+          VALUES({{srv}}, {{msg}}, {{err}}, toTimestamp({{timestamp:date}}))
+      Q
+    }
   }
 
   log_3 {
     store  = "clickhouse_1"
     source = "nats_1"
-    target = "testlog"
-    # Optional if fields in log and in message the same
-    fields = "service=srv,msg,error=err,timestamp=@toTimestamp({{timestamp:date}})"
+
+    options {
+      target = "testlog"
+      # Optional if fields in log and in message the same
+      fields = "service=srv,msg,error=err,timestamp=@toTimestamp({{timestamp:date}})"
+    }
   }
 
   log_4 {
     store  = "clickhouse_1"
     source = "nats_1"
-    target = "testlog"
-    fields = [
-      "service=srv",
-      "msg",
-      "error=err:string",
-      "timestamp=@toTimestamp('{{timestamp:date|2006-01-02 15:04:05}}')",
-    ]
+
+    options {
+      target = "testlog"
+      fields = [
+        "service=srv",
+        "msg",
+        "error=err:string",
+        "timestamp=@toTimestamp('{{timestamp:date|2006-01-02 15:04:05}}')",
+      ]
+    }
+  }
+
+  metric_1 {
+    store   = "metric_1"
+    source  = "nats_1"
+
+    options {
+      target  = "metrics"
+      metrics = [
+        {
+          name = "message.{{type}}.counter"
+          type = "counter"
+          tags {
+            os = "{{os}}"
+          }
+        }
+      ]
+    }
   }
 }

@@ -5,19 +5,15 @@
 
 // TODO: Store all messages if not sended yet
 
-package eventstream
+package sql
 
 import (
 	"database/sql"
-	"strings"
 	"sync"
 	"time"
 
-	"github.com/Knetic/govaluate"
-	"github.com/demdxx/gocast"
 	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/stream"
-	"github.com/labstack/gommon/log"
 )
 
 // StreamSQL stream
@@ -28,19 +24,12 @@ type StreamSQL struct {
 	blockSize        int
 	writeMaxDuration time.Duration
 	writeLastTime    time.Time
-	when             *govaluate.EvaluableExpression
 	query            stream.Query
 	processTimer     *time.Ticker
 }
 
 // NewStreamSQL streamer
-func NewStreamSQL(
-	conn *sql.DB,
-	blockSize int,
-	duration time.Duration,
-	whenCondition string,
-	query stream.Query,
-) (_ stream.Streamer, err error) {
+func NewStreamSQL(conn *sql.DB, blockSize int, duration time.Duration, query stream.Query) (_ eventstream.SimpleStreamer, err error) {
 	if blockSize < 1 {
 		blockSize = 1000
 	}
@@ -49,49 +38,22 @@ func NewStreamSQL(
 		duration = time.Second * 1
 	}
 
-	var (
-		when *govaluate.EvaluableExpression
-	)
-
-	if len(strings.TrimSpace(whenCondition)) > 0 {
-		if when, err = govaluate.NewEvaluableExpression(whenCondition); nil != err {
-			return
-		}
-	}
-
 	return &StreamSQL{
 		conn:             conn,
 		buffer:           make(chan eventstream.Message, blockSize*2),
 		blockSize:        blockSize,
 		writeMaxDuration: duration,
-		when:             when,
 		query:            query,
 	}, nil
 }
 
 // NewStreamSQLByRaw query
-func NewStreamSQLByRaw(
-	conn *sql.DB,
-	blockSize int,
-	duration time.Duration,
-	when,
-	query string,
-	fields interface{},
-) (stream.Streamer, error) {
+func NewStreamSQLByRaw(conn *sql.DB, blockSize int, duration time.Duration, query string, fields interface{}) (eventstream.SimpleStreamer, error) {
 	q, err := stream.NewQueryByRaw(query, fields)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
-	return NewStreamSQL(conn, blockSize, duration, when, *q)
-}
-
-// Check message value
-func (s *StreamSQL) Check(msg eventstream.Message) bool {
-	if nil != s.when {
-		r, err := s.when.Evaluate(msg.Map())
-		return err == nil && gocast.ToBool(r)
-	}
-	return true
+	return NewStreamSQL(conn, blockSize, duration, *q)
 }
 
 // Put message to stream
@@ -112,9 +74,9 @@ func (s *StreamSQL) Close() error {
 	return nil
 }
 
-// Process loop
-func (s *StreamSQL) Process() {
-	if nil != s.processTimer {
+// Run loop
+func (s *StreamSQL) Run() error {
+	if s.processTimer != nil {
 		s.processTimer.Stop()
 	}
 
@@ -123,10 +85,11 @@ func (s *StreamSQL) Process() {
 	ch := s.processTimer.C
 
 	for _, ok := <-ch; ok; {
-		if err := s.writeBuffer(false); nil != err {
-			s.LogError(err)
+		if err := s.writeBuffer(false); err != nil {
+			return err
 		}
 	}
+	return nil
 }
 
 // writeBuffer all data
@@ -176,15 +139,4 @@ func (s *StreamSQL) writeBuffer(flush bool) (err error) {
 
 	s.writeLastTime = time.Now()
 	return
-}
-
-///////////////////////////////////////////////////////////////////////////////
-/// Logs
-///////////////////////////////////////////////////////////////////////////////
-
-// LogError message
-func (s *StreamSQL) LogError(params ...interface{}) {
-	if len(params) > 0 {
-		log.Error(params...)
-	}
 }

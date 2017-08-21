@@ -25,7 +25,6 @@ dcbuild:
 
 dcrun:
 	docker run --rm -it -e DEBUG=true \
-		--link nats:nats --link hdfs:hdfs \
-		--link grclickhouse:clickhouse \
+		--link nats:nats --link grclickhouse:clickhouse \
 		-v $(PROJDIR)/:/project eventstream
 
