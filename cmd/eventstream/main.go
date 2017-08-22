@@ -16,9 +16,12 @@ import (
 	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/context"
 	"github.com/geniusrabbit/eventstream/source"
+	_ "github.com/geniusrabbit/eventstream/source/kafka"
+	_ "github.com/geniusrabbit/eventstream/source/nats"
 	"github.com/geniusrabbit/eventstream/storage"
 	_ "github.com/geniusrabbit/eventstream/storage/clickhouse"
 	_ "github.com/geniusrabbit/eventstream/storage/hdfs"
+	_ "github.com/geniusrabbit/eventstream/storage/metrics"
 	_ "github.com/geniusrabbit/eventstream/storage/vertica"
 )
 
@@ -55,7 +58,6 @@ func main() {
 	for _, strmConf := range context.Config.Streams {
 		if strm, err := newStream(strmConf); err == nil {
 			sourceName := strmConf.String("source", "")
-
 			if err = source.Subscribe(sourceName, strm); nil != err {
 				fatalError(err)
 				break
@@ -78,7 +80,7 @@ func main() {
 	close()
 }
 
-func newStream(conf context.StreamConfig) (eventstream.Streamer, error) {
+func newStream(conf eventstream.ConfigItem) (eventstream.Streamer, error) {
 	store := storage.Storage(conf.String("store", ""))
 	if store != nil {
 		return store.Stream(conf)

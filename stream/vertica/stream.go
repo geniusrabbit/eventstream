@@ -16,7 +16,7 @@ import (
 
 // New vertica stream
 func New(store eventstream.Storager, conn *sql.DB, config eventstream.ConfigItem) (stream eventstream.SimpleStreamer, err error) {
-	if rawItem := config.String("raw_item", ""); rawItem != "" {
+	if rawItem := config.String("rawitem", ""); rawItem != "" {
 		stream, err = bsql.NewStreamSQLByRaw(
 			conn,
 			int(config.Int("buffer", 0)),

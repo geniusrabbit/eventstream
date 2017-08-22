@@ -14,9 +14,6 @@ import (
 
 // StreamWrapper extends
 type StreamWrapper struct {
-	// Storage connector
-	Store Storager
-
 	// Stream pricessor
 	Stream SimpleStreamer
 
@@ -25,7 +22,7 @@ type StreamWrapper struct {
 }
 
 // NewStreamWrapper with support condition
-func NewStreamWrapper(stream SimpleStreamer, store Storager, where string) (_ Streamer, err error) {
+func NewStreamWrapper(stream SimpleStreamer, where string) (_ Streamer, err error) {
 	var whereObj *govaluate.EvaluableExpression
 
 	if len(strings.TrimSpace(where)) > 0 {
@@ -35,7 +32,6 @@ func NewStreamWrapper(stream SimpleStreamer, store Storager, where string) (_ St
 	}
 
 	return &StreamWrapper{
-		Store:          store,
 		Stream:         stream,
 		WhereCondition: whereObj,
 	}, nil

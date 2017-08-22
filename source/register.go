@@ -77,7 +77,7 @@ func (r *registry) connection(config eventstream.ConfigItem, debug bool) (events
 	if conn, _ := r.connectors[driver]; conn != nil {
 		return conn(config, debug)
 	}
-	return nil, fmt.Errorf("Undefined stream driver: [%s]", driver)
+	return nil, fmt.Errorf("Undefined source driver: [%s]", driver)
 }
 
 ///////////////////////////////////////////////////////////////////////////////

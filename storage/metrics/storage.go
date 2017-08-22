@@ -24,7 +24,7 @@ import (
 
 // Errors set
 var (
-	ErrUndefinedMetricsEngine = errors.New("Undefined metrics engine")
+	ErrUndefinedMetricsEngine = errors.New(`Undefined metrics engine or wrong "connect"`)
 )
 
 func init() {
@@ -36,16 +36,16 @@ type Metrics struct {
 	metrica notificationcenter.Logger
 }
 
-func connector(conf eventstream.ConfigItem, debug bool) (_ *Metrics, err error) {
+func connector(conf eventstream.ConfigItem, debug bool) (_ eventstream.Storager, err error) {
 	var (
-		logger     notificationcenter.Logger
-		connection = conf.String("connection", "")
+		logger  notificationcenter.Logger
+		connect = conf.String("connect", "")
 	)
 	switch {
-	case strings.HasPrefix(connection, "nats://"):
-		logger, err = connectNATS(connection)
-	case strings.HasPrefix(connection, "statsd://"):
-		logger, err = connectStatsD(connection)
+	case strings.HasPrefix(connect, "nats://"):
+		logger, err = connectNATS(connect)
+	case strings.HasPrefix(connect, "statsd://"):
+		logger, err = connectStatsD(connect)
 	default:
 		return nil, ErrUndefinedMetricsEngine
 	}
@@ -57,9 +57,13 @@ func connector(conf eventstream.ConfigItem, debug bool) (_ *Metrics, err error) 
 	return &Metrics{metrica: logger}, nil
 }
 
-// Write messages to storage
-func (m *Metrics) Write(message eventstream.Message) error {
-	return m.metrica.Send(m.prepareMetricsMessage(message)...)
+// Stream metrics processor
+func (m *Metrics) Stream(conf eventstream.ConfigItem) (eventstream.Streamer, error) {
+	stream, err := newStream(m.metrica, conf)
+	if err != nil {
+		return nil, err
+	}
+	return eventstream.NewStreamWrapper(stream, conf.String("where", ""))
 }
 
 // Close vertica connection
@@ -68,14 +72,6 @@ func (m *Metrics) Close() error {
 		return cl.Close()
 	}
 	return nil
-}
-
-///////////////////////////////////////////////////////////////////////////////
-/// Helpers
-///////////////////////////////////////////////////////////////////////////////
-
-func (m *Metrics) prepareMetricsMessage(msg eventstream.Message) (result []interface{}) {
-	return
 }
 
 ///////////////////////////////////////////////////////////////////////////////

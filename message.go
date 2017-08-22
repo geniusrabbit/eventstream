@@ -8,6 +8,7 @@ package eventstream
 import (
 	"errors"
 	"net"
+	"strconv"
 	"time"
 
 	"github.com/demdxx/gocast"
@@ -46,6 +47,15 @@ func (m Message) Item(key string, def interface{}) interface{} {
 		return v
 	}
 	return def
+}
+
+// String item value
+func (m Message) String(key, def string) string {
+	switch v := m.Item(key, def).(type) {
+	case float64:
+		return strconv.FormatFloat(v, 'G', 6, 64)
+	}
+	return gocast.ToString(m.Item(key, def))
 }
 
 // ItemCast value

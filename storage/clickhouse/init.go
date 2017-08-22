@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/geniusrabbit/eventstream"
+	"github.com/geniusrabbit/eventstream/errors"
 	"github.com/geniusrabbit/eventstream/storage"
 	"github.com/geniusrabbit/eventstream/stream/clickhouse"
 )
@@ -29,9 +30,15 @@ type Clickhouse struct {
 
 func connector(conf eventstream.ConfigItem, debug bool) (eventstream.Storager, error) {
 	var (
-		urlObj, err = url.Parse(conf.String("connection", ""))
+		connect     = conf.String("connect", "")
+		urlObj, err = url.Parse(connect)
 		conn        *sql.DB
 	)
+
+	if connect == "" {
+		return nil, errors.ErrConnectionIsNotDefined
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +57,11 @@ func (c *Clickhouse) Close() error {
 
 // Stream clickhouse processor
 func (c *Clickhouse) Stream(conf eventstream.ConfigItem) (eventstream.Streamer, error) {
-	return clickhouse.New(c, c.conn, conf)
+	simple, err := clickhouse.New(c, c.conn, conf)
+	if err != nil {
+		return nil, err
+	}
+	return eventstream.NewStreamWrapper(simple, conf.String("where", ""))
 }
 
 ///////////////////////////////////////////////////////////////////////////////

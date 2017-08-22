@@ -8,6 +8,7 @@ package stream
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -108,7 +109,8 @@ func NewQueryByPattern(pattern, target string, fl interface{}) (_ *Query, err er
 		values          []Value
 	)
 
-	if nil == fl {
+	if fl == nil {
+		fmt.Println("XXX", pattern, target, fl)
 		return nil, errInvalidQueryFields
 	}
 
@@ -185,10 +187,12 @@ func PrepareFields(fls interface{}) (values []Value, fields, inserts []string, e
 	case string:
 		values, fields, inserts = PrepareFieldsByString(fs)
 	default:
+		fmt.Println("YYY", fls)
 		err = errInvalidQueryFields
 	}
 
 	if len(inserts) < 1 || len(fields) > len(values) {
+		fmt.Println("ZZZ", fls)
 		err = errInvalidQueryFields
 	}
 	return

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/geniusrabbit/eventstream"
+	"github.com/geniusrabbit/eventstream/errors"
 	"github.com/geniusrabbit/eventstream/storage"
 	"github.com/geniusrabbit/eventstream/stream/vertica"
 )
@@ -29,11 +30,13 @@ type Vertica struct {
 
 func connector(conf eventstream.ConfigItem, debug bool) (eventstream.Storager, error) {
 	var (
-		urlObj, err = url.Parse(conf.String("connection", ""))
+		connect     = conf.String("connect", "")
+		urlObj, err = url.Parse(connect)
 		conn        *sql.DB
 	)
-	if err != nil {
-		return nil, err
+
+	if connect == "" {
+		return nil, errors.ErrConnectionIsNotDefined
 	}
 
 	if conn, err = verticaConnect(urlObj, debug); err != nil {
@@ -45,7 +48,11 @@ func connector(conf eventstream.ConfigItem, debug bool) (eventstream.Storager, e
 
 // Stream vertica processor
 func (st *Vertica) Stream(conf eventstream.ConfigItem) (eventstream.Streamer, error) {
-	return vertica.New(st, st.conn, conf)
+	simple, err := vertica.New(st, st.conn, conf)
+	if err != nil {
+		return nil, err
+	}
+	return eventstream.NewStreamWrapper(simple, conf.String("where", ""))
 }
 
 // Close vertica connection

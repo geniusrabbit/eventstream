@@ -18,13 +18,14 @@ destroy:
 	-docker rmi -f geniusrabbit/eventstream
 
 drun:
-	go run cmd/eventstream/main.go --config=config.example.hcl --debug
+	# go run cmd/eventstream/main.go --config=config.example.hcl --debug
+	go run cmd/eventstream/main.go --config=eventstream.hcl --debug
 
 dcbuild:
 	docker build -t eventstream -f Develop.docker .
 
 dcrun:
-	docker run --rm -it -e DEBUG=true \
+	docker run --rm -it -e DEBUG=true --name eventstream \
 		--link nats:nats --link grclickhouse:clickhouse \
 		-v $(PROJDIR)/:/project eventstream
-
+	docker network connect --link telegraf:metrics influxdb eventstream

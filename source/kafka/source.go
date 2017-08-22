@@ -12,7 +12,6 @@ import (
 	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/converter"
 	"github.com/geniusrabbit/eventstream/source"
-	"github.com/geniusrabbit/notificationcenter"
 	"github.com/geniusrabbit/notificationcenter/kafka"
 )
 
@@ -27,7 +26,7 @@ type sourceSubscriber struct {
 
 func connector(config eventstream.ConfigItem, debug bool) (eventstream.Sourcer, error) {
 	var (
-		url, err   = url.Parse(config.String("connection", ""))
+		url, err   = url.Parse(config.String("connect", ""))
 		subscriber *kafka.Subscriber
 	)
 
@@ -53,13 +52,10 @@ func connector(config eventstream.ConfigItem, debug bool) (eventstream.Sourcer, 
 
 // Subscribe stream object
 func (s *sourceSubscriber) Subscribe(stream eventstream.Streamer) error {
-	return s.subscriber.Subscribe(notificationcenter.FuncHandler(func(item interface{}) error {
-		msg, err := eventstream.MessageDecode(item, s.format)
-		if err == nil && stream.Check(msg) {
-			err = stream.Put(msg)
-		}
-		return err
-	}))
+	return s.subscriber.Subscribe(&subs{
+		format: s.format,
+		stream: stream,
+	})
 }
 
 // Start sunscriber listener
