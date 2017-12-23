@@ -27,6 +27,7 @@ var (
 )
 
 type config struct {
+	Debug   bool                              `yaml:"debug" json:"debug"`
 	Stores  map[string]eventstream.ConfigItem `yaml:"stores" json:"stores"`
 	Sources map[string]eventstream.ConfigItem `yaml:"sources" json:"sources"`
 	Streams map[string]eventstream.ConfigItem `yaml:"streams" json:"streams"`

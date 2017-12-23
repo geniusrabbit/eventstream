@@ -9,6 +9,7 @@ package sql
 
 import (
 	"database/sql"
+	"log"
 	"sync"
 	"time"
 
@@ -26,10 +27,11 @@ type StreamSQL struct {
 	writeLastTime    time.Time
 	query            stream.Query
 	processTimer     *time.Ticker
+	debug            bool
 }
 
 // NewStreamSQL streamer
-func NewStreamSQL(conn *sql.DB, blockSize int, duration time.Duration, query stream.Query) (_ eventstream.SimpleStreamer, err error) {
+func NewStreamSQL(conn *sql.DB, blockSize int, duration time.Duration, query stream.Query, debug bool) (_ eventstream.SimpleStreamer, err error) {
 	if blockSize < 1 {
 		blockSize = 1000
 	}
@@ -44,16 +46,17 @@ func NewStreamSQL(conn *sql.DB, blockSize int, duration time.Duration, query str
 		blockSize:        blockSize,
 		writeMaxDuration: duration,
 		query:            query,
+		debug:            debug,
 	}, nil
 }
 
 // NewStreamSQLByRaw query
-func NewStreamSQLByRaw(conn *sql.DB, blockSize int, duration time.Duration, query string, fields interface{}) (eventstream.SimpleStreamer, error) {
+func NewStreamSQLByRaw(conn *sql.DB, blockSize int, duration time.Duration, query string, fields interface{}, debug bool) (eventstream.SimpleStreamer, error) {
 	q, err := stream.NewQueryByRaw(query, fields)
 	if err != nil {
 		return nil, err
 	}
-	return NewStreamSQL(conn, blockSize, duration, *q)
+	return NewStreamSQL(conn, blockSize, duration, *q, debug)
 }
 
 // Put message to stream
@@ -64,7 +67,7 @@ func (s *StreamSQL) Put(msg eventstream.Message) error {
 
 // Close implementation
 func (s *StreamSQL) Close() error {
-	if nil != s.processTimer {
+	if s.processTimer != nil {
 		s.processTimer.Stop()
 		s.processTimer = nil
 	}
@@ -122,6 +125,9 @@ func (s *StreamSQL) writeBuffer(flush bool) (err error) {
 	for !stop {
 		select {
 		case msg := <-s.buffer:
+			if s.debug {
+				log.Printf("[clickhouse] %s\n", msg.JSON())
+			}
 			if _, err = stmt.Exec(s.query.ParamsBy(msg)...); nil != err {
 				stop = true
 			}
@@ -130,7 +136,7 @@ func (s *StreamSQL) writeBuffer(flush bool) (err error) {
 		}
 	}
 
-	if nil == err {
+	if err == nil {
 		stmt.Exec()
 		err = tx.Commit()
 	} else {

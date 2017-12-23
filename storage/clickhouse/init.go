@@ -25,7 +25,8 @@ func init() {
 
 // Clickhouse storage object
 type Clickhouse struct {
-	conn *sql.DB
+	debug bool
+	conn  *sql.DB
 }
 
 func connector(conf eventstream.ConfigItem, debug bool) (eventstream.Storager, error) {
@@ -47,7 +48,7 @@ func connector(conf eventstream.ConfigItem, debug bool) (eventstream.Storager, e
 		return nil, err
 	}
 
-	return &Clickhouse{conn: conn}, nil
+	return &Clickhouse{conn: conn, debug: debug}, nil
 }
 
 // Close vertica connection
@@ -57,7 +58,7 @@ func (c *Clickhouse) Close() error {
 
 // Stream clickhouse processor
 func (c *Clickhouse) Stream(conf eventstream.ConfigItem) (eventstream.Streamer, error) {
-	simple, err := clickhouse.New(c, c.conn, conf)
+	simple, err := clickhouse.New(c, c.conn, conf, c.debug)
 	if err != nil {
 		return nil, err
 	}

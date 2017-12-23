@@ -25,7 +25,8 @@ func init() {
 
 // Vertica storage object
 type Vertica struct {
-	conn *sql.DB
+	debug bool
+	conn  *sql.DB
 }
 
 func connector(conf eventstream.ConfigItem, debug bool) (eventstream.Storager, error) {
@@ -43,12 +44,12 @@ func connector(conf eventstream.ConfigItem, debug bool) (eventstream.Storager, e
 		return nil, err
 	}
 
-	return &Vertica{conn: conn}, nil
+	return &Vertica{conn: conn, debug: debug}, nil
 }
 
 // Stream vertica processor
 func (st *Vertica) Stream(conf eventstream.ConfigItem) (eventstream.Streamer, error) {
-	simple, err := vertica.New(st, st.conn, conf)
+	simple, err := vertica.New(st, st.conn, conf, st.debug)
 	if err != nil {
 		return nil, err
 	}

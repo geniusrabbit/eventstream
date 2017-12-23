@@ -59,7 +59,7 @@ func (item *metricItem) updateParamsByString(str string) {
 
 func (item *metricItem) getTags(replacer *strings.Replacer) (resp map[string]string) {
 	if replacer == nil || item.Tags == nil || len(item.Tags) < 1 {
-		return
+		return item.Tags
 	}
 
 	resp = map[string]string{}

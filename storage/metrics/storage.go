@@ -33,6 +33,7 @@ func init() {
 
 // Metrics processor
 type Metrics struct {
+	debug   bool
 	metrica notificationcenter.Logger
 }
 
@@ -54,12 +55,12 @@ func connector(conf eventstream.ConfigItem, debug bool) (_ eventstream.Storager,
 		return nil, err
 	}
 
-	return &Metrics{metrica: logger}, nil
+	return &Metrics{metrica: logger, debug: debug}, nil
 }
 
 // Stream metrics processor
 func (m *Metrics) Stream(conf eventstream.ConfigItem) (eventstream.Streamer, error) {
-	stream, err := newStream(m.metrica, conf)
+	stream, err := newStream(m.metrica, conf, m.debug)
 	if err != nil {
 		return nil, err
 	}

@@ -15,7 +15,7 @@ import (
 )
 
 // New vertica stream
-func New(store eventstream.Storager, conn *sql.DB, config eventstream.ConfigItem) (stream eventstream.SimpleStreamer, err error) {
+func New(store eventstream.Storager, conn *sql.DB, config eventstream.ConfigItem, debug bool) (stream eventstream.SimpleStreamer, err error) {
 	if rawItem := config.String("rawitem", ""); rawItem != "" {
 		stream, err = bsql.NewStreamSQLByRaw(
 			conn,
@@ -23,6 +23,7 @@ func New(store eventstream.Storager, conn *sql.DB, config eventstream.ConfigItem
 			time.Duration(config.Int("duration", 0)),
 			rawItem,
 			config.Item("fields", nil),
+			debug,
 		)
 	} else {
 		stream, err = newStreamVerticaByTarget(
@@ -31,13 +32,14 @@ func New(store eventstream.Storager, conn *sql.DB, config eventstream.ConfigItem
 			time.Duration(config.Int("duration", 0)),
 			config.String("target", ""),
 			config.Item("fields", nil),
+			debug,
 		)
 	}
 	return
 }
 
 // NewStreamVerticaByTarget params
-func newStreamVerticaByTarget(conn *sql.DB, blockSize int, duration time.Duration, target string, fields interface{}) (eventstream.SimpleStreamer, error) {
+func newStreamVerticaByTarget(conn *sql.DB, blockSize int, duration time.Duration, target string, fields interface{}, debug bool) (eventstream.SimpleStreamer, error) {
 	q, err := stream.NewQueryByPattern(
 		`COPY {{target}} ({{fields}}) FROM STDIN DELIMITER '\t' NULL 'null'`,
 		target, fields,
@@ -45,5 +47,5 @@ func newStreamVerticaByTarget(conn *sql.DB, blockSize int, duration time.Duratio
 	if nil != err {
 		return nil, err
 	}
-	return bsql.NewStreamSQL(conn, blockSize, duration, *q)
+	return bsql.NewStreamSQL(conn, blockSize, duration, *q, debug)
 }

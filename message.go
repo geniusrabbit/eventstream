@@ -6,6 +6,7 @@
 package eventstream
 
 import (
+	"encoding/json"
 	"errors"
 	"net"
 	"strconv"
@@ -39,6 +40,12 @@ func MessageDecode(item interface{}, converter converter.Converter) (msg Message
 
 	err = converter.Unmarshal(data, &msg)
 	return msg, err
+}
+
+// JSON data string
+func (m Message) JSON() string {
+	data, _ := json.Marshal(m)
+	return string(data)
 }
 
 // Item by key name

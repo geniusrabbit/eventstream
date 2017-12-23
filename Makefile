@@ -1,5 +1,5 @@
 
-PROJDIR ?= $(CURDIR)/../../../../../www
+PROJDIR ?= $(CURDIR)/../../../../
 
 buildapp:
 	CGO_ENABLED=0 go build -a -installsuffix cgo -gcflags '-B' -ldflags '-s -w' -o .build/eventstream cmd/eventstream/main.go
@@ -22,10 +22,10 @@ drun:
 	go run cmd/eventstream/main.go --config=eventstream.hcl --debug
 
 dcbuild:
-	docker build -t eventstream -f Develop.docker .
+	docker build -t eventstream -f Develop.dockerfile .
 
-dcrun:
+dcrun: dcbuild
 	docker run --rm -it -e DEBUG=true --name eventstream \
-		--link nats:nats --link grclickhouse:clickhouse \
+		--link nats --link grclickhouse:clickhouse \
 		-v $(PROJDIR)/:/project eventstream
 	docker network connect --link telegraf:metrics influxdb eventstream

@@ -1,4 +1,4 @@
-FROM golang:1.8.1
+FROM golang:1.8.5
 
 RUN mkdir -p /project
 

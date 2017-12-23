@@ -7,6 +7,7 @@ package metrics
 
 import (
 	"errors"
+	"log"
 
 	"github.com/demdxx/gocast"
 	"github.com/geniusrabbit/eventstream"
@@ -19,12 +20,13 @@ var (
 )
 
 type stream struct {
+	debug   bool
 	prefix  string
 	metrics []*metricItem
 	metrica notificationcenter.Logger
 }
 
-func newStream(metrica notificationcenter.Logger, conf eventstream.ConfigItem) (*stream, error) {
+func newStream(metrica notificationcenter.Logger, conf eventstream.ConfigItem, debug bool) (*stream, error) {
 	var metrics []*metricItem
 
 	switch mts := conf.Item("metrics", nil).(type) {
@@ -73,6 +75,7 @@ func newStream(metrica notificationcenter.Logger, conf eventstream.ConfigItem) (
 	}
 
 	return &stream{
+		debug:   debug,
 		prefix:  conf.String("prefix", ""),
 		metrics: metrics,
 		metrica: metrica,
@@ -81,7 +84,14 @@ func newStream(metrica notificationcenter.Logger, conf eventstream.ConfigItem) (
 
 // Put message to stream
 func (s *stream) Put(msg eventstream.Message) error {
-	return s.metrica.Send(s.prepareMetricsMessage(msg)...)
+	messages := s.prepareMetricsMessage(msg)
+	if s.debug {
+		for _, msg := range messages {
+			m := msg.(metrics.Message)
+			log.Printf("[metrics] %s> %s\n", s.prefix, m.Name)
+		}
+	}
+	return s.metrica.Send(messages...)
 }
 
 // Close implementation
@@ -100,21 +110,21 @@ func (s *stream) Run() error {
 
 func (s *stream) prepareMetricsMessage(msg eventstream.Message) (result []interface{}) {
 	for _, mt := range s.metrics {
-		if replacer := mt.replacer(msg); replacer == nil {
-			result = append(result, metrics.Message{
-				Name:  mt.Name,
-				Type:  mt.getType(),
-				Tags:  mt.Tags,
-				Value: msg.Item(mt.Value, nil),
-			})
-		} else {
-			result = append(result, metrics.Message{
-				Name:  replacer.Replace(mt.Name),
-				Type:  mt.getType(),
-				Tags:  mt.getTags(replacer),
-				Value: msg.Item(mt.Value, nil),
-			})
+		var (
+			name     = mt.Name
+			replacer = mt.replacer(msg)
+		)
+
+		if replacer != nil {
+			name = replacer.Replace(mt.Name)
 		}
+
+		result = append(result, metrics.Message{
+			Name:  name,
+			Type:  mt.getType(),
+			Tags:  mt.getTags(replacer),
+			Value: msg.Item(mt.Value, nil),
+		})
 	}
 	return
 }

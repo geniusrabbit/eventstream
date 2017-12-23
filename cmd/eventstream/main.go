@@ -40,6 +40,10 @@ func init() {
 	// Validate config
 	fatalError(context.Config.Validate())
 
+	if *flagDebug {
+		context.Config.Debug = *flagDebug
+	}
+
 	// Register stores connections
 	for name, conf := range context.Config.Stores {
 		fatalError(storage.Register(name, conf, *flagDebug))
