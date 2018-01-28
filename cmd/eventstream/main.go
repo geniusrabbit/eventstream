@@ -42,6 +42,7 @@ func init() {
 
 	if *flagDebug {
 		context.Config.Debug = *flagDebug
+		fmt.Println("Config:", context.Config.String())
 	}
 
 	// Register stores connections

@@ -27,5 +27,5 @@ dcbuild:
 
 dcrun: dcbuild
 	docker run --rm -it -e DEBUG=true --name eventstream \
-		--link nats:nats-streaming --link clickhouse \
+		--link nats:nats-streaming --link grclickhouse:clickhouse \
 		-v $(PROJDIR)/:/project eventstream

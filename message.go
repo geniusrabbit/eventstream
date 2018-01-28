@@ -103,8 +103,16 @@ func (m Message) ItemCast(key string, t FieldType, length int, format string) (v
 		}
 	case FieldTypeInt:
 		return gocast.ToInt64(v)
+	case FieldTypeInt32:
+		return gocast.ToInt32(v)
+	case FieldTypeInt8:
+		return int8(gocast.ToInt(v))
 	case FieldTypeUint:
 		return gocast.ToUint64(v)
+	case FieldTypeUint32:
+		return gocast.ToUint32(v)
+	case FieldTypeUint8:
+		return uint8(gocast.ToUint(v))
 	case FieldTypeFloat:
 		return gocast.ToFloat64(v)
 	case FieldTypeBoolean:
@@ -119,7 +127,7 @@ func (m Message) ItemCast(key string, t FieldType, length int, format string) (v
 		}
 	case FieldTypeDate:
 		var tm time.Time
-		if nil != v {
+		if v != nil {
 			switch v.(type) {
 			case int64, uint64, float64:
 				tm = time.Unix(gocast.ToInt64(v), 0)
@@ -134,7 +142,7 @@ func (m Message) ItemCast(key string, t FieldType, length int, format string) (v
 		v = tm
 	case FieldTypeUnixnano:
 		var tm time.Time
-		if nil != v {
+		if v != nil { 
 			tm = time.Unix(0, gocast.ToInt64(v))
 		}
 
@@ -143,7 +151,7 @@ func (m Message) ItemCast(key string, t FieldType, length int, format string) (v
 		}
 		v = tm
 	case FieldTypeArrayInt32:
-		if nil != v {
+		if v != nil {
 			var arr = []int32{}
 			gocast.ToSlice(arr, v, "")
 			v = arr
@@ -151,7 +159,7 @@ func (m Message) ItemCast(key string, t FieldType, length int, format string) (v
 			v = []int32{}
 		}
 	case FieldTypeArrayInt64:
-		if nil != v {
+		if v != nil {
 			var arr = []int64{}
 			gocast.ToSlice(arr, v, "")
 			v = arr

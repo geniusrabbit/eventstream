@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017
+// @project geniusrabbit::eventstream 2017 - 2018
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2018
 //
 
 // TODO: Store all messages if not sended yet
@@ -112,11 +112,11 @@ func (s *StreamSQL) writeBuffer(flush bool) (err error) {
 		stop = false
 	)
 
-	if tx, err = s.conn.Begin(); nil != err {
+	if tx, err = s.conn.Begin(); err != nil{
 		return
 	}
 
-	if stmt, err = tx.Prepare(s.query.Q); nil != err {
+	if stmt, err = tx.Prepare(s.query.Q); err != nil {
 		tx.Rollback()
 		return
 	}
@@ -128,10 +128,10 @@ func (s *StreamSQL) writeBuffer(flush bool) (err error) {
 			if s.debug {
 				log.Printf("[clickhouse] %s\n", msg.JSON())
 			}
-			if _, err = stmt.Exec(s.query.ParamsBy(msg)...); nil != err {
+			if _, err = stmt.Exec(s.query.ParamsBy(msg)...);  err != nil {
 				stop = true
 			}
-		default:
+		default: 
 			stop = true
 		}
 	}

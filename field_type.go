@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017
+// @project geniusrabbit::eventstream 2017 - 2018
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2018
 //
 
 package eventstream
@@ -10,7 +10,11 @@ var typeList = []string{
 	"fix", // String
 	"uuid",
 	"int",
+	"int32",
+	"int8",
 	"uint",
+	"uint32",
+	"uint8",
 	"float",
 	"bool",
 	"ip",
@@ -26,7 +30,11 @@ const (
 	FieldTypeFixed
 	FieldTypeUUID
 	FieldTypeInt
+	FieldTypeInt32
+	FieldTypeInt8
 	FieldTypeUint
+	FieldTypeUint32
+	FieldTypeUint8
 	FieldTypeFloat
 	FieldTypeBoolean
 	FieldTypeIP

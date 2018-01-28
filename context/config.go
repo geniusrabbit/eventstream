@@ -6,6 +6,7 @@
 package context
 
 import (
+	"encoding/json"
 	"errors"
 	"io/ioutil"
 	"os"
@@ -33,10 +34,15 @@ type config struct {
 	Streams map[string]eventstream.ConfigItem `yaml:"streams" json:"streams"`
 }
 
+func (c *config) String() string {
+	data, _ := json.MarshalIndent(c, "", "  ")
+	return string(data)
+}
+
 // Load config
 func (c *config) Load(filename string) error {
 	file, err := os.Open(filename)
-	if nil != err {
+	if  err != nil {
 		return err
 	}
 
