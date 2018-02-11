@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017
+// @project geniusrabbit::eventstream 2017 - 2018
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2018
 //
 
 package clickhouse
@@ -25,8 +25,9 @@ func init() {
 
 // Clickhouse storage object
 type Clickhouse struct {
-	debug bool
-	conn  *sql.DB
+	debug   bool
+	connect string
+	conn    *sql.DB
 }
 
 func connector(conf eventstream.ConfigItem, debug bool) (eventstream.Storager, error) {
@@ -48,7 +49,7 @@ func connector(conf eventstream.ConfigItem, debug bool) (eventstream.Storager, e
 		return nil, err
 	}
 
-	return &Clickhouse{conn: conn, debug: debug}, nil
+	return &Clickhouse{conn: conn, connect: connect, debug: debug}, nil
 }
 
 // Close vertica connection
@@ -57,8 +58,28 @@ func (c *Clickhouse) Close() error {
 }
 
 // Stream clickhouse processor
-func (c *Clickhouse) Stream(conf eventstream.ConfigItem) (eventstream.Streamer, error) {
-	simple, err := clickhouse.New(c, c.conn, conf, c.debug)
+func (c *Clickhouse) Stream(conf eventstream.ConfigItem) (_ eventstream.Streamer, err error) {
+	var (
+		simple eventstream.SimpleStreamer
+	)
+
+	// Check current connection
+	if c.conn != nil {
+		if err = c.conn.Ping(); err != nil {
+			err = nil
+			c.conn = nil
+		}
+	}
+
+	if c.conn == nil {
+		urlObj, _ := url.Parse(c.connect)
+		c.conn, err = clickHouseConnect(urlObj, c.debug)
+	}
+
+	if err == nil {
+		simple, err = clickhouse.New(c, c.conn, conf, c.debug)
+	}
+
 	if err != nil {
 		return nil, err
 	}
