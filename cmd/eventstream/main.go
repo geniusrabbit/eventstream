@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017
+// @project geniusrabbit::eventstream 2017 - 2018
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2018
 //
 
 package main
@@ -104,7 +104,7 @@ func close() {
 
 func fatalError(err error) {
 	if err != nil {
+		defer log.Fatal("[main] fatal:", err)
 		close()
-		log.Fatal(err)
 	}
 }

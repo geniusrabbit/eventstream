@@ -5,5 +5,5 @@ LABEL service.name=eventstream
 LABEL service.veight=1
 
 COPY .build/eventstream /
-COPY ./zoneinfo.zip /usr/local/go/lib/time/
+COPY ./deploy/zoneinfo.zip /usr/local/go/lib/time/
 CMD /eventstream --config=/config.hcl --debug

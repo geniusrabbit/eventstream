@@ -66,6 +66,7 @@ func (c *Clickhouse) Stream(conf eventstream.ConfigItem) (_ eventstream.Streamer
 	// Check current connection
 	if c.conn != nil {
 		if err = c.conn.Ping(); err != nil {
+			c.conn.Close()
 			err = nil
 			c.conn = nil
 		}

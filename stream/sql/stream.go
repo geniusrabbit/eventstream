@@ -9,7 +9,9 @@ package sql
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -99,6 +101,7 @@ func (s *StreamSQL) Run() error {
 func (s *StreamSQL) writeBuffer(flush bool) (err error) {
 	s.Lock()
 	defer s.Unlock()
+	defer s.recError()
 
 	if !flush {
 		if c := len(s.buffer); c < 1 || (s.blockSize > c && time.Now().Sub(s.writeLastTime) < s.writeMaxDuration) {
@@ -112,7 +115,7 @@ func (s *StreamSQL) writeBuffer(flush bool) (err error) {
 		stop = false
 	)
 
-	if tx, err = s.conn.Begin(); err != nil{
+	if tx, err = s.conn.Begin(); err != nil {
 		return
 	}
 
@@ -126,12 +129,12 @@ func (s *StreamSQL) writeBuffer(flush bool) (err error) {
 		select {
 		case msg := <-s.buffer:
 			if s.debug {
-				log.Printf("[clickhouse] %s\n", msg.JSON())
+				s.log(msg.JSON())
 			}
-			if _, err = stmt.Exec(s.query.ParamsBy(msg)...);  err != nil {
+			if _, err = stmt.Exec(s.query.ParamsBy(msg)...); err != nil {
 				stop = true
 			}
-		default: 
+		default:
 			stop = true
 		}
 	}
@@ -145,4 +148,27 @@ func (s *StreamSQL) writeBuffer(flush bool) (err error) {
 
 	s.writeLastTime = time.Now()
 	return
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/// Logs
+///////////////////////////////////////////////////////////////////////////////
+
+func (s *StreamSQL) recError() {
+	if rec := recover(); rec != nil {
+		s.logError(rec)
+		s.logError(string(debug.Stack()))
+	}
+}
+
+func (s *StreamSQL) log(args ...interface{}) {
+	if len(args) > 0 {
+		log.Println("[clickhouse] ", fmt.Sprintln(args...))
+	}
+}
+
+func (s *StreamSQL) logError(err interface{}) {
+	if err != nil {
+		log.Println("[clickhouse] ", err)
+	}
 }

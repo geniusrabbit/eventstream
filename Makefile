@@ -3,11 +3,11 @@ PROJDIR ?= $(CURDIR)/../../../../
 
 buildapp:
 	docker run -it --rm --env CGO_ENABLED=0 --env GOPATH="/project" \
-    -v="`pwd`/../../../..:/project" -w="/project/src/github.com/geniusrabbit/eventstream" golang:1.9.2 \
+    -v="`pwd`/../../../..:/project" -w="/project/src/github.com/geniusrabbit/eventstream" golang:1.9.4 \
     go build -a -installsuffix cgo -gcflags '-B' -ldflags '-s -w' -o ".build/eventstream" "cmd/eventstream/main.go"
 
 builddocker:
-	docker build -t geniusrabbit/eventstream .
+	docker build -t geniusrabbit/eventstream -f deploy/Dockerfile .
 
 build: buildapp builddocker
 
@@ -27,5 +27,5 @@ dcbuild:
 
 dcrun: dcbuild
 	docker run --rm -it -e DEBUG=true --name eventstream \
-		--link nats:nats-streaming --link grclickhouse:clickhouse \
+		--link nats:nats-streaming --link clickhouse \
 		-v $(PROJDIR)/:/project eventstream
