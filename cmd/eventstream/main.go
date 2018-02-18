@@ -35,10 +35,10 @@ func init() {
 	flag.Parse()
 
 	// Load config
-	fatalError(context.Config.Load(*flagConfigFile))
+	fatalError("config.load", context.Config.Load(*flagConfigFile))
 
 	// Validate config
-	fatalError(context.Config.Validate())
+	fatalError("config.validate", context.Config.Validate())
 
 	if *flagDebug {
 		context.Config.Debug = *flagDebug
@@ -47,12 +47,12 @@ func init() {
 
 	// Register stores connections
 	for name, conf := range context.Config.Stores {
-		fatalError(storage.Register(name, conf, *flagDebug))
+		fatalError("register store <"+name+">", storage.Register(name, conf, *flagDebug))
 	}
 
 	// Register sources subscribers
 	for name, conf := range context.Config.Sources {
-		fatalError(source.Register(name, conf, *flagDebug))
+		fatalError("register source <"+name+">", source.Register(name, conf, *flagDebug))
 	}
 }
 
@@ -64,18 +64,18 @@ func main() {
 		if strm, err := newStream(strmConf); err == nil {
 			sourceName := strmConf.String("source", "")
 			if err = source.Subscribe(sourceName, strm); nil != err {
-				fatalError(err)
+				fatalError("subscribe <"+sourceName+">", err)
 				break
 			}
 
 			go func() {
 				if err = strm.Run(); err != nil {
-					fatalError(err)
+					fatalError("run", err)
 					return
 				}
 			}()
 		} else {
-			fatalError(err)
+			fatalError("new stream", err)
 			return
 		}
 	} // end for
@@ -102,9 +102,9 @@ func close() {
 	storage.Close()
 }
 
-func fatalError(err error) {
+func fatalError(block string, err error) {
 	if err != nil {
-		defer log.Fatal("[main] fatal:", err)
 		close()
+		log.Fatal("[main] fatal:", block, err)
 	}
 }

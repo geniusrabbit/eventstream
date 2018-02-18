@@ -25,8 +25,9 @@ func init() {
 
 // Vertica storage object
 type Vertica struct {
-	debug bool
-	conn  *sql.DB
+	debug   bool
+	connect string
+	conn    *sql.DB
 }
 
 func connector(conf eventstream.ConfigItem, debug bool) (eventstream.Storager, error) {
@@ -40,20 +41,43 @@ func connector(conf eventstream.ConfigItem, debug bool) (eventstream.Storager, e
 		return nil, errors.ErrConnectionIsNotDefined
 	}
 
+	if err != nil {
+		return nil, err
+	}
+
 	if conn, err = verticaConnect(urlObj, debug); err != nil {
 		return nil, err
 	}
 
-	return &Vertica{conn: conn, debug: debug}, nil
+	return &Vertica{conn: conn, connect: connect, debug: debug}, nil
 }
 
 // Stream vertica processor
 func (st *Vertica) Stream(conf eventstream.ConfigItem) (eventstream.Streamer, error) {
-	simple, err := vertica.New(st, st.conn, conf, st.debug)
+	simple, err := vertica.New(st, conf, st.debug)
 	if err != nil {
 		return nil, err
 	}
 	return eventstream.NewStreamWrapper(simple, conf.String("where", ""))
+}
+
+// Connection to clickhouse DB
+func (st *Vertica) Connection() (_ *sql.DB, err error) {
+	// Check current connection
+	if st.conn != nil {
+		if err = st.conn.Ping(); err != nil {
+			st.conn.Close()
+			err = nil
+			st.conn = nil
+		}
+	}
+
+	if st.conn == nil {
+		urlObj, _ := url.Parse(st.connect)
+		st.conn, err = verticaConnect(urlObj, st.debug)
+	}
+
+	return st.conn, err
 }
 
 // Close vertica connection

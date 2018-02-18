@@ -59,10 +59,15 @@ func (c *Clickhouse) Close() error {
 
 // Stream clickhouse processor
 func (c *Clickhouse) Stream(conf eventstream.ConfigItem) (_ eventstream.Streamer, err error) {
-	var (
-		simple eventstream.SimpleStreamer
-	)
+	var simple eventstream.SimpleStreamer
+	if simple, err = clickhouse.New(c, conf, c.debug); err != nil {
+		return nil, err
+	}
+	return eventstream.NewStreamWrapper(simple, conf.String("where", ""))
+}
 
+// Connection to clickhouse DB
+func (c *Clickhouse) Connection() (_ *sql.DB, err error) {
 	// Check current connection
 	if c.conn != nil {
 		if err = c.conn.Ping(); err != nil {
@@ -77,14 +82,7 @@ func (c *Clickhouse) Stream(conf eventstream.ConfigItem) (_ eventstream.Streamer
 		c.conn, err = clickHouseConnect(urlObj, c.debug)
 	}
 
-	if err == nil {
-		simple, err = clickhouse.New(c, c.conn, conf, c.debug)
-	}
-
-	if err != nil {
-		return nil, err
-	}
-	return eventstream.NewStreamWrapper(simple, conf.String("where", ""))
+	return c.conn, err
 }
 
 ///////////////////////////////////////////////////////////////////////////////

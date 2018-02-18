@@ -19,10 +19,15 @@ import (
 	"github.com/geniusrabbit/eventstream/stream"
 )
 
+// Connector to DB
+type Connector interface {
+	Connection() (*sql.DB, error)
+}
+
 // StreamSQL stream
 type StreamSQL struct {
 	sync.Mutex
-	conn             *sql.DB
+	connector        Connector
 	buffer           chan eventstream.Message
 	blockSize        int
 	writeMaxDuration time.Duration
@@ -33,7 +38,7 @@ type StreamSQL struct {
 }
 
 // NewStreamSQL streamer
-func NewStreamSQL(conn *sql.DB, blockSize int, duration time.Duration, query stream.Query, debug bool) (_ eventstream.SimpleStreamer, err error) {
+func NewStreamSQL(connector Connector, blockSize int, duration time.Duration, query stream.Query, debug bool) (_ eventstream.SimpleStreamer, err error) {
 	if blockSize < 1 {
 		blockSize = 1000
 	}
@@ -43,7 +48,7 @@ func NewStreamSQL(conn *sql.DB, blockSize int, duration time.Duration, query str
 	}
 
 	return &StreamSQL{
-		conn:             conn,
+		connector:        connector,
 		buffer:           make(chan eventstream.Message, blockSize*2),
 		blockSize:        blockSize,
 		writeMaxDuration: duration,
@@ -53,12 +58,12 @@ func NewStreamSQL(conn *sql.DB, blockSize int, duration time.Duration, query str
 }
 
 // NewStreamSQLByRaw query
-func NewStreamSQLByRaw(conn *sql.DB, blockSize int, duration time.Duration, query string, fields interface{}, debug bool) (eventstream.SimpleStreamer, error) {
+func NewStreamSQLByRaw(connector Connector, blockSize int, duration time.Duration, query string, fields interface{}, debug bool) (eventstream.SimpleStreamer, error) {
 	q, err := stream.NewQueryByRaw(query, fields)
 	if err != nil {
 		return nil, err
 	}
-	return NewStreamSQL(conn, blockSize, duration, *q, debug)
+	return NewStreamSQL(connector, blockSize, duration, *q, debug)
 }
 
 // Put message to stream
@@ -101,6 +106,12 @@ func (s *StreamSQL) Run() error {
 func (s *StreamSQL) writeBuffer(flush bool) (err error) {
 	s.Lock()
 	defer s.Unlock()
+
+	var conn *sql.DB
+	if conn, err = s.connector.Connection(); err != nil {
+		return
+	}
+
 	defer s.recError()
 
 	if !flush {
@@ -115,7 +126,7 @@ func (s *StreamSQL) writeBuffer(flush bool) (err error) {
 		stop = false
 	)
 
-	if tx, err = s.conn.Begin(); err != nil {
+	if tx, err = conn.Begin(); err != nil {
 		return
 	}
 
