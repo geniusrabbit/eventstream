@@ -1,18 +1,16 @@
 //
-// @project geniusrabbit::eventstream 2017
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017
+// @project geniusrabbit::eventstream 2017, 2019
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019
 //
 
 package converter
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 
 	"gopkg.in/mgo.v2/bson"
 )
-
-var ErrIncorrectConverterInput = errors.New("Incorrect input type for data converter")
 
 // Converter interaface
 type Converter interface {
@@ -48,7 +46,7 @@ var (
 			case string:
 				return []byte(b), nil
 			}
-			return nil, ErrIncorrectConverterInput
+			return nil, fmt.Errorf("[raw] unsupported converter encode type %T", v)
 		},
 		decoder: func(data []byte, v interface{}) error {
 			switch pt := v.(type) {
@@ -56,8 +54,10 @@ var (
 				*pt = data
 			case *[]byte:
 				*pt = data
+			case []byte:
+				copy(pt, data)
 			}
-			return ErrIncorrectConverterInput
+			return fmt.Errorf("[raw] unsupported converter decode type %T", v)
 		},
 	}
 )

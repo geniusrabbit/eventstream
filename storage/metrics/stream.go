@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017
+// @project geniusrabbit::eventstream 2017, 2019
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019
 //
 
 package metrics
@@ -8,9 +8,10 @@ package metrics
 import (
 	"errors"
 	"log"
+	"strings"
 
-	"github.com/demdxx/gocast"
 	"github.com/geniusrabbit/eventstream"
+	"github.com/geniusrabbit/eventstream/storage"
 	"github.com/geniusrabbit/notificationcenter"
 	"github.com/geniusrabbit/notificationcenter/metrics"
 )
@@ -19,6 +20,12 @@ var (
 	errInvalidMetricsItemConfig = errors.New("Invalid metrics item config")
 )
 
+type config struct {
+	Metrics []*metricItem `json:"metrics"`
+	Prefix  string        `json:"prefix"`
+	Where   string        `json:"where"`
+}
+
 type stream struct {
 	debug   bool
 	prefix  string
@@ -26,60 +33,26 @@ type stream struct {
 	metrica notificationcenter.Logger
 }
 
-func newStream(metrica notificationcenter.Logger, conf eventstream.ConfigItem, debug bool) (*stream, error) {
-	var metrics []*metricItem
+func newStream(metrica notificationcenter.Logger, conf *storage.Config) (eventstream.Streamer, error) {
+	var preConfig config
 
-	switch mts := conf.Item("metrics", nil).(type) {
-	case []interface{}:
-		for _, mit := range mts {
-			switch mp := mit.(type) {
-			case map[string]interface{}:
-				if name, ok := mp["name"]; ok {
-					var (
-						tp, _   = mp["type"]
-						tags, _ = mp["tags"]
-						vl, _   = mp["value"]
-						mtags   map[string]string
-					)
-
-					if tags != nil {
-						switch ntags := tags.(type) {
-						case []interface{}:
-							if len(ntags) > 0 {
-								mtags, _ = gocast.ToStringMap(ntags[0], "", false)
-							}
-						case []map[string]interface{}:
-							if len(ntags) > 0 {
-								mtags, _ = gocast.ToStringMap(ntags[0], "", false)
-							}
-						default:
-							mtags, _ = gocast.ToStringMap(ntags, "", false)
-						}
-					}
-
-					item := &metricItem{
-						Name:  gocast.ToString(name),
-						Type:  gocast.ToString(tp),
-						Tags:  mtags,
-						Value: gocast.ToString(vl),
-					}
-					item.updateParams()
-					metrics = append(metrics, item)
-				}
-			default:
-				return nil, errInvalidMetricsItemConfig
-			}
-		}
-	default:
-		return nil, errInvalidMetricsItemConfig
+	if err := conf.Decode(&preConfig); err != nil {
+		return nil, err
 	}
 
-	return &stream{
-		debug:   debug,
-		prefix:  conf.String("prefix", ""),
-		metrics: metrics,
+	preConfig.Where = strings.TrimSpace(preConfig.Where)
+	stream := &stream{
+		debug:   conf.Debug,
+		prefix:  preConfig.Prefix,
+		metrics: preConfig.Metrics,
 		metrica: metrica,
-	}, nil
+	}
+
+	if preConfig.Where != "" {
+		return eventstream.NewStreamWrapper(stream, preConfig.Where)
+	}
+
+	return stream, nil
 }
 
 // Put message to stream
@@ -92,6 +65,11 @@ func (s *stream) Put(msg eventstream.Message) error {
 		}
 	}
 	return s.metrica.Send(messages...)
+}
+
+// Checl the message
+func (s *stream) Check(msg eventstream.Message) bool {
+	return true
 }
 
 // Close implementation

@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017 - 2018
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2018
+// @project geniusrabbit::eventstream 2017 - 2019
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2019
 //
 
 package main
@@ -20,9 +20,9 @@ import (
 	_ "github.com/geniusrabbit/eventstream/source/nats"
 	"github.com/geniusrabbit/eventstream/storage"
 	_ "github.com/geniusrabbit/eventstream/storage/clickhouse"
-	_ "github.com/geniusrabbit/eventstream/storage/hdfs"
 	_ "github.com/geniusrabbit/eventstream/storage/metrics"
 	_ "github.com/geniusrabbit/eventstream/storage/vertica"
+	"github.com/geniusrabbit/eventstream/stream"
 )
 
 var (
@@ -47,37 +47,53 @@ func init() {
 
 	// Register stores connections
 	for name, conf := range context.Config.Stores {
+		storageConf := &storage.Config{}
+		fatalError("storage config decode <"+name+">", conf.Decode(storageConf))
 		fatalError("register store <"+name+">", storage.Register(name, conf, *flagDebug))
 	}
 
 	// Register sources subscribers
 	for name, conf := range context.Config.Sources {
-		fatalError("register source <"+name+">", source.Register(name, conf, *flagDebug))
+		sourceConf := &source.Config{}
+		fatalError("source config decode <"+name+">", conf.Decode(sourceConf))
+		fatalError("register source <"+name+">", source.Register(name, sourceConf, *flagDebug))
 	}
 }
 
 func main() {
-	fmt.Println("> RUN APP")
+	fmt.Println("> Run eventstream service")
+
+	var err error
 
 	// Register streams
-	for _, strmConf := range context.Config.Streams {
-		if strm, err := newStream(strmConf); err == nil {
-			sourceName := strmConf.String("source", "")
-			if err = source.Subscribe(sourceName, strm); nil != err {
-				fatalError("subscribe <"+sourceName+">", err)
-				break
-			}
+	for name, strmConf := range context.Config.Streams {
+		var (
+			baseConf = &stream.Config{Name: name, Debug: context.Config.Debug}
+			strm     eventstream.Streamer
+		)
+		if err = strmConf.Decode(baseConf); err != nil {
+			fatalError("[stream] "+name+" decode error", err)
+			break
+		}
 
-			go func() {
-				if err = strm.Run(); err != nil {
-					fatalError("run", err)
-					return
-				}
-			}()
-		} else {
-			fatalError("new stream", err)
+		if err = baseConf.Validate(); err != nil {
+			fatalError("[stream] "+name+" decode error", err)
+			break
+		}
+
+		if strm, err = newStream(baseConf); err != nil {
+			fatalError(fmt.Sprintf("[stream] %s new init", name), err)
 			return
 		}
+
+		log.Printf("[stream] %s subscribe on <%s>", name, baseConf.Source)
+		if err = source.Subscribe(baseConf.Source, strm); nil != err {
+			fatalError(fmt.Sprintf("[stream] "+name+" subscribe <%s>", baseConf.Source), err)
+			break
+		}
+
+		log.Printf("[stream] %s run stream listener on <%s>", name, baseConf.Source)
+		go func(name string) { fatalError("[strean] "+name+" run", strm.Run()) }(name)
 	} // end for
 
 	// Run source listener's
@@ -85,12 +101,12 @@ func main() {
 	close()
 }
 
-func newStream(conf eventstream.ConfigItem) (eventstream.Streamer, error) {
-	store := storage.Storage(conf.String("store", ""))
+func newStream(conf *stream.Config) (eventstream.Streamer, error) {
+	store := storage.Storage(conf.Store)
 	if store != nil {
 		return store.Stream(conf)
 	}
-	return nil, fmt.Errorf("Undefined storage [%s]", conf.String("store", ""))
+	return nil, fmt.Errorf("[stream] %s undefined storage [%s]", name, conf.Store)
 }
 
 ///////////////////////////////////////////////////////////////////////////////

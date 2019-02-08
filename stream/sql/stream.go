@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017 - 2018
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2018
+// @project geniusrabbit::eventstream 2017 - 2019
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2019
 //
 
 // TODO: Store all messages if not sended yet
@@ -38,7 +38,7 @@ type StreamSQL struct {
 }
 
 // NewStreamSQL streamer
-func NewStreamSQL(connector Connector, blockSize int, duration time.Duration, query stream.Query, debug bool) (_ eventstream.SimpleStreamer, err error) {
+func NewStreamSQL(connector Connector, blockSize int, duration time.Duration, query stream.Query, debug bool) (_ eventstream.Streamer, err error) {
 	if blockSize < 1 {
 		blockSize = 1000
 	}
@@ -58,7 +58,7 @@ func NewStreamSQL(connector Connector, blockSize int, duration time.Duration, qu
 }
 
 // NewStreamSQLByRaw query
-func NewStreamSQLByRaw(connector Connector, blockSize int, duration time.Duration, query string, fields interface{}, debug bool) (eventstream.SimpleStreamer, error) {
+func NewStreamSQLByRaw(connector Connector, blockSize int, duration time.Duration, query string, fields interface{}, debug bool) (eventstream.Streamer, error) {
 	q, err := stream.NewQueryByRaw(query, fields)
 	if err != nil {
 		return nil, err
@@ -69,18 +69,6 @@ func NewStreamSQLByRaw(connector Connector, blockSize int, duration time.Duratio
 // Put message to stream
 func (s *StreamSQL) Put(msg eventstream.Message) error {
 	s.buffer <- msg
-	return nil
-}
-
-// Close implementation
-func (s *StreamSQL) Close() error {
-	if s.processTimer != nil {
-		s.processTimer.Stop()
-		s.processTimer = nil
-	}
-
-	s.writeBuffer(true)
-	close(s.buffer)
 	return nil
 }
 
@@ -100,6 +88,23 @@ func (s *StreamSQL) Run() error {
 		}
 	}
 	return nil
+}
+
+// Close implementation
+func (s *StreamSQL) Close() error {
+	if s.processTimer != nil {
+		s.processTimer.Stop()
+		s.processTimer = nil
+	}
+
+	s.writeBuffer(true)
+	close(s.buffer)
+	return nil
+}
+
+// Check message value
+func (s *StreamSQL) Check(msg eventstream.Message) bool {
+	return true
 }
 
 // writeBuffer all data

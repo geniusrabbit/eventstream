@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017
+// @project geniusrabbit::eventstream 2017, 2019
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019
 //
 
 package context
@@ -8,30 +8,45 @@ package context
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
-	"github.com/geniusrabbit/eventstream"
 	"github.com/hashicorp/hcl"
 
 	yaml "gopkg.in/yaml.v2"
 )
 
 var (
-	errInvalidConfig        = errors.New("Invalid config")
-	errInvalidConfigFile    = errors.New("Invalid config file format")
-	errInvalidStoreConnect  = errors.New("Invalid store config connect")
-	errInvalidSourceConnect = errors.New("Invalid source config connect")
-	errInvalidSourceStream  = errors.New("Invalid stream config connect")
+	errInvalidConfig        = errors.New("[config] invalid config")
+	errInvalidConfigFile    = errors.New("[config] invalid config file format")
+	errInvalidStoreConnect  = errors.New("[config] invalid store config connect")
+	errInvalidSourceConnect = errors.New("[config] invalid source config connect")
+	errInvalidSourceStream  = errors.New("[config] invalid stream config connect")
 )
 
+type configItem map[string]interface{}
+
+func (it configItem) Decode(v interface{}) (json.RawMessage, error) {
+	raw, err := json.Marshal(it)
+	if err != nil {
+		return nil, fmt.Errorf("[config] invalid item encoding: %s", err)
+	}
+	if v != nil {
+		err = json.Unmarshal(raw, v)
+	}
+	return raw, err
+}
+
 type config struct {
-	Debug   bool                              `yaml:"debug" json:"debug"`
-	Stores  map[string]eventstream.ConfigItem `yaml:"stores" json:"stores"`
-	Sources map[string]eventstream.ConfigItem `yaml:"sources" json:"sources"`
-	Streams map[string]eventstream.ConfigItem `yaml:"streams" json:"streams"`
+	mx      sync.RWMutex
+	Debug   bool                  `yaml:"debug" json:"debug"`
+	Stores  map[string]configItem `yaml:"stores" json:"stores"`
+	Sources map[string]configItem `yaml:"sources" json:"sources"`
+	Streams map[string]configItem `yaml:"streams" json:"streams"`
 }
 
 func (c *config) String() string {
@@ -39,26 +54,33 @@ func (c *config) String() string {
 	return string(data)
 }
 
-// Load config
+// Load eventstore config
 func (c *config) Load(filename string) error {
 	file, err := os.Open(filename)
-	if  err != nil {
+	if err != nil {
 		return err
 	}
 
 	data, err := ioutil.ReadAll(file)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	file.Close()
 
+	c.mx.Lock()
+	defer c.mx.Unlock()
+
 	switch strings.ToLower(filepath.Ext(filename)) {
 	case ".yml", ".yaml":
-		return yaml.Unmarshal(data, c)
+		err = yaml.Unmarshal(data, c)
 	case ".hcl":
-		return hcl.Unmarshal(data, c)
+		err = hcl.Unmarshal(data, c)
+	case ".json":
+		err = json.Unmarshal(data, c)
+	default:
+		err = errInvalidConfigFile
 	}
-	return errInvalidConfigFile
+	return err
 }
 
 // Validate config

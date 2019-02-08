@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017 - 2018
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2018
+// @project geniusrabbit::eventstream 2017 - 2019
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2019
 //
 
 package clickhouse
@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/geniusrabbit/eventstream"
-	"github.com/geniusrabbit/eventstream/errors"
 	"github.com/geniusrabbit/eventstream/storage"
 	"github.com/geniusrabbit/eventstream/stream/clickhouse"
 )
@@ -30,40 +29,30 @@ type Clickhouse struct {
 	conn    *sql.DB
 }
 
-func connector(conf eventstream.ConfigItem, debug bool) (eventstream.Storager, error) {
+func connector(conf *storage.Config) (eventstream.Storager, error) {
 	var (
-		connect     = conf.String("connect", "")
-		urlObj, err = url.Parse(connect)
+		urlObj, err = url.Parse(conf.Connect)
 		conn        *sql.DB
 	)
-
-	if connect == "" {
-		return nil, errors.ErrConnectionIsNotDefined
-	}
 
 	if err != nil {
 		return nil, err
 	}
 
-	if conn, err = clickHouseConnect(urlObj, debug); err != nil {
+	if conn, err = clickHouseConnect(urlObj, conf.Debug); err != nil {
 		return nil, err
 	}
 
-	return &Clickhouse{conn: conn, connect: connect, debug: debug}, nil
-}
-
-// Close vertica connection
-func (c *Clickhouse) Close() error {
-	return c.conn.Close()
+	return &Clickhouse{conn: conn, connect: conf.Connect, debug: conf.Debug}, nil
 }
 
 // Stream clickhouse processor
-func (c *Clickhouse) Stream(conf eventstream.ConfigItem) (_ eventstream.Streamer, err error) {
-	var simple eventstream.SimpleStreamer
-	if simple, err = clickhouse.New(c, conf, c.debug); err != nil {
+func (c *Clickhouse) Stream(conf interface{}) (stream eventstream.Streamer, err error) {
+	var confObj = conf.(*storage.Config)
+	if stream, err = clickhouse.New(c, confObj); err != nil {
 		return nil, err
 	}
-	return eventstream.NewStreamWrapper(simple, conf.String("where", ""))
+	return eventstream.NewStreamWrapper(stream, confObj.Where)
 }
 
 // Connection to clickhouse DB
@@ -83,6 +72,11 @@ func (c *Clickhouse) Connection() (_ *sql.DB, err error) {
 	}
 
 	return c.conn, err
+}
+
+// Close clickhouse connection
+func (c *Clickhouse) Close() error {
+	return c.conn.Close()
 }
 
 ///////////////////////////////////////////////////////////////////////////////

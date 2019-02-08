@@ -1,12 +1,11 @@
 //
-// @project geniusrabbit::eventstream 2017
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017
+// @project geniusrabbit::eventstream 2017, 2019
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019
 //
 
 package metrics
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -22,49 +21,15 @@ import (
 	"github.com/geniusrabbit/notificationcenter/statsd"
 )
 
-// Errors set
-var (
-	ErrUndefinedMetricsEngine = errors.New(`Undefined metrics engine or wrong "connect"`)
-)
-
-func init() {
-	storage.RegisterConnector(connector, "metrics")
-}
-
 // Metrics processor
 type Metrics struct {
 	debug   bool
 	metrica notificationcenter.Logger
 }
 
-func connector(conf eventstream.ConfigItem, debug bool) (_ eventstream.Storager, err error) {
-	var (
-		logger  notificationcenter.Logger
-		connect = conf.String("connect", "")
-	)
-	switch {
-	case strings.HasPrefix(connect, "nats://"):
-		logger, err = connectNATS(connect)
-	case strings.HasPrefix(connect, "statsd://"):
-		logger, err = connectStatsD(connect)
-	default:
-		return nil, ErrUndefinedMetricsEngine
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &Metrics{metrica: logger, debug: debug}, nil
-}
-
 // Stream metrics processor
-func (m *Metrics) Stream(conf eventstream.ConfigItem) (eventstream.Streamer, error) {
-	stream, err := newStream(m.metrica, conf, m.debug)
-	if err != nil {
-		return nil, err
-	}
-	return eventstream.NewStreamWrapper(stream, conf.String("where", ""))
+func (m *Metrics) Stream(conf interface{}) (eventstream.Streamer, error) {
+	return newStream(m.metrica, conf.(*storage.Config))
 }
 
 // Close vertica connection

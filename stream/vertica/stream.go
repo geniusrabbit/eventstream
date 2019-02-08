@@ -1,43 +1,17 @@
 //
-// @project geniusrabbit::eventstream 2017 - 2018
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2018
+// @project geniusrabbit::eventstream 2017 - 2019
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2019
 //
 
 package vertica
 
 import (
-	"time"
-
 	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/stream"
 	"github.com/geniusrabbit/eventstream/stream/sql"
 )
 
 // New vertica stream
-func New(connector sql.Connector, config eventstream.ConfigItem, debug bool) (st eventstream.SimpleStreamer, err error) {
-	if rawItem := config.String("rawitem", ""); rawItem != "" {
-		st, err = sql.NewStreamSQLByRaw(
-			connector,
-			int(config.Int("buffer", 0)),
-			time.Duration(config.Int("duration", 0)),
-			rawItem,
-			config.Item("fields", nil),
-			debug,
-		)
-	} else {
-		var (
-			q     *stream.Query
-			query = `COPY {{target}} ({{fields}}) FROM STDIN DELIMITER '\t' NULL 'null'`
-		)
-
-		if q, err = stream.NewQueryByPattern(query, config.String("target", ""), config.Item("fields", nil)); err == nil {
-			st, err = sql.NewStreamSQL(
-				connector,
-				int(config.Int("buffer", 0)),
-				time.Duration(config.Int("duration", 0)),
-				*q, debug,
-			)
-		}
-	}
-	return
+func New(connector sql.Connector, conf *stream.Config) (st eventstream.Streamer, err error) {
+	return sql.New(connector, conf, `COPY {{target}} ({{fields}}) FROM STDIN DELIMITER '\t' NULL 'null'`)
 }

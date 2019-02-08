@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017
+// @project geniusrabbit::eventstream 2017, 2019
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019
 //
 
 package stream
@@ -23,7 +23,7 @@ var (
 )
 
 var (
-	errInvalidQueryFields = errors.New(`Invalid fields build param`)
+	errInvalidQueryFields = errors.New(`[stream::query] invalid fields build param`)
 )
 
 // Value item
@@ -110,7 +110,6 @@ func NewQueryByPattern(pattern, target string, fl interface{}) (_ *Query, err er
 	)
 
 	if fl == nil {
-		fmt.Println("XXX", pattern, target, fl)
 		return nil, errInvalidQueryFields
 	}
 

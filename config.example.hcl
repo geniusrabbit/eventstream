@@ -51,20 +51,6 @@ sources {
 
 // Streams it's pipelines which have source and destination store
 streams {
-  // log_1 {
-  //   store = "hdfs_1"
-  //   source = "nats_1"
-  //   target = "/path/log{{date|2006-01-02_15}}{{iterator|_%iter%}}.log.gz"
-  //   fields = "service=srv:int,msg,timestamp:date|2006-01-02 15:04:05.999999-07:00"
-
-  //   options {
-  //     timefield = "timestamp"
-  //     separator = ",\n"
-  //     # 1Mb = 1024 * 1024 * 1
-  //     maxsize   = 100
-  //   }
-  // }
-
   log_2 {
     store   = "clickhouse_1"
     source  = "nats_1"
@@ -74,7 +60,7 @@ streams {
         VALUES({{srv}}, {{msg}}, {{err}}, toTimestamp({{timestamp:date}}))
     Q
 
-    when    = "service = ${"\"info\""}"
+    where   = "service = ${"\"info\""}"
   }
 
   log_3 {

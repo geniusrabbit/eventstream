@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017
+// @project geniusrabbit::eventstream 2017, 2019
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019
 //
 
 package metrics
@@ -18,10 +18,10 @@ var (
 )
 
 type metricItem struct {
-	Name   string
-	Type   string
-	Tags   map[string]string
-	Value  string
+	Name   string            `json:"name"`
+	Type   string            `json:"type"`
+	Tags   map[string]string `json:"tags"`
+	Value  string            `json:"value"`
 	params [][2]string
 }
 

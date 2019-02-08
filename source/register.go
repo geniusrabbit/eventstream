@@ -1,12 +1,13 @@
 //
-// @project geniusrabbit::eventstream 2017
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017
+// @project geniusrabbit::eventstream 2017, 2019
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019
 //
 
 package source
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/geniusrabbit/eventstream"
 )
@@ -14,6 +15,7 @@ import (
 type connector func(config eventstream.ConfigItem, debug bool) (eventstream.Sourcer, error)
 
 type registry struct {
+	mx         sync.RWMutex
 	close      chan bool
 	connectors map[string]connector
 	sources    map[string]eventstream.Sourcer
@@ -21,13 +23,17 @@ type registry struct {
 
 // RegisterConnector stream subscriber
 func (r *registry) RegisterConnector(c connector, driver string) {
+	r.mx.Lock()
+	defer r.mx.Unlock()
 	r.connectors[driver] = c
 }
 
 // Register stream subscriber
 func (r *registry) Register(name string, config eventstream.ConfigItem, debug bool) (err error) {
 	var source eventstream.Sourcer
-	if source, err = r.connection(config, debug); nil == err {
+	if source, err = r.connection(config, debug); err == nil {
+		r.mx.Lock()
+		defer r.mx.Unlock()
 		r.sources[name] = source
 	}
 	return
@@ -35,6 +41,8 @@ func (r *registry) Register(name string, config eventstream.ConfigItem, debug bo
 
 // Subscribe handler
 func (r *registry) Subscribe(name string, stream eventstream.Streamer) error {
+	r.mx.RLock()
+	defer r.mx.RUnlock()
 	if src, _ := r.sources[name]; src != nil {
 		return src.Subscribe(stream)
 	}
@@ -43,28 +51,35 @@ func (r *registry) Subscribe(name string, stream eventstream.Streamer) error {
 
 // Source object by name
 func (r *registry) Source(name string) eventstream.Sourcer {
+	r.mx.RLock()
+	defer r.mx.RUnlock()
 	src, _ := r.sources[name]
 	return src
 }
 
+// Listen sources
+func (r *registry) Listen() (err error) {
+	r.mx.RLock()
+	for _, source := range r.sources {
+		if err = source.Start(); err != nil {
+			r.Close()
+			r.mx.RUnlock()
+			return err
+		}
+	}
+	r.mx.RUnlock()
+	<-r.close
+	return
+}
+
 // Close listener
 func (r *registry) Close() (err error) {
+	r.mx.RLock()
+	defer r.mx.RUnlock()
 	for _, source := range r.sources {
 		err = source.Close()
 	}
 	r.close <- true
-	return
-}
-
-// Listen sources
-func (r *registry) Listen() (err error) {
-	for _, source := range r.sources {
-		if err = source.Start(); err != nil {
-			r.Close()
-			return err
-		}
-	}
-	<-r.close
 	return
 }
 
@@ -74,6 +89,9 @@ func (r *registry) Listen() (err error) {
 
 func (r *registry) connection(config eventstream.ConfigItem, debug bool) (eventstream.Sourcer, error) {
 	var driver = config.String("driver", "")
+
+	r.mx.RLock()
+	defer r.mx.RUnlock()
 	if conn, _ := r.connectors[driver]; conn != nil {
 		return conn(config, debug)
 	}
