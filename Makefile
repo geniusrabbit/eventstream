@@ -3,7 +3,7 @@ PROJDIR ?= $(CURDIR)/../../../../
 
 buildapp:
 	docker run -it --rm --env CGO_ENABLED=0 --env GOPATH="/project" \
-    -v="`pwd`/../../../..:/project" -w="/project/src/github.com/geniusrabbit/eventstream" golang:1.9.4 \
+    -v="`pwd`/../../../..:/project" -w="/project/src/github.com/geniusrabbit/eventstream" golang:latest \
     go build -a -installsuffix cgo -gcflags '-B' -ldflags '-s -w' -o ".build/eventstream" "cmd/eventstream/main.go"
 
 builddocker:
@@ -11,15 +11,10 @@ builddocker:
 
 build: buildapp builddocker
 
-run:
-	docker run --rm -it -e DEBUG=true \
-		-v .build/config.yml:/config.yml \
-		geniusrabbit/eventstream
-
 destroy:
 	-docker rmi -f geniusrabbit/eventstream
 
-drun:
+run:
 	go run -tags all cmd/eventstream/main.go --config=config.example.hcl --debug
 
 dcbuild:
