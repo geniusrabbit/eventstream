@@ -20,7 +20,7 @@ destroy:
 	-docker rmi -f geniusrabbit/eventstream
 
 drun:
-	go run cmd/eventstream/main.go --config=config.example.hcl --debug
+	go run -tags all cmd/eventstream/main.go --config=config.example.hcl --debug
 
 dcbuild:
 	docker build -t eventstream -f Develop.dockerfile .

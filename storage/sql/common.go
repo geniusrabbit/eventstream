@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/geniusrabbit/eventstream"
-	"github.com/geniusrabbit/eventstream/stream"
+	"github.com/geniusrabbit/eventstream/storage"
 )
 
 type config struct {
@@ -16,7 +16,7 @@ type config struct {
 }
 
 // New clickhouse stream
-func New(connector Connector, conf *stream.Config, pattern string) (st eventstream.Streamer, err error) {
+func New(connector Connector, conf *storage.StreamConfig, pattern string) (st eventstream.Streamer, err error) {
 	var config config
 
 	if err = conf.Decode(&config); err != nil {
@@ -33,8 +33,8 @@ func New(connector Connector, conf *stream.Config, pattern string) (st eventstre
 			conf.Debug,
 		)
 	} else {
-		var q *stream.Query
-		if q, err = stream.NewQueryByPattern(pattern, config.Target, config.Fields); err == nil {
+		var q *Query
+		if q, err = NewQueryByPattern(pattern, config.Target, config.Fields); err == nil {
 			st, err = NewStreamSQL(
 				connector,
 				int(config.BufferSize),

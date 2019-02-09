@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/geniusrabbit/eventstream"
-	"github.com/geniusrabbit/eventstream/stream"
 )
 
 // Connector to DB
@@ -32,13 +31,13 @@ type StreamSQL struct {
 	blockSize        int
 	writeMaxDuration time.Duration
 	writeLastTime    time.Time
-	query            stream.Query
+	query            Query
 	processTimer     *time.Ticker
 	debug            bool
 }
 
 // NewStreamSQL streamer
-func NewStreamSQL(connector Connector, blockSize int, duration time.Duration, query stream.Query, debug bool) (_ eventstream.Streamer, err error) {
+func NewStreamSQL(connector Connector, blockSize int, duration time.Duration, query Query, debug bool) (_ eventstream.Streamer, err error) {
 	if blockSize < 1 {
 		blockSize = 1000
 	}
@@ -59,7 +58,7 @@ func NewStreamSQL(connector Connector, blockSize int, duration time.Duration, qu
 
 // NewStreamSQLByRaw query
 func NewStreamSQLByRaw(connector Connector, blockSize int, duration time.Duration, query string, fields interface{}, debug bool) (eventstream.Streamer, error) {
-	q, err := stream.NewQueryByRaw(query, fields)
+	q, err := NewQueryByRaw(query, fields)
 	if err != nil {
 		return nil, err
 	}

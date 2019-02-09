@@ -22,7 +22,6 @@ import (
 	_ "github.com/geniusrabbit/eventstream/storage/clickhouse"
 	_ "github.com/geniusrabbit/eventstream/storage/metrics"
 	_ "github.com/geniusrabbit/eventstream/storage/vertica"
-	"github.com/geniusrabbit/eventstream/stream"
 )
 
 var (
@@ -47,16 +46,16 @@ func init() {
 
 	// Register stores connections
 	for name, conf := range context.Config.Stores {
-		storageConf := &storage.Config{}
+		storageConf := &storage.Config{Debug: context.Config.Debug}
 		fatalError("storage config decode <"+name+">", conf.Decode(storageConf))
-		fatalError("register store <"+name+">", storage.Register(name, conf, *flagDebug))
+		fatalError("register store <"+name+">", storage.Register(name, storageConf))
 	}
 
 	// Register sources subscribers
 	for name, conf := range context.Config.Sources {
-		sourceConf := &source.Config{}
+		sourceConf := &source.Config{Debug: context.Config.Debug}
 		fatalError("source config decode <"+name+">", conf.Decode(sourceConf))
-		fatalError("register source <"+name+">", source.Register(name, sourceConf, *flagDebug))
+		fatalError("register source <"+name+">", source.Register(name, sourceConf))
 	}
 }
 
@@ -68,7 +67,7 @@ func main() {
 	// Register streams
 	for name, strmConf := range context.Config.Streams {
 		var (
-			baseConf = &stream.Config{Name: name, Debug: context.Config.Debug}
+			baseConf = &storage.StreamConfig{Name: name, Debug: context.Config.Debug}
 			strm     eventstream.Streamer
 		)
 		if err = strmConf.Decode(baseConf); err != nil {
@@ -101,12 +100,12 @@ func main() {
 	close()
 }
 
-func newStream(conf *stream.Config) (eventstream.Streamer, error) {
+func newStream(conf *storage.StreamConfig) (eventstream.Streamer, error) {
 	store := storage.Storage(conf.Store)
 	if store != nil {
 		return store.Stream(conf)
 	}
-	return nil, fmt.Errorf("[stream] %s undefined storage [%s]", name, conf.Store)
+	return nil, fmt.Errorf("[stream] %s undefined storage [%s]", conf.Name, conf.Store)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -121,6 +120,6 @@ func close() {
 func fatalError(block string, err error) {
 	if err != nil {
 		close()
-		log.Fatal("[main] fatal:", block, err)
+		log.Fatal("[main] fatal: ", block+" ", err)
 	}
 }

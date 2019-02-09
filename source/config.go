@@ -4,6 +4,7 @@ import "encoding/json"
 
 // Config of the source connection
 type Config struct {
+	Debug   bool
 	Connect string
 	Driver  string
 	Format  string

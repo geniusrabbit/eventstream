@@ -30,15 +30,12 @@ var (
 
 type configItem map[string]interface{}
 
-func (it configItem) Decode(v interface{}) (json.RawMessage, error) {
+func (it configItem) Decode(v interface{}) error {
 	raw, err := json.Marshal(it)
 	if err != nil {
-		return nil, fmt.Errorf("[config] invalid item encoding: %s", err)
+		return fmt.Errorf("[config] invalid item encoding: %s", err)
 	}
-	if v != nil {
-		err = json.Unmarshal(raw, v)
-	}
-	return raw, err
+	return json.Unmarshal(raw, v)
 }
 
 type config struct {

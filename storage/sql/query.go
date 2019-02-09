@@ -3,7 +3,7 @@
 // @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019
 //
 
-package stream
+package sql
 
 import (
 	"bytes"

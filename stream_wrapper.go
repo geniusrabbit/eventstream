@@ -26,9 +26,13 @@ func NewStreamWrapper(stream Streamer, where string) (_ Streamer, err error) {
 	var whereObj *govaluate.EvaluableExpression
 
 	if len(strings.TrimSpace(where)) > 0 {
-		if whereObj, err = govaluate.NewEvaluableExpression(where); nil != err {
+		if whereObj, err = govaluate.NewEvaluableExpression(where); err != nil {
 			return
 		}
+	}
+
+	if whereObj == nil {
+		return stream, nil
 	}
 
 	return &StreamWrapper{

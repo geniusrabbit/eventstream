@@ -1,3 +1,4 @@
+// +build metrics allsource all
 //
 // @project geniusrabbit::eventstream 2019
 // @author Dmitry Ponomarev <demdxx@gmail.com> 2019

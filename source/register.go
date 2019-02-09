@@ -12,7 +12,7 @@ import (
 	"github.com/geniusrabbit/eventstream"
 )
 
-type connector func(config eventstream.ConfigItem, debug bool) (eventstream.Sourcer, error)
+type connector func(config *Config) (eventstream.Sourcer, error)
 
 type registry struct {
 	mx         sync.RWMutex
@@ -21,7 +21,7 @@ type registry struct {
 	sources    map[string]eventstream.Sourcer
 }
 
-// RegisterConnector stream subscriber
+// RegisterConnector stream driver
 func (r *registry) RegisterConnector(c connector, driver string) {
 	r.mx.Lock()
 	defer r.mx.Unlock()
@@ -29,9 +29,9 @@ func (r *registry) RegisterConnector(c connector, driver string) {
 }
 
 // Register stream subscriber
-func (r *registry) Register(name string, config eventstream.ConfigItem, debug bool) (err error) {
+func (r *registry) Register(name string, config *Config) (err error) {
 	var source eventstream.Sourcer
-	if source, err = r.connection(config, debug); err == nil {
+	if source, err = r.connection(config); err == nil {
 		r.mx.Lock()
 		defer r.mx.Unlock()
 		r.sources[name] = source
@@ -87,15 +87,13 @@ func (r *registry) Close() (err error) {
 /// Internal methods
 ///////////////////////////////////////////////////////////////////////////////
 
-func (r *registry) connection(config eventstream.ConfigItem, debug bool) (eventstream.Sourcer, error) {
-	var driver = config.String("driver", "")
-
+func (r *registry) connection(config *Config) (eventstream.Sourcer, error) {
 	r.mx.RLock()
 	defer r.mx.RUnlock()
-	if conn, _ := r.connectors[driver]; conn != nil {
-		return conn(config, debug)
+	if conn, _ := r.connectors[config.Driver]; conn != nil {
+		return conn(config)
 	}
-	return nil, fmt.Errorf("Undefined source driver: [%s]", driver)
+	return nil, fmt.Errorf("[source] undefined source driver: [%s]", config.Driver)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -114,8 +112,8 @@ func RegisterConnector(c connector, driver string) {
 }
 
 // Register connection
-func Register(name string, config eventstream.ConfigItem, debug bool) error {
-	return _registry.Register(name, config, debug)
+func Register(name string, config *Config) error {
+	return _registry.Register(name, config)
 }
 
 // Subscribe handler

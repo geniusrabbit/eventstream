@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017
+// @project geniusrabbit::eventstream 2017, 2019
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019
 //
 
 package kafka
@@ -15,18 +15,14 @@ import (
 	"github.com/geniusrabbit/notificationcenter/kafka"
 )
 
-func init() {
-	source.RegisterConnector(connector, "kafka")
-}
-
 type sourceSubscriber struct {
 	format     converter.Converter
 	subscriber *kafka.Subscriber
 }
 
-func connector(config eventstream.ConfigItem, debug bool) (eventstream.Sourcer, error) {
+func connector(config *source.Config) (eventstream.Sourcer, error) {
 	var (
-		url, err   = url.Parse(config.String("connect", ""))
+		url, err   = url.Parse(config.Connect)
 		subscriber *kafka.Subscriber
 	)
 
@@ -44,9 +40,13 @@ func connector(config eventstream.ConfigItem, debug bool) (eventstream.Sourcer, 
 		return nil, err
 	}
 
+	if config.Format == "" {
+		config.Format = "raw"
+	}
+
 	return &sourceSubscriber{
 		subscriber: subscriber,
-		format:     converter.ByName(config.String("format", "raw")),
+		format:     converter.ByName(config.Format),
 	}, nil
 }
 

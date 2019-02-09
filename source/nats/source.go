@@ -10,16 +10,13 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/nats-io/nats"
+
 	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/converter"
 	"github.com/geniusrabbit/eventstream/source"
 	ncnats "github.com/geniusrabbit/notificationcenter/nats"
-	"github.com/nats-io/nats"
 )
-
-func init() {
-	source.RegisterConnector(connector, "nats")
-}
 
 type sourceSubscriber struct {
 	debug      bool
@@ -27,9 +24,9 @@ type sourceSubscriber struct {
 	subscriber *ncnats.Subscriber
 }
 
-func connector(config eventstream.ConfigItem, debug bool) (eventstream.Sourcer, error) {
+func connector(config *source.Config) (eventstream.Sourcer, error) {
 	var (
-		url, err   = url.Parse(config.String("connect", ""))
+		url, err   = url.Parse(config.Connect)
 		subscriber *ncnats.Subscriber
 	)
 
@@ -37,9 +34,13 @@ func connector(config eventstream.ConfigItem, debug bool) (eventstream.Sourcer, 
 		return nil, err
 	}
 
+	if config.Format == "" {
+		config.Format = "raw"
+	}
+
 	subObject := &sourceSubscriber{
-		debug:  debug,
-		format: converter.ByName(config.String("format", "raw")),
+		debug:  config.Debug,
+		format: converter.ByName(config.Format),
 	}
 
 	subscriber, err = ncnats.NewSubscriber(
