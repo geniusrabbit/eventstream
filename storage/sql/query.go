@@ -1,13 +1,14 @@
 //
-// @project geniusrabbit::eventstream 2017
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017
+// @project geniusrabbit::eventstream 2017, 2019
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019
 //
 
-package stream
+package sql
 
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -22,7 +23,7 @@ var (
 )
 
 var (
-	errInvalidQueryFields = errors.New(`Invalid fields build param`)
+	errInvalidQueryFields = errors.New(`[stream::query] invalid fields build param`)
 )
 
 // Value item
@@ -108,7 +109,7 @@ func NewQueryByPattern(pattern, target string, fl interface{}) (_ *Query, err er
 		values          []Value
 	)
 
-	if nil == fl {
+	if fl == nil {
 		return nil, errInvalidQueryFields
 	}
 
@@ -185,10 +186,12 @@ func PrepareFields(fls interface{}) (values []Value, fields, inserts []string, e
 	case string:
 		values, fields, inserts = PrepareFieldsByString(fs)
 	default:
+		fmt.Println("YYY", fls)
 		err = errInvalidQueryFields
 	}
 
 	if len(inserts) < 1 || len(fields) > len(values) {
+		fmt.Println("ZZZ", fls)
 		err = errInvalidQueryFields
 	}
 	return

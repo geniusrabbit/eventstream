@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017
+// @project geniusrabbit::eventstream 2017 - 2019
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2019
 //
 
 package main
@@ -13,27 +13,16 @@ import (
 	_ "github.com/kshvakov/clickhouse"
 	_ "github.com/lib/pq"
 
+	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/context"
-	"github.com/geniusrabbit/eventstream/converter"
 	"github.com/geniusrabbit/eventstream/source"
+	_ "github.com/geniusrabbit/eventstream/source/kafka"
+	_ "github.com/geniusrabbit/eventstream/source/nats"
 	"github.com/geniusrabbit/eventstream/storage"
 	_ "github.com/geniusrabbit/eventstream/storage/clickhouse"
-	_ "github.com/geniusrabbit/eventstream/storage/hdfs"
+	_ "github.com/geniusrabbit/eventstream/storage/metrics"
 	_ "github.com/geniusrabbit/eventstream/storage/vertica"
-	"github.com/geniusrabbit/eventstream/stream"
-	"github.com/geniusrabbit/eventstream/stream/clickhouse"
-	"github.com/geniusrabbit/eventstream/stream/hdfs"
-	"github.com/geniusrabbit/eventstream/stream/vertica"
-	"github.com/geniusrabbit/notificationcenter"
 )
-
-var fabric = map[string]stream.NewConstructor{
-	"clickhouse": clickhouse.New,
-	"ch":         clickhouse.New,
-	"vertica":    vertica.New,
-	"vt":         vertica.New,
-	"hdfs":       hdfs.New,
-}
 
 var (
 	flagConfigFile = flag.String("config", "config.hcl", "Configuration file path")
@@ -45,93 +34,94 @@ func init() {
 	flag.Parse()
 
 	// Load config
-	fatalError(context.Config.Load(*flagConfigFile))
+	fatalError("config.load", context.Config.Load(*flagConfigFile))
 
 	// Validate config
-	fatalError(context.Config.Validate())
+	fatalError("config.validate", context.Config.Validate())
 
-	// Register stures connections
-	for name, st := range context.Config.Stores {
-		fatalError(storage.Register(name, st.Connect, *flagDebug))
+	if *flagDebug {
+		context.Config.Debug = *flagDebug
+		fmt.Println("Config:", context.Config.String())
+	}
+
+	// Register stores connections
+	for name, conf := range context.Config.Stores {
+		log.Printf("[storage] %s register", name)
+		storageConf := &storage.Config{Debug: context.Config.Debug}
+		fatalError("storage config decode <"+name+">", conf.Decode(storageConf))
+		fatalError("register store <"+name+">", storage.Register(name, storageConf))
 	}
 
 	// Register sources subscribers
-	for name, sr := range context.Config.Sources {
-		fatalError(source.Register(name, sr.Connect))
+	for name, conf := range context.Config.Sources {
+		log.Printf("[source] %s register", name)
+		sourceConf := &source.Config{Debug: context.Config.Debug}
+		fatalError("source config decode <"+name+">", conf.Decode(sourceConf))
+		fatalError("register source <"+name+">", source.Register(name, sourceConf))
 	}
 }
 
 func main() {
-	fmt.Println("> RUN APP")
+	fmt.Println("> Run eventstream service")
+
+	var err error
 
 	// Register streams
-	for _, st := range context.Config.Streams {
-		if s, err := newStream(st); nil == err {
-			if err = source.Subscribe(st.Source, s); nil != err {
-				notificationcenter.Close()
-				fatalError(err)
-				break
-			}
-
-			go s.Process()
-		} else {
-			fatalError(err)
+	for name, strmConf := range context.Config.Streams {
+		var (
+			baseConf = &storage.StreamConfig{Name: name, Debug: context.Config.Debug}
+			strm     eventstream.Streamer
+		)
+		if err = strmConf.Decode(baseConf); err != nil {
+			fatalError("[stream] "+name+" decode error", err)
+			break
 		}
+
+		if err = baseConf.Validate(); err != nil {
+			fatalError("[stream] "+name+" decode error", err)
+			break
+		}
+
+		if strm, err = newStream(baseConf); err != nil {
+			fatalError(fmt.Sprintf("[stream] %s new init", name), err)
+			return
+		}
+
+		log.Printf("[stream] %s subscribe on <%s>", name, baseConf.Source)
+		if err = source.Subscribe(baseConf.Source, strm); nil != err {
+			fatalError(fmt.Sprintf("[stream] "+name+" subscribe <%s>", baseConf.Source), err)
+			break
+		}
+
+		log.Printf("[stream] %s run stream listener on <%s>", name, baseConf.Source)
+		go func(name string) { fatalError("[stream] "+name+" run", strm.Run()) }(name)
 	} // end for
 
-	// Run notification listener
-	notificationcenter.Listen()
+	// Run source listener's
+	source.Listen()
+	close()
 }
 
-func newStream(st context.StreamConfig) (s stream.ExtStreamer, err error) {
-	var baseStream stream.Streamer
-	if baseStream, err = newStreamBase(st); nil != err {
-		return
+func newStream(conf *storage.StreamConfig) (eventstream.Streamer, error) {
+	store := storage.Storage(conf.Store)
+	if store != nil {
+		return store.Stream(conf)
 	}
-
-	source := context.Config.Sources[st.Source]
-	s = stream.NewWrapper(baseStream, converter.ByName(source.Format))
-	return
-}
-
-func newStreamBase(st context.StreamConfig) (stream.Streamer, error) {
-	var (
-		opt   = map[string]interface{}{}
-		store = context.Config.Stores[st.Store]
-	)
-
-	if nil != st.Options {
-		for k, v := range st.Options {
-			opt[k] = v
-		}
-	}
-
-	if nil != store.Options {
-		for k, v := range store.Options {
-			opt[k] = v
-		}
-	}
-
-	if fb, _ := fabric[store.ConnectScheme()]; nil != fb {
-		return fb(stream.Options{
-			Connection: st.Store,
-			RawItem:    st.RawItem,
-			Target:     st.Target,
-			Fields:     st.Fields,
-			When:       st.When,
-			Options:    opt,
-		})
-	}
-
-	return nil, fmt.Errorf("Undefined stream scheme: %s", store.ConnectScheme())
+	return nil, fmt.Errorf("[stream] %s undefined storage [%s]", conf.Name, conf.Store)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Helpers
 ///////////////////////////////////////////////////////////////////////////////
 
-func fatalError(err error) {
-	if nil != err {
-		log.Fatal(err)
+func close() {
+	source.Close()
+	storage.Close()
+}
+
+func fatalError(block string, err error) {
+	if err != nil {
+		close()
+		log.Fatal("[main] fatal: ", block+" ", err)
 	}
 }

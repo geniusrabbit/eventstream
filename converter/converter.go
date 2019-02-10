@@ -1,12 +1,13 @@
 //
-// @project geniusrabbit::eventstream 2017
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017
+// @project geniusrabbit::eventstream 2017, 2019
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019
 //
 
 package converter
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"gopkg.in/mgo.v2/bson"
 )
@@ -37,6 +38,28 @@ func (f Fnk) Unmarshal(data []byte, v interface{}) error {
 var (
 	JSON Converter = Fnk{encoder: json.Marshal, decoder: json.Unmarshal}
 	BSON Converter = Fnk{encoder: bson.Marshal, decoder: bson.Unmarshal}
+	RAW  Converter = Fnk{
+		encoder: func(v interface{}) ([]byte, error) {
+			switch b := v.(type) {
+			case []byte:
+				return b, nil
+			case string:
+				return []byte(b), nil
+			}
+			return nil, fmt.Errorf("[raw] unsupported converter encode type %T", v)
+		},
+		decoder: func(data []byte, v interface{}) error {
+			switch pt := v.(type) {
+			case *interface{}:
+				*pt = data
+			case *[]byte:
+				*pt = data
+			case []byte:
+				copy(pt, data)
+			}
+			return fmt.Errorf("[raw] unsupported converter decode type %T", v)
+		},
+	}
 )
 
 // ByName decoder object
@@ -44,6 +67,8 @@ func ByName(name string) Converter {
 	switch name {
 	case "bson":
 		return BSON
+	case "json":
+		return JSON
 	}
-	return JSON
+	return RAW
 }

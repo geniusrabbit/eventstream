@@ -1,31 +1,26 @@
 
-PROJDIR ?= $(CURDIR)/../../../../../www
+PROJDIR ?= $(CURDIR)/../../../../
 
 buildapp:
-	CGO_ENABLED=0 go build -a -installsuffix cgo -o .build/eventstream cmd/eventstream/main.go
+	docker run -it --rm --env CGO_ENABLED=0 --env GOPATH="/project" \
+    -v="`pwd`/../../../..:/project" -w="/project/src/github.com/geniusrabbit/eventstream" golang:latest \
+    go build -tags all -a -installsuffix cgo -gcflags '-B' -ldflags '-s -w' -o ".build/eventstream" "cmd/eventstream/main.go"
 
 builddocker:
-	docker build -t geniusrabbit/eventstream .
+	docker build -t geniusrabbit/eventstream -f deploy/docker/Dockerfile .
 
 build: buildapp builddocker
-
-run:
-	docker run --rm -it -e DEBUG=true \
-		-v .build/config.yml:/config.yml \
-		geniusrabbit/eventstream
 
 destroy:
 	-docker rmi -f geniusrabbit/eventstream
 
-drun:
-	go run cmd/eventstream/main.go --config=config.example.hcl --debug
+run:
+	go run -tags all cmd/eventstream/main.go --config=config.example.hcl --debug
 
 dcbuild:
-	docker build -t eventstream -f Develop.docker .
+	docker build -t eventstream -f Develop.dockerfile .
 
-dcrun:
-	docker run --rm -it -e DEBUG=true \
-		--link nats:nats --link hdfs:hdfs \
-		--link grclickhouse:clickhouse \
+dcrun: dcbuild
+	docker run --rm -it -e DEBUG=true --name eventstream \
+		--link nats:nats-streaming --link clickhouse \
 		-v $(PROJDIR)/:/project eventstream
-

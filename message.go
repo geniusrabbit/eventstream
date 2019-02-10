@@ -1,38 +1,20 @@
 //
-// @project geniusrabbit::eventstream 2017
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017
+// @project geniusrabbit::eventstream 2017, 2019
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019
 //
 
 package eventstream
 
 import (
-	"bytes"
+	"encoding/json"
 	"errors"
-	"fmt"
-	"math/big"
 	"net"
+	"strconv"
 	"time"
-	"unicode"
 
 	"github.com/demdxx/gocast"
 	"github.com/geniusrabbit/eventstream/converter"
 	"github.com/twinj/uuid"
-)
-
-var (
-	timeFormats = []string{
-		"2006-01-02",
-		"01-02-2006",
-		time.RFC1123Z,
-		time.RFC3339Nano,
-		time.UnixDate,
-		time.RubyDate,
-		time.RFC1123,
-		time.RFC3339,
-		time.RFC822,
-		time.RFC850,
-		time.RFC822Z,
-	}
 )
 
 // Errors set
@@ -60,12 +42,27 @@ func MessageDecode(item interface{}, converter converter.Converter) (msg Message
 	return msg, err
 }
 
+// JSON data string
+func (m Message) JSON() string {
+	data, _ := json.Marshal(m)
+	return string(data)
+}
+
 // Item by key name
 func (m Message) Item(key string, def interface{}) interface{} {
 	if v, ok := m[key]; ok && nil != v {
 		return v
 	}
 	return def
+}
+
+// String item value
+func (m Message) String(key, def string) string {
+	switch v := m.Item(key, def).(type) {
+	case float64:
+		return strconv.FormatFloat(v, 'G', 6, 64)
+	}
+	return gocast.ToString(m.Item(key, def))
 }
 
 // ItemCast value
@@ -106,8 +103,16 @@ func (m Message) ItemCast(key string, t FieldType, length int, format string) (v
 		}
 	case FieldTypeInt:
 		return gocast.ToInt64(v)
+	case FieldTypeInt32:
+		return gocast.ToInt32(v)
+	case FieldTypeInt8:
+		return int8(gocast.ToInt(v))
 	case FieldTypeUint:
 		return gocast.ToUint64(v)
+	case FieldTypeUint32:
+		return gocast.ToUint32(v)
+	case FieldTypeUint8:
+		return uint8(gocast.ToUint(v))
 	case FieldTypeFloat:
 		return gocast.ToFloat64(v)
 	case FieldTypeBoolean:
@@ -122,7 +127,7 @@ func (m Message) ItemCast(key string, t FieldType, length int, format string) (v
 		}
 	case FieldTypeDate:
 		var tm time.Time
-		if nil != v {
+		if v != nil {
 			switch v.(type) {
 			case int64, uint64, float64:
 				tm = time.Unix(gocast.ToInt64(v), 0)
@@ -137,7 +142,7 @@ func (m Message) ItemCast(key string, t FieldType, length int, format string) (v
 		v = tm
 	case FieldTypeUnixnano:
 		var tm time.Time
-		if nil != v {
+		if v != nil {
 			tm = time.Unix(0, gocast.ToInt64(v))
 		}
 
@@ -146,7 +151,7 @@ func (m Message) ItemCast(key string, t FieldType, length int, format string) (v
 		}
 		v = tm
 	case FieldTypeArrayInt32:
-		if nil != v {
+		if v != nil {
 			var arr = []int32{}
 			gocast.ToSlice(arr, v, "")
 			v = arr
@@ -154,7 +159,7 @@ func (m Message) ItemCast(key string, t FieldType, length int, format string) (v
 			v = []int32{}
 		}
 	case FieldTypeArrayInt64:
-		if nil != v {
+		if v != nil {
 			var arr = []int64{}
 			gocast.ToSlice(arr, v, "")
 			v = arr
@@ -168,131 +173,4 @@ func (m Message) ItemCast(key string, t FieldType, length int, format string) (v
 // Map value
 func (m Message) Map() map[string]interface{} {
 	return map[string]interface{}(m)
-}
-
-///////////////////////////////////////////////////////////////////////////////
-/// Field type
-///////////////////////////////////////////////////////////////////////////////
-
-var typeList = []string{
-	"string",
-	"fix", // String
-	"uuid",
-	"int",
-	"uint",
-	"float",
-	"bool",
-	"ip",
-	"date",
-	"unixnano",
-	"[]int32",
-	"[]int64",
-}
-
-// Types enum
-const (
-	FieldTypeString FieldType = iota
-	FieldTypeFixed
-	FieldTypeUUID
-	FieldTypeInt
-	FieldTypeUint
-	FieldTypeFloat
-	FieldTypeBoolean
-	FieldTypeIP
-	FieldTypeDate
-	FieldTypeUnixnano
-	FieldTypeArrayInt32
-	FieldTypeArrayInt64
-)
-
-// FieldType data
-type FieldType int
-
-// String implementaion of fmt.Stringer
-func (t FieldType) String() string {
-	if t > 0 && int(t) < len(typeList) {
-		return typeList[t]
-	}
-	return typeList[0]
-}
-
-// TypeByString name
-func TypeByString(t string) FieldType {
-	for i, s := range typeList {
-		if s == t {
-			return FieldType(i)
-		}
-	}
-	return FieldTypeString
-}
-
-///////////////////////////////////////////////////////////////////////////////
-/// Helpers
-///////////////////////////////////////////////////////////////////////////////
-
-// ParseTime from string
-func parseTime(tm string) (t time.Time, err error) {
-	for _, f := range timeFormats {
-		if t, err = time.Parse(f, tm); nil == err {
-			break
-		}
-	}
-	return
-}
-
-func isInt(s string) bool {
-	for _, c := range s {
-		if !unicode.IsDigit(c) {
-			return false
-		}
-	}
-	return true
-}
-
-func ip2EscapeString(ip net.IP) string {
-	var (
-		data    = make([]byte, 16)
-		ipBytes = ip2Int(ip).Bytes()
-	)
-
-	for i := range ipBytes {
-		data[15-i] = ipBytes[len(ipBytes)-i-1]
-	}
-
-	return escapeBytes(data, 0)
-}
-
-func escapeBytes(data []byte, size int) string {
-	var buff bytes.Buffer
-	for i, b := range data {
-		if size > 0 && i > size {
-			break
-		}
-		buff.WriteString(fmt.Sprintf("\\%03o", b))
-	}
-
-	for i := len(data); i < size; i++ {
-		buff.WriteString(fmt.Sprintf("\\%03o", byte(0)))
-	}
-
-	return buff.String()
-}
-
-func bytesSize(data []byte, size int) []byte {
-	if size < 1 {
-		return data
-	}
-	if len(data) > size {
-		return data[:size]
-	}
-	for i := len(data); i < size; i++ {
-		data = append(data, 0)
-	}
-	return data
-}
-
-func ip2Int(ip net.IP) *big.Int {
-	ipInt := big.NewInt(0)
-	ipInt.SetBytes(ip)
-	return ipInt
 }

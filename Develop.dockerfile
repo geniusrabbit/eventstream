@@ -1,4 +1,4 @@
-FROM golang:1.8.1
+FROM golang:latest
 
 RUN mkdir -p /project
 
@@ -7,4 +7,5 @@ ENV GOPATH=/project/ \
     PATH="$PATH:$GOBIN"
 
 WORKDIR /project/src/github.com/geniusrabbit/eventstream
-ENTRYPOINT PATH="$PATH:$GOBIN" && bash
+
+CMD make run
