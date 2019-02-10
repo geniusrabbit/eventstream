@@ -29,7 +29,7 @@ type Metrics struct {
 
 // Stream metrics processor
 func (m *Metrics) Stream(conf interface{}) (eventstream.Streamer, error) {
-	return newStream(m.metrica, conf.(*storage.Config))
+	return newStream(m.metrica, conf.(*storage.StreamConfig))
 }
 
 // Close vertica connection

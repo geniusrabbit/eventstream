@@ -4,7 +4,7 @@ PROJDIR ?= $(CURDIR)/../../../../
 buildapp:
 	docker run -it --rm --env CGO_ENABLED=0 --env GOPATH="/project" \
     -v="`pwd`/../../../..:/project" -w="/project/src/github.com/geniusrabbit/eventstream" golang:latest \
-    go build -a -installsuffix cgo -gcflags '-B' -ldflags '-s -w' -o ".build/eventstream" "cmd/eventstream/main.go"
+    go build -tags all -a -installsuffix cgo -gcflags '-B' -ldflags '-s -w' -o ".build/eventstream" "cmd/eventstream/main.go"
 
 builddocker:
 	docker build -t geniusrabbit/eventstream -f deploy/docker/Dockerfile .

@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"log"
 	"runtime/debug"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/geniusrabbit/eventstream"
@@ -25,15 +25,22 @@ type Connector interface {
 
 // StreamSQL stream
 type StreamSQL struct {
-	sync.Mutex
-	connector        Connector
+	debug bool
+
+	connector Connector
+
 	buffer           chan eventstream.Message
 	blockSize        int
 	writeMaxDuration time.Duration
 	writeLastTime    time.Time
-	query            Query
-	processTimer     *time.Ticker
-	debug            bool
+
+	// Query prepared data
+	query Query
+
+	// Time ticker
+	processTimer *time.Ticker
+
+	isWriting int32
 }
 
 // NewStreamSQL streamer
@@ -67,6 +74,9 @@ func NewStreamSQLByRaw(connector Connector, blockSize int, duration time.Duratio
 
 // Put message to stream
 func (s *StreamSQL) Put(msg eventstream.Message) error {
+	if s.debug {
+		log.Println("[stream] put message", msg)
+	}
 	s.buffer <- msg
 	return nil
 }
@@ -78,7 +88,7 @@ func (s *StreamSQL) Run() error {
 	}
 
 	s.writeLastTime = time.Now()
-	s.processTimer = time.NewTicker(time.Millisecond * 5)
+	s.processTimer = time.NewTicker(time.Millisecond * 50)
 	ch := s.processTimer.C
 
 	for _, ok := <-ch; ok; {
@@ -108,20 +118,8 @@ func (s *StreamSQL) Check(msg eventstream.Message) bool {
 
 // writeBuffer all data
 func (s *StreamSQL) writeBuffer(flush bool) (err error) {
-	s.Lock()
-	defer s.Unlock()
-
-	var conn *sql.DB
-	if conn, err = s.connector.Connection(); err != nil {
+	if !atomic.CompareAndSwapInt32(&s.isWriting, 0, 1) {
 		return
-	}
-
-	defer s.recError()
-
-	if !flush {
-		if c := len(s.buffer); c < 1 || (s.blockSize > c && time.Now().Sub(s.writeLastTime) < s.writeMaxDuration) {
-			return
-		}
 	}
 
 	var (
@@ -129,6 +127,34 @@ func (s *StreamSQL) writeBuffer(flush bool) (err error) {
 		stmt *sql.Stmt
 		stop = false
 	)
+
+	defer func() {
+		if rec := recover(); rec != nil {
+			s.logError(rec)
+			s.logError(string(debug.Stack()))
+
+			if tx != nil {
+				tx.Rollback()
+			}
+		}
+
+		atomic.StoreInt32(&s.isWriting, 0)
+	}()
+
+	var conn *sql.DB
+	if conn, err = s.connector.Connection(); err != nil {
+		return
+	}
+
+	if !flush {
+		if c := len(s.buffer); c < 1 || (s.blockSize > c && time.Now().Sub(s.writeLastTime) < s.writeMaxDuration) {
+			return
+		}
+	}
+
+	if s.debug {
+		log.Println("[stream] write buffer", flush, time.Now().Sub(s.writeLastTime))
+	}
 
 	if tx, err = conn.Begin(); err != nil {
 		return
@@ -168,13 +194,6 @@ func (s *StreamSQL) writeBuffer(flush bool) (err error) {
 ///////////////////////////////////////////////////////////////////////////////
 /// Logs
 ///////////////////////////////////////////////////////////////////////////////
-
-func (s *StreamSQL) recError() {
-	if rec := recover(); rec != nil {
-		s.logError(rec)
-		s.logError(string(debug.Stack()))
-	}
-}
 
 func (s *StreamSQL) log(args ...interface{}) {
 	if len(args) > 0 {

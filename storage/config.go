@@ -3,11 +3,12 @@ package storage
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 )
 
 var (
-	ErrEmptyConnection = errors.New("[storage] empty connection")
-	ErrUndefinedDriver = errors.New("[storage] undefined driver")
+	ErrStreamEmptyConnection = errors.New("[storage] empty connection")
+	ErrStreamUndefinedDriver = errors.New("[storage] undefined driver")
 )
 
 // Config of the storage
@@ -21,7 +22,10 @@ type Config struct {
 
 // Decode raw data to the target object
 func (c *Config) Decode(v interface{}) error {
-	return json.Unmarshal(c.Raw, v)
+	if err := json.Unmarshal(c.Raw, v); err != nil {
+		return fmt.Errorf("decode storage config: %s", err.Error())
+	}
+	return nil
 }
 
 // UnmarshalJSON data
@@ -47,10 +51,10 @@ func (c *Config) UnmarshalJSON(data []byte) (err error) {
 // Validate config
 func (c *Config) Validate() error {
 	if c.Connect == "" {
-		return ErrEmptyConnection
+		return ErrStreamEmptyConnection
 	}
 	if c.Driver == "" {
-		return ErrUndefinedDriver
+		return ErrStreamUndefinedDriver
 	}
 	return nil
 }

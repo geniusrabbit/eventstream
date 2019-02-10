@@ -23,7 +23,6 @@ var (
 type config struct {
 	Metrics []*metricItem `json:"metrics"`
 	Prefix  string        `json:"prefix"`
-	Where   string        `json:"where"`
 }
 
 type stream struct {
@@ -33,14 +32,14 @@ type stream struct {
 	metrica notificationcenter.Logger
 }
 
-func newStream(metrica notificationcenter.Logger, conf *storage.Config) (eventstream.Streamer, error) {
+func newStream(metrica notificationcenter.Logger, conf *storage.StreamConfig) (eventstream.Streamer, error) {
 	var preConfig config
 
 	if err := conf.Decode(&preConfig); err != nil {
 		return nil, err
 	}
 
-	preConfig.Where = strings.TrimSpace(preConfig.Where)
+	conf.Where = strings.TrimSpace(conf.Where)
 	stream := &stream{
 		debug:   conf.Debug,
 		prefix:  preConfig.Prefix,
@@ -48,8 +47,8 @@ func newStream(metrica notificationcenter.Logger, conf *storage.Config) (eventst
 		metrica: metrica,
 	}
 
-	if preConfig.Where != "" {
-		return eventstream.NewStreamWrapper(stream, preConfig.Where)
+	if conf.Where != "" {
+		return eventstream.NewStreamWrapper(stream, conf.Where)
 	}
 
 	return stream, nil

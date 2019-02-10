@@ -46,6 +46,7 @@ func init() {
 
 	// Register stores connections
 	for name, conf := range context.Config.Stores {
+		log.Printf("[storage] %s register", name)
 		storageConf := &storage.Config{Debug: context.Config.Debug}
 		fatalError("storage config decode <"+name+">", conf.Decode(storageConf))
 		fatalError("register store <"+name+">", storage.Register(name, storageConf))
@@ -53,6 +54,7 @@ func init() {
 
 	// Register sources subscribers
 	for name, conf := range context.Config.Sources {
+		log.Printf("[source] %s register", name)
 		sourceConf := &source.Config{Debug: context.Config.Debug}
 		fatalError("source config decode <"+name+">", conf.Decode(sourceConf))
 		fatalError("register source <"+name+">", source.Register(name, sourceConf))
@@ -92,7 +94,7 @@ func main() {
 		}
 
 		log.Printf("[stream] %s run stream listener on <%s>", name, baseConf.Source)
-		go func(name string) { fatalError("[strean] "+name+" run", strm.Run()) }(name)
+		go func(name string) { fatalError("[stream] "+name+" run", strm.Run()) }(name)
 	} // end for
 
 	// Run source listener's

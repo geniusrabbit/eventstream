@@ -16,6 +16,7 @@ import (
 )
 
 type sourceSubscriber struct {
+	debug      bool
 	format     converter.Converter
 	subscriber *kafka.Subscriber
 }
@@ -45,6 +46,7 @@ func connector(config *source.Config) (eventstream.Sourcer, error) {
 	}
 
 	return &sourceSubscriber{
+		debug:      config.Debug,
 		subscriber: subscriber,
 		format:     converter.ByName(config.Format),
 	}, nil
@@ -53,6 +55,7 @@ func connector(config *source.Config) (eventstream.Sourcer, error) {
 // Subscribe stream object
 func (s *sourceSubscriber) Subscribe(stream eventstream.Streamer) error {
 	return s.subscriber.Subscribe(&subs{
+		debug:  s.debug,
 		format: s.format,
 		stream: stream,
 	})

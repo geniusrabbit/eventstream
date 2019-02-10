@@ -3,6 +3,7 @@ package storage
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 )
 
 var (
@@ -22,7 +23,10 @@ type StreamConfig struct {
 
 // Decode raw data to the target object
 func (c *StreamConfig) Decode(v interface{}) error {
-	return json.Unmarshal(c.Raw, v)
+	if err := json.Unmarshal(c.Raw, v); err != nil {
+		return fmt.Errorf("decode stream config: %s", err.Error())
+	}
+	return nil
 }
 
 // UnmarshalJSON data

@@ -63,6 +63,7 @@ func connector(config *source.Config) (eventstream.Sourcer, error) {
 // Subscribe stream object
 func (s *sourceSubscriber) Subscribe(stream eventstream.Streamer) error {
 	return s.subscriber.Subscribe(&subs{
+		debug:  s.debug,
 		format: s.format,
 		stream: stream,
 	})
