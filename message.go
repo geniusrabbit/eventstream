@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017
+// @project geniusrabbit::eventstream 2017, 2019
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019
 //
 
 package eventstream
@@ -142,7 +142,7 @@ func (m Message) ItemCast(key string, t FieldType, length int, format string) (v
 		v = tm
 	case FieldTypeUnixnano:
 		var tm time.Time
-		if v != nil { 
+		if v != nil {
 			tm = time.Unix(0, gocast.ToInt64(v))
 		}
 

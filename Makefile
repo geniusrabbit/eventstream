@@ -7,7 +7,7 @@ buildapp:
     go build -a -installsuffix cgo -gcflags '-B' -ldflags '-s -w' -o ".build/eventstream" "cmd/eventstream/main.go"
 
 builddocker:
-	docker build -t geniusrabbit/eventstream -f deploy/Dockerfile .
+	docker build -t geniusrabbit/eventstream -f deploy/docker/Dockerfile .
 
 build: buildapp builddocker
 
