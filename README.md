@@ -64,5 +64,5 @@ streams {
  - [x] Add 'when' stream condition (http://github.com/Knetic/govaluate)
  - [ ] Ack message only if success
  - [ ] Buffering all data until be stored
- - [-] ~~Fix HDFS writer~~
+ - [ ] ~~Fix HDFS writer~~
  - [x] Add support HCL config
