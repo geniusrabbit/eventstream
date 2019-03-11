@@ -15,12 +15,12 @@ destroy:
 	-docker rmi -f geniusrabbit/eventstream
 
 run:
-	go run -tags all cmd/eventstream/main.go --config=config.example.hcl --debug
+	go run -tags all cmd/eventstream/main.go --config=config.example.hcl --profiler=:6060 --debug
 
 dcbuild:
 	docker build -t eventstream -f Develop.dockerfile .
 
 dcrun: dcbuild
-	docker run --rm -it -e DEBUG=true --name eventstream \
+	docker run --rm -it -e DEBUG=true -p 6060:6060 --name eventstream \
 		--link nats:nats-streaming --link clickhouse \
 		-v $(PROJDIR)/:/project eventstream

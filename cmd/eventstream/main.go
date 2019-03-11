@@ -9,6 +9,8 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
+	_ "net/http/pprof"
 
 	_ "github.com/kshvakov/clickhouse"
 	_ "github.com/lib/pq"
@@ -27,6 +29,7 @@ import (
 var (
 	flagConfigFile = flag.String("config", "config.hcl", "Configuration file path")
 	flagDebug      = flag.Bool("debug", false, "is debug mode on")
+	flagProfiler   = flag.String("profiler", "", "The hostname and port of golang profiler, for example: :6060")
 )
 
 func init() {
@@ -97,9 +100,17 @@ func main() {
 		go func(name string) { fatalError("[stream] "+name+" run", strm.Run()) }(name)
 	} // end for
 
+	// Run profiler
+	if *flagProfiler != "" {
+		go func() {
+			fmt.Println("Run profile: " + *flagProfiler)
+			fatalError("profiler", http.ListenAndServe(*flagProfiler, nil))
+		}()
+	}
+
 	// Run source listener's
-	source.Listen()
-	close()
+	defer close()
+	fatalError("profiler", source.Listen())
 }
 
 func newStream(conf *storage.StreamConfig) (eventstream.Streamer, error) {

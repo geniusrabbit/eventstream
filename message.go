@@ -14,7 +14,7 @@ import (
 
 	"github.com/demdxx/gocast"
 	"github.com/geniusrabbit/eventstream/converter"
-	"github.com/twinj/uuid"
+	"github.com/myesui/uuid"
 )
 
 // Errors set
@@ -94,7 +94,7 @@ func (m Message) ItemCast(key string, t FieldType, length int, format string) (v
 				v = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 			} else {
 				if v, _ = uuid.Parse(gocast.ToString(v)); v != nil {
-					v = v.(uuid.Uuid).Bytes()
+					v = v.(*uuid.UUID).Bytes()
 				}
 			}
 		}

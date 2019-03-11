@@ -95,6 +95,7 @@ func (s *StreamSQL) Run() error {
 		if err := s.writeBuffer(false); err != nil {
 			return err
 		}
+		time.Sleep(time.Millisecond * 50)
 	}
 	return nil
 }
@@ -126,6 +127,7 @@ func (s *StreamSQL) writeBuffer(flush bool) (err error) {
 		tx   *sql.Tx
 		stmt *sql.Stmt
 		stop = false
+		conn *sql.DB
 	)
 
 	defer func() {
@@ -141,15 +143,14 @@ func (s *StreamSQL) writeBuffer(flush bool) (err error) {
 		atomic.StoreInt32(&s.isWriting, 0)
 	}()
 
-	var conn *sql.DB
-	if conn, err = s.connector.Connection(); err != nil {
-		return
-	}
-
 	if !flush {
 		if c := len(s.buffer); c < 1 || (s.blockSize > c && time.Now().Sub(s.writeLastTime) < s.writeMaxDuration) {
 			return
 		}
+	}
+
+	if conn, err = s.connector.Connection(); err != nil {
+		return
 	}
 
 	if s.debug {
