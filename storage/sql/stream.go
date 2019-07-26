@@ -31,10 +31,10 @@ type StreamSQL struct {
 
 	connector Connector
 
-	buffer           chan eventstream.Message
-	blockSize        int // size of the block suitable to save into DB
+	buffer        chan eventstream.Message
+	blockSize     int // size of the block suitable to save into DB
 	flushInterval time.Duration
-	writeLastTime    time.Time
+	writeLastTime time.Time
 
 	// Query prepared data formater object
 	query Query
@@ -48,7 +48,7 @@ type StreamSQL struct {
 // NewStreamSQL creates streamer object for SQL based stream integration
 func NewStreamSQL(id string, connector Connector, query Query, options ...Option) (_ eventstream.Streamer, err error) {
 	stream := &StreamSQL{
-		id:				id,
+		id:        id,
 		connector: connector,
 		query:     query,
 	}

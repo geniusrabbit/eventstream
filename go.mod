@@ -5,8 +5,8 @@ require (
 	github.com/demdxx/gocast v0.0.0-20160708134729-106586117e3c
 	github.com/geniusrabbit/notificationcenter v0.0.0-20181001112336-107e5ac01489
 	github.com/hashicorp/hcl v1.0.0
-	github.com/kshvakov/clickhouse v1.3.6 // indirect
-	github.com/lib/pq v1.0.0 // indirect
+	github.com/kshvakov/clickhouse v1.3.6
+	github.com/lib/pq v1.0.0
 	github.com/myesui/uuid v1.0.0
 	github.com/nats-io/go-nats v1.7.2 // indirect
 	github.com/nats-io/nats v1.7.2

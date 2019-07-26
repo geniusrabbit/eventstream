@@ -18,55 +18,49 @@ import (
 	ncnats "github.com/geniusrabbit/notificationcenter/nats"
 )
 
+var (
+	errInvalidStreamObject = errors.New("[nats] invalid stream object")
+)
+
 type sourceSubscriber struct {
 	debug      bool
 	format     converter.Converter
 	subscriber *ncnats.Subscriber
-}
-
-func connector(config *source.Config) (eventstream.Sourcer, error) {
-	var (
-		url, err   = url.Parse(config.Connect)
-		subscriber *ncnats.Subscriber
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if config.Format == "" {
-		config.Format = "raw"
-	}
-
-	subObject := &sourceSubscriber{
-		debug:  config.Debug,
-		format: converter.ByName(config.Format),
-	}
-
-	subscriber, err = ncnats.NewSubscriber(
-		"nats://"+url.Host,
-		url.Path[1:],
-		strings.Split(url.Query().Get("topics"), ","),
-		nats.DisconnectHandler(subObject.eventDisconnect),
-		nats.ReconnectHandler(subObject.eventReconnect),
-		nats.ClosedHandler(subObject.eventClose),
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	subObject.subscriber = subscriber
-	return subObject, nil
+	streams    []eventstream.Streamer
 }
 
 // Subscribe stream to data processing pipeline
 func (s *sourceSubscriber) Subscribe(stream eventstream.Streamer) error {
-	return s.subscriber.Subscribe(&subscriber{
-		debug:  s.debug,
-		format: s.format,
-		stream: stream,
-	})
+	if stream == nil {
+		return errInvalidStreamObject
+	}
+	for _, st := range s.streams {
+		if st.ID() == stream.ID() {
+			return fmt.Errorf("[nats] stream [%s] already registered", st.ID())
+		}
+	}
+	s.streams = append(s.streams, stream)
+	return nil
+}
+
+// Handle notification message
+func (s *sourceSubscriber) Handle(message notificationcenter.Message) error {
+	msg, err := eventstream.MessageDecode(message.Data(), s.format)
+	if err != nil {
+		return err
+	}
+	for _, stream := range s.streams {
+		if !stream.Check(msg) {
+			continue
+		}
+		if err = s.stream.Put(msg); err != nil {
+			break
+		}
+	}
+	if err != nil {
+		err = message.Ack()
+	}
+	return err
 }
 
 // Start sunscriber listener

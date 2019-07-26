@@ -43,7 +43,7 @@ func newStream(metrica notificationcenter.Streamer, conf *storage.StreamConfig) 
 	conf.Where = strings.TrimSpace(conf.Where)
 	stream := &stream{
 		debug:   conf.Debug,
-		id: conf.Name,
+		id:      conf.Name,
 		prefix:  preConfig.Prefix,
 		metrics: preConfig.Metrics,
 		metrica: metrica,
