@@ -59,10 +59,13 @@ streams {
 
 ## TODO
 
- - [ ] Add health check API
- - [ ] Add metrics support
- - [x] Add 'when' stream condition (http://github.com/Knetic/govaluate)
- - [ ] Ack message only if success
- - [ ] Buffering all data until be stored
- - [ ] ~~Fix HDFS writer~~
- - [x] Add support HCL config
+- [ ] Prepare evetstream as Framework extension
+- [ ] Add Kafka stream writer support
+- [ ] Add RabbitMQ queue source support
+- [ ] Add health check API
+- [ ] Add metrics support (prometheus)
+- [x] Add 'when' stream condition (http://github.com/Knetic/govaluate)
+- [X] Ack message only if success
+- [X] Buffering all data until be stored
+- [ ] ~~Fix HDFS writer~~
+- [X] Add support HCL config
