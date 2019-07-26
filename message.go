@@ -19,25 +19,15 @@ import (
 
 // Errors set
 var (
-	ErrUndefinedDataType       = errors.New("Undefined data types")
-	ErrInvalidMessageFieldType = errors.New("Invalid message field type")
+	ErrUndefinedDataType       = errors.New("[eventstream::message] undefined data types")
+	ErrInvalidMessageFieldType = errors.New("[eventstream::message] invalid message field type")
 )
 
 // Message object
 type Message map[string]interface{}
 
 // MessageDecode from bytes
-func MessageDecode(item interface{}, converter converter.Converter) (msg Message, err error) {
-	var data []byte
-	switch v := item.(type) {
-	case []byte:
-		data = v
-	case string:
-		data = []byte(v)
-	default:
-		return nil, ErrUndefinedDataType // Undefined type
-	}
-
+func MessageDecode(data []byte, converter converter.Converter) (msg Message, err error) {
 	err = converter.Unmarshal(data, &msg)
 	return msg, err
 }
@@ -50,7 +40,7 @@ func (m Message) JSON() string {
 
 // Item by key name
 func (m Message) Item(key string, def interface{}) interface{} {
-	if v, ok := m[key]; ok && nil != v {
+	if v, ok := m[key]; ok && v != nil {
 		return v
 	}
 	return def
@@ -146,7 +136,7 @@ func (m Message) ItemCast(key string, t FieldType, length int, format string) (v
 			tm = time.Unix(0, gocast.ToInt64(v))
 		}
 
-		if "" != format {
+		if format != "" {
 			return tm.Format(format)
 		}
 		v = tm

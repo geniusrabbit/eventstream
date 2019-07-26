@@ -1,20 +1,24 @@
 //
-// @project geniusrabbit::eventstream 2017
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017
+// @project geniusrabbit::eventstream 2017, 2019
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019
 //
 
 package eventstream
 
 import "io"
 
-// Sourcer interface
+// Sourcer describes the input stream interface.
+// The source accepts messages from some queue popeline
+// like Kafka, NATS, RabbitMQ and etc and send this data
+// one by one into the stream processor.
 type Sourcer interface {
 	// Close extension
 	io.Closer
 
-	// Subscribe stream object
+	// Subscribe new stream to data processing.
+	// For all subscribed streams sends the same data messages
 	Subscribe(stream Streamer) error
 
-	// Start listeners
+	// Start runs observing for data writing into subscribed streams
 	Start() error
 }

@@ -10,16 +10,17 @@ import (
 
 	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/converter"
+	"github.com/geniusrabbit/notificationcenter"
 )
 
-type subs struct {
+type subscriber struct {
 	debug  bool
 	format converter.Converter
 	stream eventstream.Streamer
 }
 
-func (s *subs) Handle(item interface{}) error {
-	msg, err := eventstream.MessageDecode(item, s.format)
+func (s *subscriber) Handle(message notificationcenter.Message) error {
+	msg, err := eventstream.MessageDecode(message.Data(), s.format)
 	if err == nil && s.stream.Check(msg) {
 		err = s.stream.Put(msg)
 	} else if s.debug {

@@ -87,16 +87,16 @@ func (c *Clickhouse) Close() error {
 // URL example tcp://login:pass@hostname:port/name?sslmode=disable&idle=10&maxcon=30
 func clickHouseConnect(u *url.URL, debug bool) (*sql.DB, error) {
 	var (
-		query          = u.Query()
-		idle           = defs(query.Get("idle"), "30")
-		maxcon         = defs(query.Get("maxcon"), "0")
-		lifetime       = defs(query.Get("lifetime"), "0")
-		host, port, _  = net.SplitHostPort(u.Host)
-		dataSourceName = fmt.Sprintf("tcp://%s:%s?database=%s", host, defs(port, "9000"), u.Path[1:])
+		query         = u.Query()
+		idle          = defString(query.Get("idle"), "30")
+		maxcon        = defString(query.Get("maxcon"), "0")
+		lifetime      = defString(query.Get("lifetime"), "0")
+		host, port, _ = net.SplitHostPort(u.Host)
+		dataSource    = fmt.Sprintf("tcp://%s:%s?database=%s", host, defString(port, "9000"), u.Path[1:])
 	)
 
 	// Open connection
-	conn, err := sql.Open("clickhouse", dataSourceName)
+	conn, err := sql.Open("clickhouse", dataSource)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func clickHouseConnect(u *url.URL, debug bool) (*sql.DB, error) {
 /// Helpers
 ///////////////////////////////////////////////////////////////////////////////
 
-func defs(s, def string) string {
+func defString(s, def string) string {
 	if len(s) > 0 {
 		return s
 	}

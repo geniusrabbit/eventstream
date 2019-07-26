@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017 - 2018
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2018
+// @project geniusrabbit::eventstream 2017 - 2019
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2019
 //
 
 package eventstream
@@ -24,7 +24,7 @@ var typeList = []string{
 	"[]int64",
 }
 
-// Types enum
+// Field scalar types enum
 const (
 	FieldTypeString FieldType = iota
 	FieldTypeFixed
@@ -44,7 +44,8 @@ const (
 	FieldTypeArrayInt64
 )
 
-// FieldType data
+// FieldType of data represents scalar types supported
+// by eventstream message processing
 type FieldType int
 
 // String implementaion of fmt.Stringer

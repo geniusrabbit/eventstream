@@ -60,9 +60,9 @@ func connector(config *source.Config) (eventstream.Sourcer, error) {
 	return subObject, nil
 }
 
-// Subscribe stream object
+// Subscribe stream to data processing pipeline
 func (s *sourceSubscriber) Subscribe(stream eventstream.Streamer) error {
-	return s.subscriber.Subscribe(&subs{
+	return s.subscriber.Subscribe(&subscriber{
 		debug:  s.debug,
 		format: s.format,
 		stream: stream,
