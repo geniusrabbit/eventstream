@@ -23,5 +23,5 @@ dcbuild:
 
 dcrun: dcbuild
 	docker run --rm -it -e DEBUG=true -p 6060:6060 --name eventstream \
-		--link nats:nats-streaming --link clickhouse \
-		-v $(PROJDIR)/:/project eventstream
+		-e GOPATH=/project/.cache --link nats:nats-streaming --link clickhouse \
+		-v $(PROJDIR):/project eventstream
