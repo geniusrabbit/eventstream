@@ -3,7 +3,13 @@
 package kafka
 
 import (
+	"net/url"
+	"strings"
+
+	"github.com/geniusrabbit/eventstream"
+	"github.com/geniusrabbit/eventstream/converter"
 	"github.com/geniusrabbit/eventstream/source"
+	"github.com/geniusrabbit/notificationcenter/kafka"
 )
 
 func init() {
@@ -12,15 +18,15 @@ func init() {
 
 func connector(config *source.Config) (eventstream.Sourcer, error) {
 	var (
-		url, err   = url.Parse(config.Connect)
-		subscriber *kafka.Subscriber
+		url, err = url.Parse(config.Connect)
+		kafkaSub *kafka.Subscriber
 	)
 
 	if err != nil {
 		return nil, err
 	}
 
-	subscriber, err = kafka.NewSubscriber(
+	kafkaSub, err = kafka.NewSubscriber(
 		strings.Split(url.Host, ","),
 		url.Path[1:],
 		strings.Split(url.Query().Get("topics"), ","),
@@ -36,12 +42,12 @@ func connector(config *source.Config) (eventstream.Sourcer, error) {
 
 	subscriber := &sourceSubscriber{
 		debug:      config.Debug,
-		subscriber: subscriber,
+		subscriber: kafkaSub,
 		format:     converter.ByName(config.Format),
 	}
 
-	if err := subscriber.Subscribe(subscriber); err != nil {
+	if err := kafkaSub.Subscribe(subscriber); err != nil {
 		return nil, err
 	}
-	return subscriber
+	return subscriber, nil
 }

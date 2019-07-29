@@ -6,12 +6,12 @@
 package kafka
 
 import (
-	"net/url"
-	"strings"
+	"errors"
+	"fmt"
 
 	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/converter"
-	"github.com/geniusrabbit/eventstream/source"
+	"github.com/geniusrabbit/notificationcenter"
 	"github.com/geniusrabbit/notificationcenter/kafka"
 )
 
@@ -42,7 +42,7 @@ func (s *sourceSubscriber) Subscribe(stream eventstream.Streamer) error {
 
 // Handle notification message
 func (s *sourceSubscriber) Handle(message notificationcenter.Message) error {
-	msg, err := eventstream.MessageDecode(message.Data(), s.format)
+	msg, err := eventstream.MessageDecode(message.Body(), s.format)
 	if err != nil {
 		return err
 	}
@@ -50,7 +50,7 @@ func (s *sourceSubscriber) Handle(message notificationcenter.Message) error {
 		if !stream.Check(msg) {
 			continue
 		}
-		if err = s.stream.Put(msg); err != nil {
+		if err = stream.Put(msg); err != nil {
 			break
 		}
 	}

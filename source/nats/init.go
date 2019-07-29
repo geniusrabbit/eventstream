@@ -3,7 +3,15 @@
 package nats
 
 import (
+	"net/url"
+	"strings"
+
+	nats "github.com/nats-io/nats.go"
+
+	"github.com/geniusrabbit/eventstream"
+	"github.com/geniusrabbit/eventstream/converter"
 	"github.com/geniusrabbit/eventstream/source"
+	ncnats "github.com/geniusrabbit/notificationcenter/nats"
 )
 
 func init() {

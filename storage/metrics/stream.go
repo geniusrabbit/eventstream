@@ -28,6 +28,7 @@ type config struct {
 
 type stream struct {
 	debug   bool
+	id      string
 	prefix  string
 	metrics []*metricItem
 	metrica notificationcenter.Streamer

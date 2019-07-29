@@ -6,15 +6,15 @@
 package nats
 
 import (
+	"errors"
+	"fmt"
 	"log"
-	"net/url"
-	"strings"
 
-	"github.com/nats-io/nats"
+	nats "github.com/nats-io/nats.go"
 
 	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/converter"
-	"github.com/geniusrabbit/eventstream/source"
+	"github.com/geniusrabbit/notificationcenter"
 	ncnats "github.com/geniusrabbit/notificationcenter/nats"
 )
 
@@ -45,7 +45,7 @@ func (s *sourceSubscriber) Subscribe(stream eventstream.Streamer) error {
 
 // Handle notification message
 func (s *sourceSubscriber) Handle(message notificationcenter.Message) error {
-	msg, err := eventstream.MessageDecode(message.Data(), s.format)
+	msg, err := eventstream.MessageDecode(message.Body(), s.format)
 	if err != nil {
 		return err
 	}
@@ -53,7 +53,7 @@ func (s *sourceSubscriber) Handle(message notificationcenter.Message) error {
 		if !stream.Check(msg) {
 			continue
 		}
-		if err = s.stream.Put(msg); err != nil {
+		if err = stream.Put(msg); err != nil {
 			break
 		}
 	}

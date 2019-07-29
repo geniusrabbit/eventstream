@@ -25,14 +25,12 @@ func init() {
 }
 
 func connector(conf *storage.Config) (_ eventstream.Storager, err error) {
-	var (
-		logger notificationcenter.Logger
-	)
+	var stream notificationcenter.Streamer
 	switch {
 	case strings.HasPrefix(conf.Connect, "nats://"):
-		logger, err = connectNATS(conf.Connect)
+		stream, err = connectNATS(conf.Connect)
 	case strings.HasPrefix(conf.Connect, "statsd://"):
-		logger, err = connectStatsD(conf.Connect)
+		stream, err = connectStatsD(conf.Connect)
 	default:
 		return nil, ErrUndefinedMetricsEngine
 	}
@@ -41,5 +39,5 @@ func connector(conf *storage.Config) (_ eventstream.Storager, err error) {
 		return nil, err
 	}
 
-	return &Metrics{metrica: logger, debug: conf.Debug}, nil
+	return &Metrics{metrica: stream, debug: conf.Debug}, nil
 }

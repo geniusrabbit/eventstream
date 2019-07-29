@@ -10,6 +10,7 @@ require (
 	github.com/myesui/uuid v1.0.0
 	github.com/nats-io/go-nats v1.7.2 // indirect
 	github.com/nats-io/nats v1.7.2
+	github.com/nats-io/nats.go v1.8.1
 	github.com/pierrec/lz4 v2.0.5+incompatible // indirect
 	gopkg.in/alexcesaro/statsd.v2 v2.0.0
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
