@@ -248,9 +248,6 @@ func PrepareFieldsByString(fls string) (values []Value, fields, inserts []string
 }
 
 func isEmptyFields(fls interface{}) bool {
-	if nil == fls {
-		return true
-	}
 	switch fs := fls.(type) {
 	case []string:
 		return len(fs) < 1
@@ -258,6 +255,7 @@ func isEmptyFields(fls interface{}) bool {
 		return len(fs) < 1
 	case string:
 		return strings.TrimSpace(fs) == ""
+	case nil:
 	default:
 	}
 	return true

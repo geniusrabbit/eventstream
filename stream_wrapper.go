@@ -12,13 +12,14 @@ import (
 	"github.com/demdxx/gocast"
 )
 
-// StreamWrapper extends
+// StreamWrapper extends any stream interface with conditional
+// check support to any message
 type StreamWrapper struct {
 	// Stream pricessor
-	Stream Streamer
+	stream Streamer
 
 	// WhereCondition of stream
-	WhereCondition *govaluate.EvaluableExpression
+	whereCondition *govaluate.EvaluableExpression
 }
 
 // NewStreamWrapper with support condition
@@ -36,23 +37,28 @@ func NewStreamWrapper(stream Streamer, where string) (_ Streamer, err error) {
 	}
 
 	return &StreamWrapper{
-		Stream:         stream,
-		WhereCondition: whereObj,
+		stream:         stream,
+		whereCondition: whereObj,
 	}, nil
 }
 
-// Put message to stream
+// ID returns unical stream identificator
+func (s *StreamWrapper) ID() string {
+	return s.stream.ID()
+}
+
+// Put message to the stream to process information
 func (s *StreamWrapper) Put(msg Message) error {
-	return s.Stream.Put(msg)
+	return s.stream.Put(msg)
 }
 
 // Check if the message meets the conditions
 func (s *StreamWrapper) Check(msg Message) bool {
-	if !s.Stream.Check(msg) {
+	if !s.stream.Check(msg) {
 		return false
 	}
-	if s.WhereCondition != nil {
-		r, err := s.WhereCondition.Evaluate(msg.Map())
+	if s.whereCondition != nil {
+		r, err := s.whereCondition.Evaluate(msg.Map())
 		return err == nil && gocast.ToBool(r)
 	}
 	return true
@@ -60,10 +66,10 @@ func (s *StreamWrapper) Check(msg Message) bool {
 
 // Run the stream reading loop
 func (s *StreamWrapper) Run() error {
-	return s.Stream.Run()
+	return s.stream.Run()
 }
 
-// Close stream ans shut down all process
+// Close stream and shut down all process
 func (s *StreamWrapper) Close() error {
-	return s.Stream.Close()
+	return s.stream.Close()
 }

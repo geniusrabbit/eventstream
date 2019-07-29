@@ -24,7 +24,7 @@ import (
 // Metrics processor
 type Metrics struct {
 	debug   bool
-	metrica notificationcenter.Logger
+	metrica notificationcenter.Streamer
 }
 
 // Stream metrics processor
@@ -44,7 +44,7 @@ func (m *Metrics) Close() error {
 /// Connection helpers
 ///////////////////////////////////////////////////////////////////////////////
 
-func connectNATS(connection string) (notificationcenter.Logger, error) {
+func connectNATS(connection string) (notificationcenter.Streamer, error) {
 	var arr = strings.Split(connection, "?")
 	if len(arr) != 2 {
 		return nil, fmt.Errorf("Undefined NATS topics: %s", connection)
@@ -55,13 +55,13 @@ func connectNATS(connection string) (notificationcenter.Logger, error) {
 		return nil, err
 	}
 
-	return nats.NewLogger(
+	return nats.NewStream(
 		strings.Split(vals.Get("topics"), ","),
 		arr[0],
 	)
 }
 
-func connectStatsD(connection string) (notificationcenter.Logger, error) {
+func connectStatsD(connection string) (notificationcenter.Streamer, error) {
 	var (
 		url, err = url.Parse(connection)
 		tags     []string

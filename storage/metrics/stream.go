@@ -2,6 +2,7 @@
 // @project geniusrabbit::eventstream 2017, 2019
 // @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019
 //
+// * DEPRECATED module
 
 package metrics
 
@@ -17,7 +18,7 @@ import (
 )
 
 var (
-	errInvalidMetricsItemConfig = errors.New("Invalid metrics item config")
+	errInvalidMetricsItemConfig = errors.New("[metrics] invalid metrics item config")
 )
 
 type config struct {
@@ -27,12 +28,13 @@ type config struct {
 
 type stream struct {
 	debug   bool
+	id      string
 	prefix  string
 	metrics []*metricItem
-	metrica notificationcenter.Logger
+	metrica notificationcenter.Streamer
 }
 
-func newStream(metrica notificationcenter.Logger, conf *storage.StreamConfig) (eventstream.Streamer, error) {
+func newStream(metrica notificationcenter.Streamer, conf *storage.StreamConfig) (eventstream.Streamer, error) {
 	var preConfig config
 
 	if err := conf.Decode(&preConfig); err != nil {
@@ -42,6 +44,7 @@ func newStream(metrica notificationcenter.Logger, conf *storage.StreamConfig) (e
 	conf.Where = strings.TrimSpace(conf.Where)
 	stream := &stream{
 		debug:   conf.Debug,
+		id:      conf.Name,
 		prefix:  preConfig.Prefix,
 		metrics: preConfig.Metrics,
 		metrica: metrica,
@@ -52,6 +55,11 @@ func newStream(metrica notificationcenter.Logger, conf *storage.StreamConfig) (e
 	}
 
 	return stream, nil
+}
+
+// ID returns unical stream identificator
+func (s *stream) ID() string {
+	return s.id
 }
 
 // Put message to stream

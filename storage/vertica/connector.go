@@ -88,14 +88,14 @@ func (st *Vertica) Close() error {
 func verticaConnect(u *url.URL, debug bool) (*sql.DB, error) {
 	var (
 		query          = u.Query()
-		idle           = defs(query.Get("idle"), "30")
-		maxcon         = defs(query.Get("maxcon"), "0")
-		lifetime       = defs(query.Get("lifetime"), "0")
-		sslmode        = defs(query.Get("sslmode"), "disable")
+		idle           = defString(query.Get("idle"), "30")
+		maxcon         = defString(query.Get("maxcon"), "0")
+		lifetime       = defString(query.Get("lifetime"), "0")
+		sslmode        = defString(query.Get("sslmode"), "disable")
 		password, _    = u.User.Password()
 		host, port, _  = net.SplitHostPort(u.Host)
 		dataSourceName = fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s sslmode=%s",
-			u.User.Username(), password, host, defs(port, "5432"), u.Path[1:], sslmode)
+			u.User.Username(), password, host, defString(port, "5432"), u.Path[1:], sslmode)
 	)
 
 	// Open connection
@@ -125,7 +125,7 @@ func verticaConnect(u *url.URL, debug bool) (*sql.DB, error) {
 /// Helpers
 ///////////////////////////////////////////////////////////////////////////////
 
-func defs(s, def string) string {
+func defString(s, def string) string {
 	if len(s) > 0 {
 		return s
 	}

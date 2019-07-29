@@ -9,11 +9,13 @@ import (
 	"io"
 )
 
-// Storager describe method of interaction with storage
+// Storager describe method of interaction with storage.
+// Storage creates new stream interfaces to process
+// data from sources.
 type Storager interface {
 	// Closer extension of interface
 	io.Closer
 
-	// Stream new processor
+	// Stream returns new stream writer for some specific configs
 	Stream(conf interface{}) (Streamer, error)
 }

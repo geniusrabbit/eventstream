@@ -1,5 +1,6 @@
 # Eventstream
 
+[![Build Status](https://travis-ci.org/geniusrabbit/eventstream.svg?branch=master)](https://travis-ci.org/geniusrabbit/eventstream)
 [![Go Report Card](https://goreportcard.com/badge/github.com/geniusrabbit/eventstream)](https://goreportcard.com/report/github.com/geniusrabbit/eventstream)
 [![GoDoc](https://godoc.org/github.com/geniusrabbit/eventstream?status.svg)](https://godoc.org/github.com/geniusrabbit/eventstream)
 [![Coverage Status](https://coveralls.io/repos/github/geniusrabbit/eventstream/badge.svg)](https://coveralls.io/github/geniusrabbit/eventstream)
@@ -59,10 +60,13 @@ streams {
 
 ## TODO
 
- - [ ] Add health check API
- - [ ] Add metrics support
- - [x] Add 'when' stream condition (http://github.com/Knetic/govaluate)
- - [ ] Ack message only if success
- - [ ] Buffering all data until be stored
- - [ ] ~~Fix HDFS writer~~
- - [x] Add support HCL config
+- [ ] Prepare evetstream as Framework extension
+- [ ] Add Kafka stream writer support
+- [ ] Add RabbitMQ queue source support
+- [ ] Add health check API
+- [ ] Add metrics support (prometheus)
+- [x] Add 'when' stream condition (http://github.com/Knetic/govaluate)
+- [X] Ack message only if success
+- [X] Buffering all data until be stored
+- [ ] ~~Fix HDFS writer~~
+- [X] Add support HCL config

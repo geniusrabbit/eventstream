@@ -27,14 +27,16 @@ type Connector interface {
 type StreamSQL struct {
 	debug bool
 
+	id string
+
 	connector Connector
 
-	buffer           chan eventstream.Message
-	blockSize        int
-	writeMaxDuration time.Duration
-	writeLastTime    time.Time
+	buffer        chan eventstream.Message
+	blockSize     int // size of the block suitable to save into DB
+	flushInterval time.Duration
+	writeLastTime time.Time
 
-	// Query prepared data
+	// Query prepared data formater object
 	query Query
 
 	// Time ticker
@@ -43,33 +45,38 @@ type StreamSQL struct {
 	isWriting int32
 }
 
-// NewStreamSQL streamer
-func NewStreamSQL(connector Connector, blockSize int, duration time.Duration, query Query, debug bool) (_ eventstream.Streamer, err error) {
-	if blockSize < 1 {
-		blockSize = 1000
+// NewStreamSQL creates streamer object for SQL based stream integration
+func NewStreamSQL(id string, connector Connector, query Query, options ...Option) (_ eventstream.Streamer, err error) {
+	stream := &StreamSQL{
+		id:        id,
+		connector: connector,
+		query:     query,
 	}
-
-	if duration <= 0 {
-		duration = time.Second * 1
+	for _, opt := range options {
+		opt(stream)
 	}
-
-	return &StreamSQL{
-		connector:        connector,
-		buffer:           make(chan eventstream.Message, blockSize*2),
-		blockSize:        blockSize,
-		writeMaxDuration: duration,
-		query:            query,
-		debug:            debug,
-	}, nil
+	if stream.blockSize < 1 {
+		stream.blockSize = 1000
+	}
+	if stream.flushInterval <= 0 {
+		stream.flushInterval = time.Second * 1
+	}
+	stream.buffer = make(chan eventstream.Message, stream.blockSize*2)
+	return stream, nil
 }
 
 // NewStreamSQLByRaw query
-func NewStreamSQLByRaw(connector Connector, blockSize int, duration time.Duration, query string, fields interface{}, debug bool) (eventstream.Streamer, error) {
+func NewStreamSQLByRaw(id string, connector Connector, query string, fields interface{}, options ...Option) (eventstream.Streamer, error) {
 	q, err := NewQueryByRaw(query, fields)
 	if err != nil {
 		return nil, err
 	}
-	return NewStreamSQL(connector, blockSize, duration, *q, debug)
+	return NewStreamSQL(id, connector, *q, options...)
+}
+
+// ID returns unical stream identificator
+func (s *StreamSQL) ID() string {
+	return s.id
 }
 
 // Put message to stream
@@ -144,7 +151,7 @@ func (s *StreamSQL) writeBuffer(flush bool) (err error) {
 	}()
 
 	if !flush {
-		if c := len(s.buffer); c < 1 || (s.blockSize > c && time.Now().Sub(s.writeLastTime) < s.writeMaxDuration) {
+		if c := len(s.buffer); c < 1 || (s.blockSize > c && time.Now().Sub(s.writeLastTime) < s.flushInterval) {
 			return
 		}
 	}

@@ -15,8 +15,8 @@ type config struct {
 	Fields       interface{} `json:"fields"`
 }
 
-// New clickhouse stream
-func New(connector Connector, conf *storage.StreamConfig, pattern string) (st eventstream.Streamer, err error) {
+// New stream for SQL type integrations
+func New(connector Connector, conf *storage.StreamConfig, pattern string) (stream eventstream.Streamer, err error) {
 	var config config
 
 	if err = conf.Decode(&config); err != nil {
@@ -24,25 +24,27 @@ func New(connector Connector, conf *storage.StreamConfig, pattern string) (st ev
 	}
 
 	if config.RawQuery != "" {
-		st, err = NewStreamSQLByRaw(
+		stream, err = NewStreamSQLByRaw(
+			conf.Name,
 			connector,
-			int(config.BufferSize),
-			time.Duration(config.WriteTimeout)*time.Millisecond,
 			config.RawQuery,
 			config.Fields,
-			conf.Debug,
+			WithBlockSize(int(config.BufferSize)),
+			WithFlushIntervals(time.Duration(config.WriteTimeout)*time.Millisecond),
+			WithDebug(conf.Debug),
 		)
 	} else {
-		var q *Query
-		if q, err = NewQueryByPattern(pattern, config.Target, config.Fields); err == nil {
-			st, err = NewStreamSQL(
+		var query *Query
+		if query, err = NewQueryByPattern(pattern, config.Target, config.Fields); err == nil {
+			stream, err = NewStreamSQL(
+				conf.Name,
 				connector,
-				int(config.BufferSize),
-				time.Duration(config.WriteTimeout)*time.Millisecond,
-				*q, conf.Debug,
+				*query,
+				WithBlockSize(int(config.BufferSize)),
+				WithFlushIntervals(time.Duration(config.WriteTimeout)*time.Millisecond),
+				WithDebug(conf.Debug),
 			)
 		}
 	}
-
 	return
 }

@@ -6,67 +6,61 @@
 package nats
 
 import (
+	"errors"
+	"fmt"
 	"log"
-	"net/url"
-	"strings"
 
-	"github.com/nats-io/nats"
+	nats "github.com/nats-io/nats.go"
 
 	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/converter"
-	"github.com/geniusrabbit/eventstream/source"
+	"github.com/geniusrabbit/notificationcenter"
 	ncnats "github.com/geniusrabbit/notificationcenter/nats"
+)
+
+var (
+	errInvalidStreamObject = errors.New("[nats] invalid stream object")
 )
 
 type sourceSubscriber struct {
 	debug      bool
 	format     converter.Converter
 	subscriber *ncnats.Subscriber
+	streams    []eventstream.Streamer
 }
 
-func connector(config *source.Config) (eventstream.Sourcer, error) {
-	var (
-		url, err   = url.Parse(config.Connect)
-		subscriber *ncnats.Subscriber
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if config.Format == "" {
-		config.Format = "raw"
-	}
-
-	subObject := &sourceSubscriber{
-		debug:  config.Debug,
-		format: converter.ByName(config.Format),
-	}
-
-	subscriber, err = ncnats.NewSubscriber(
-		"nats://"+url.Host,
-		url.Path[1:],
-		strings.Split(url.Query().Get("topics"), ","),
-		nats.DisconnectHandler(subObject.eventDisconnect),
-		nats.ReconnectHandler(subObject.eventReconnect),
-		nats.ClosedHandler(subObject.eventClose),
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	subObject.subscriber = subscriber
-	return subObject, nil
-}
-
-// Subscribe stream object
+// Subscribe stream to data processing pipeline
 func (s *sourceSubscriber) Subscribe(stream eventstream.Streamer) error {
-	return s.subscriber.Subscribe(&subs{
-		debug:  s.debug,
-		format: s.format,
-		stream: stream,
-	})
+	if stream == nil {
+		return errInvalidStreamObject
+	}
+	for _, st := range s.streams {
+		if st.ID() == stream.ID() {
+			return fmt.Errorf("[nats] stream [%s] already registered", st.ID())
+		}
+	}
+	s.streams = append(s.streams, stream)
+	return nil
+}
+
+// Handle notification message
+func (s *sourceSubscriber) Handle(message notificationcenter.Message) error {
+	msg, err := eventstream.MessageDecode(message.Body(), s.format)
+	if err != nil {
+		return err
+	}
+	for _, stream := range s.streams {
+		if !stream.Check(msg) {
+			continue
+		}
+		if err = stream.Put(msg); err != nil {
+			break
+		}
+	}
+	if err != nil {
+		err = message.Ack()
+	}
+	return err
 }
 
 // Start sunscriber listener

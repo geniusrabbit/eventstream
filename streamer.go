@@ -9,17 +9,21 @@ import (
 	"io"
 )
 
-// Streamer interface of data processing
+// Streamer interface of data processing describes
+// basic methods of data pipeline
 type Streamer interface {
 	// Close extension
 	io.Closer
 
-	// Put message to stream
+	// ID returns unical stream identificator
+	ID() string
+
+	// Put message to the stream to process information
 	Put(msg Message) error
 
-	// Check message value
+	// Check if message suits for the stream
 	Check(msg Message) bool
 
-	// Run loop
+	// Run processing loop
 	Run() error
 }

@@ -6,59 +6,58 @@
 package kafka
 
 import (
-	"net/url"
-	"strings"
+	"errors"
+	"fmt"
 
 	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/converter"
-	"github.com/geniusrabbit/eventstream/source"
+	"github.com/geniusrabbit/notificationcenter"
 	"github.com/geniusrabbit/notificationcenter/kafka"
+)
+
+var (
+	errInvalidStreamObject = errors.New("[kafka] invalid stream object")
 )
 
 type sourceSubscriber struct {
 	debug      bool
 	format     converter.Converter
 	subscriber *kafka.Subscriber
+	streams    []eventstream.Streamer
 }
 
-func connector(config *source.Config) (eventstream.Sourcer, error) {
-	var (
-		url, err   = url.Parse(config.Connect)
-		subscriber *kafka.Subscriber
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	subscriber, err = kafka.NewSubscriber(
-		strings.Split(url.Host, ","),
-		url.Path[1:],
-		strings.Split(url.Query().Get("topics"), ","),
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if config.Format == "" {
-		config.Format = "raw"
-	}
-
-	return &sourceSubscriber{
-		debug:      config.Debug,
-		subscriber: subscriber,
-		format:     converter.ByName(config.Format),
-	}, nil
-}
-
-// Subscribe stream object
+// Subscribe new stream object
 func (s *sourceSubscriber) Subscribe(stream eventstream.Streamer) error {
-	return s.subscriber.Subscribe(&subs{
-		debug:  s.debug,
-		format: s.format,
-		stream: stream,
-	})
+	if stream == nil {
+		return errInvalidStreamObject
+	}
+	for _, st := range s.streams {
+		if st.ID() == stream.ID() {
+			return fmt.Errorf("[kafka] stream [%s] already registered", st.ID())
+		}
+	}
+	s.streams = append(s.streams, stream)
+	return nil
+}
+
+// Handle notification message
+func (s *sourceSubscriber) Handle(message notificationcenter.Message) error {
+	msg, err := eventstream.MessageDecode(message.Body(), s.format)
+	if err != nil {
+		return err
+	}
+	for _, stream := range s.streams {
+		if !stream.Check(msg) {
+			continue
+		}
+		if err = stream.Put(msg); err != nil {
+			break
+		}
+	}
+	if err != nil {
+		err = message.Ack()
+	}
+	return err
 }
 
 // Start sunscriber listener
