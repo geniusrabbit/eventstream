@@ -1,5 +1,5 @@
 
-PROJDIR ?= $(CURDIR)/../../../../
+PROJDIR ?= $(CURDIR)/../
 
 buildapp:
 	docker run -it --rm --env CGO_ENABLED=0 --env GO111MODULE=on \

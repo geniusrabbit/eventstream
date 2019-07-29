@@ -7,6 +7,6 @@ ENV GOPATH=/project/ \
     PATH="$PATH:$GOBIN" \
     GO111MODULE=on
 
-WORKDIR /project/src/github.com/geniusrabbit/eventstream
+WORKDIR /project/eventstream
 
 CMD make run
