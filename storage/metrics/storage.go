@@ -28,8 +28,19 @@ type Metrics struct {
 }
 
 // Stream metrics processor
-func (m *Metrics) Stream(conf interface{}) (eventstream.Streamer, error) {
-	return newStream(m.metrica, conf.(*stream.Config))
+func (m *Metrics) Stream(options ...interface{}) (eventstream.Streamer, error) {
+	var conf stream.Config
+	for _, opt := range options {
+		switch o := opt.(type) {
+		case stream.Option:
+			o(&conf)
+		case *stream.Config:
+			conf = *o
+		default:
+			stream.WithObjectConfig(o)(&conf)
+		}
+	}
+	return newStream(m.metrica, &conf)
 }
 
 // Close vertica connection

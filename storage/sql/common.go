@@ -16,7 +16,7 @@ type config struct {
 }
 
 // New stream for SQL type integrations
-func New(connector Connector, conf *stream.Config, pattern string) (stream eventstream.Streamer, err error) {
+func New(connector Connector, pattern string, conf *stream.Config, options ...Option) (stream eventstream.Streamer, err error) {
 	var (
 		config      config
 		queryOption Option
@@ -32,9 +32,12 @@ func New(connector Connector, conf *stream.Config, pattern string) (stream event
 	return NewStreamSQL(
 		conf.Name,
 		connector,
-		queryOption,
-		WithBlockSize(int(config.BufferSize)),
-		WithFlushIntervals(time.Duration(config.WriteTimeout)*time.Millisecond),
-		WithDebug(conf.Debug),
+		append(
+			options,
+			queryOption,
+			WithBlockSize(int(config.BufferSize)),
+			WithFlushIntervals(time.Duration(config.WriteTimeout)*time.Millisecond),
+			WithDebug(conf.Debug),
+		)...,
 	)
 }

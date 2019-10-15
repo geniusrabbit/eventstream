@@ -44,16 +44,35 @@ func connector(conf *storage.Config) (eventstream.Storager, error) {
 		return nil, err
 	}
 
-	return &Clickhouse{conn: conn, connect: conf.Connect, debug: conf.Debug}, nil
+	return &Clickhouse{
+		debug:   conf.Debug,
+		connect: conf.Connect,
+		conn:    conn,
+	}, nil
 }
 
 // Stream clickhouse processor
-func (c *Clickhouse) Stream(conf interface{}) (strm eventstream.Streamer, err error) {
-	var confObj = conf.(*stream.Config)
-	if strm, err = sqlstore.New(c, confObj, queryPattern); err != nil {
+func (c *Clickhouse) Stream(options ...interface{}) (strm eventstream.Streamer, err error) {
+	var (
+		conf         stream.Config
+		storeOptions []sqlstore.Option
+	)
+	for _, opt := range options {
+		switch o := opt.(type) {
+		case stream.Option:
+			o(&conf)
+		case sqlstore.Option:
+			storeOptions = append(storeOptions, o)
+		case *stream.Config:
+			conf = *o
+		default:
+			stream.WithObjectConfig(o)(&conf)
+		}
+	}
+	if strm, err = sqlstore.New(c, queryPattern, &conf, storeOptions...); err != nil {
 		return nil, err
 	}
-	return eventstream.NewStreamWrapper(strm, confObj.Where)
+	return eventstream.NewStreamWrapper(strm, conf.Where)
 }
 
 // Connection to clickhouse DB

@@ -17,5 +17,5 @@ type Storager interface {
 	io.Closer
 
 	// Stream returns new stream writer for some specific configs
-	Stream(conf interface{}) (Streamer, error)
+	Stream(opts ...interface{}) (Streamer, error)
 }

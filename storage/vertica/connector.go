@@ -48,12 +48,27 @@ func connector(conf *storage.Config) (eventstream.Storager, error) {
 }
 
 // Stream vertica processor
-func (st *Vertica) Stream(conf interface{}) (strm eventstream.Streamer, err error) {
-	var confObj = conf.(*stream.Config)
-	if strm, err = sqlstore.New(st, confObj, queryPattern); err != nil {
+func (st *Vertica) Stream(options ...interface{}) (strm eventstream.Streamer, err error) {
+	var (
+		conf         stream.Config
+		storeOptions []sqlstore.Option
+	)
+	for _, opt := range options {
+		switch o := opt.(type) {
+		case stream.Option:
+			o(&conf)
+		case sqlstore.Option:
+			storeOptions = append(storeOptions, o)
+		case *stream.Config:
+			conf = *o
+		default:
+			stream.WithObjectConfig(o)(&conf)
+		}
+	}
+	if strm, err = sqlstore.New(st, queryPattern, &conf, storeOptions...); err != nil {
 		return nil, err
 	}
-	return eventstream.NewStreamWrapper(strm, confObj.Where)
+	return eventstream.NewStreamWrapper(strm, conf.Where)
 }
 
 // Connection to clickhouse DB

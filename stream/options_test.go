@@ -1,6 +1,7 @@
 package stream
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 )
@@ -26,6 +27,14 @@ func Test_Optins(t *testing.T) {
 			options: []Option{WithName("test4"), WithWhere("id = 100")},
 			config:  Config{Name: "test4", Where: "id = 100"},
 		},
+		{
+			options: []Option{WithName("test5"), WithRawConfig(json.RawMessage("raw"))},
+			config:  Config{Name: "test5", Raw: json.RawMessage("raw")},
+		},
+		{
+			options: []Option{WithName("test5"), WithObjectConfig(100)},
+			config:  Config{Name: "test5", Raw: json.RawMessage("100")},
+		},
 	}
 
 	for _, test := range tests {
@@ -34,7 +43,7 @@ func Test_Optins(t *testing.T) {
 			opt(&cnf)
 		}
 		if !reflect.DeepEqual(&cnf, &test.config) {
-			t.Errorf("[%s] invalid option result", cnf.Name)
+			t.Errorf("[%s] invalid option result", test.config.Name)
 		}
 	}
 }
