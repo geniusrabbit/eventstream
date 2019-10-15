@@ -5,7 +5,7 @@ require (
 	github.com/Knetic/govaluate v3.0.0+incompatible
 	github.com/demdxx/gocast v0.0.0-20160708134729-106586117e3c
 	github.com/eapache/go-resiliency v1.2.0 // indirect
-	github.com/geniusrabbit/notificationcenter v0.1.0 // indirect
+	github.com/geniusrabbit/notificationcenter v0.1.0
 	github.com/hashicorp/hcl v1.0.0
 	github.com/jcmturner/gofork v1.0.0 // indirect
 	github.com/kisielk/errcheck v1.2.0 // indirect

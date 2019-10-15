@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/geniusrabbit/eventstream"
-	"github.com/geniusrabbit/eventstream/storage"
+	"github.com/geniusrabbit/eventstream/stream"
 )
 
 type config struct {
@@ -16,7 +16,7 @@ type config struct {
 }
 
 // New stream for SQL type integrations
-func New(connector Connector, conf *storage.StreamConfig, pattern string) (stream eventstream.Streamer, err error) {
+func New(connector Connector, conf *stream.Config, pattern string) (stream eventstream.Streamer, err error) {
 	var config config
 
 	if err = conf.Decode(&config); err != nil {

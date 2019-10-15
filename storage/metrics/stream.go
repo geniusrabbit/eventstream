@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/geniusrabbit/eventstream"
-	"github.com/geniusrabbit/eventstream/storage"
+	"github.com/geniusrabbit/eventstream/stream"
 	"github.com/geniusrabbit/notificationcenter"
 	"github.com/geniusrabbit/notificationcenter/metrics"
 )
@@ -26,7 +26,7 @@ type config struct {
 	Prefix  string        `json:"prefix"`
 }
 
-type stream struct {
+type mstream struct {
 	debug   bool
 	id      string
 	prefix  string
@@ -34,7 +34,7 @@ type stream struct {
 	metrica notificationcenter.Streamer
 }
 
-func newStream(metrica notificationcenter.Streamer, conf *storage.StreamConfig) (eventstream.Streamer, error) {
+func newStream(metrica notificationcenter.Streamer, conf *stream.Config) (eventstream.Streamer, error) {
 	var preConfig config
 
 	if err := conf.Decode(&preConfig); err != nil {
@@ -42,7 +42,7 @@ func newStream(metrica notificationcenter.Streamer, conf *storage.StreamConfig) 
 	}
 
 	conf.Where = strings.TrimSpace(conf.Where)
-	stream := &stream{
+	stream := &mstream{
 		debug:   conf.Debug,
 		id:      conf.Name,
 		prefix:  preConfig.Prefix,
@@ -58,12 +58,12 @@ func newStream(metrica notificationcenter.Streamer, conf *storage.StreamConfig) 
 }
 
 // ID returns unical stream identificator
-func (s *stream) ID() string {
+func (s *mstream) ID() string {
 	return s.id
 }
 
 // Put message to stream
-func (s *stream) Put(msg eventstream.Message) error {
+func (s *mstream) Put(msg eventstream.Message) error {
 	messages := s.prepareMetricsMessage(msg)
 	if s.debug {
 		for _, msg := range messages {
@@ -75,17 +75,17 @@ func (s *stream) Put(msg eventstream.Message) error {
 }
 
 // Checl the message
-func (s *stream) Check(msg eventstream.Message) bool {
+func (s *mstream) Check(msg eventstream.Message) bool {
 	return true
 }
 
 // Close implementation
-func (s *stream) Close() error {
+func (s *mstream) Close() error {
 	return nil
 }
 
 // Run loop
-func (s *stream) Run() error {
+func (s *mstream) Run() error {
 	return nil
 }
 
@@ -93,7 +93,7 @@ func (s *stream) Run() error {
 /// Internal methods
 ///////////////////////////////////////////////////////////////////////////////
 
-func (s *stream) prepareMetricsMessage(msg eventstream.Message) (result []interface{}) {
+func (s *mstream) prepareMetricsMessage(msg eventstream.Message) (result []interface{}) {
 	for _, mt := range s.metrics {
 		var (
 			name     = mt.Name

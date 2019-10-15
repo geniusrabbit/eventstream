@@ -1,4 +1,4 @@
-package storage
+package eventstream
 
 import (
 	"encoding/json"

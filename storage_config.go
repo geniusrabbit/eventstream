@@ -1,4 +1,4 @@
-package storage
+package eventstream
 
 import (
 	"encoding/json"
@@ -7,12 +7,12 @@ import (
 )
 
 var (
-	ErrStreamEmptyConnection = errors.New("[storage] empty connection")
-	ErrStreamUndefinedDriver = errors.New("[storage] undefined driver")
+	errStorageEmptyConnection = errors.New("[storage] empty connection")
+	errStorageUndefinedDriver = errors.New("[storage] undefined driver")
 )
 
-// Config of the storage
-type Config struct {
+// StorageConfig of the storage
+type StorageConfig struct {
 	Debug   bool
 	Connect string
 	Driver  string
@@ -21,7 +21,7 @@ type Config struct {
 }
 
 // Decode raw data to the target object
-func (c *Config) Decode(v interface{}) error {
+func (c *StorageConfig) Decode(v interface{}) error {
 	if err := json.Unmarshal(c.Raw, v); err != nil {
 		return fmt.Errorf("decode storage config: %s", err.Error())
 	}
@@ -29,7 +29,7 @@ func (c *Config) Decode(v interface{}) error {
 }
 
 // UnmarshalJSON data
-func (c *Config) UnmarshalJSON(data []byte) (err error) {
+func (c *StorageConfig) UnmarshalJSON(data []byte) (err error) {
 	var confData struct {
 		Connect string `json:"connect"`
 		Driver  string `json:"driver"`
@@ -49,12 +49,12 @@ func (c *Config) UnmarshalJSON(data []byte) (err error) {
 }
 
 // Validate config
-func (c *Config) Validate() error {
+func (c *StorageConfig) Validate() error {
 	if c.Connect == "" {
-		return ErrStreamEmptyConnection
+		return errStorageEmptyConnection
 	}
 	if c.Driver == "" {
-		return ErrStreamUndefinedDriver
+		return errStorageUndefinedDriver
 	}
 	return nil
 }

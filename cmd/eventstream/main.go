@@ -24,6 +24,7 @@ import (
 	_ "github.com/geniusrabbit/eventstream/storage/clickhouse"
 	_ "github.com/geniusrabbit/eventstream/storage/metrics"
 	_ "github.com/geniusrabbit/eventstream/storage/vertica"
+	"github.com/geniusrabbit/eventstream/stream"
 )
 
 var (
@@ -52,7 +53,7 @@ func init() {
 		log.Printf("[storage] %s register", name)
 		storageConf := &storage.Config{Debug: context.Config.Debug}
 		fatalError("storage config decode <"+name+">", conf.Decode(storageConf))
-		fatalError("register store <"+name+">", storage.Register(name, storageConf))
+		fatalError("register store <"+name+">", storage.Register(name, storage.WithConfig(storageConf)))
 	}
 
 	// Register sources subscribers
@@ -60,7 +61,7 @@ func init() {
 		log.Printf("[source] %s register", name)
 		sourceConf := &source.Config{Debug: context.Config.Debug}
 		fatalError("source config decode <"+name+">", conf.Decode(sourceConf))
-		fatalError("register source <"+name+">", source.Register(name, sourceConf))
+		fatalError("register source <"+name+">", source.Register(name, source.WithConfig(sourceConf)))
 	}
 }
 
@@ -72,7 +73,7 @@ func main() {
 	// Register streams
 	for name, strmConf := range context.Config.Streams {
 		var (
-			baseConf = &storage.StreamConfig{Name: name, Debug: context.Config.Debug}
+			baseConf = &stream.Config{Name: name, Debug: context.Config.Debug}
 			strm     eventstream.Streamer
 		)
 		if err = strmConf.Decode(baseConf); err != nil {
@@ -113,7 +114,7 @@ func main() {
 	fatalError("profiler", source.Listen())
 }
 
-func newStream(conf *storage.StreamConfig) (eventstream.Streamer, error) {
+func newStream(conf *stream.Config) (eventstream.Streamer, error) {
 	store := storage.Storage(conf.Store)
 	if store != nil {
 		return store.Stream(conf)

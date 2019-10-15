@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/demdxx/gocast"
-	"github.com/geniusrabbit/eventstream/converter"
 	"github.com/myesui/uuid"
 )
 
@@ -23,11 +22,15 @@ var (
 	ErrInvalidMessageFieldType = errors.New("[eventstream::message] invalid message field type")
 )
 
+type unmarshalel interface {
+	Unmarshal(data []byte, v interface{}) error
+}
+
 // Message object
 type Message map[string]interface{}
 
 // MessageDecode from bytes
-func MessageDecode(data []byte, converter converter.Converter) (msg Message, err error) {
+func MessageDecode(data []byte, converter unmarshalel) (msg Message, err error) {
 	err = converter.Unmarshal(data, &msg)
 	return msg, err
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/storage"
 	sqlstore "github.com/geniusrabbit/eventstream/storage/sql"
+	"github.com/geniusrabbit/eventstream/stream"
 )
 
 const (
@@ -48,7 +49,7 @@ func connector(conf *storage.Config) (eventstream.Storager, error) {
 
 // Stream clickhouse processor
 func (c *Clickhouse) Stream(conf interface{}) (strm eventstream.Streamer, err error) {
-	var confObj = conf.(*storage.StreamConfig)
+	var confObj = conf.(*stream.Config)
 	if strm, err = sqlstore.New(c, confObj, queryPattern); err != nil {
 		return nil, err
 	}

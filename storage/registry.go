@@ -28,9 +28,15 @@ func (r *registry) RegisterConnector(c connector, driver string) {
 }
 
 // Register connection
-func (r *registry) Register(name string, config *Config) (err error) {
-	var storage eventstream.Storager
-	if storage, err = r.connection(config); err == nil {
+func (r *registry) Register(name string, options ...Option) (err error) {
+	var (
+		storage eventstream.Storager
+		config  Config
+	)
+	for _, opt := range options {
+		opt(&config)
+	}
+	if storage, err = r.connection(&config); err == nil {
 		r.mx.Lock()
 		defer r.mx.Unlock()
 		r.connections[name] = storage
@@ -89,8 +95,8 @@ func RegisterConnector(conn connector, driver string) {
 }
 
 // Register connection
-func Register(name string, config *Config) error {
-	return _registry.Register(name, config)
+func Register(name string, options ...Option) error {
+	return _registry.Register(name, options...)
 }
 
 // Storage connection object

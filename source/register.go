@@ -29,9 +29,15 @@ func (r *registry) RegisterConnector(c connector, driver string) {
 }
 
 // Register stream subscriber
-func (r *registry) Register(name string, config *Config) (err error) {
-	var source eventstream.Sourcer
-	if source, err = r.connection(config); err == nil {
+func (r *registry) Register(name string, options ...Option) (err error) {
+	var (
+		source eventstream.Sourcer
+		config Config
+	)
+	for _, opt := range options {
+		opt(&config)
+	}
+	if source, err = r.connection(&config); err == nil {
 		r.mx.Lock()
 		defer r.mx.Unlock()
 		r.sources[name] = source
@@ -112,8 +118,8 @@ func RegisterConnector(c connector, driver string) {
 }
 
 // Register connection
-func Register(name string, config *Config) error {
-	return _registry.Register(name, config)
+func Register(name string, options ...Option) error {
+	return _registry.Register(name, options...)
 }
 
 // Subscribe handler

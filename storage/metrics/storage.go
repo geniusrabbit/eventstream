@@ -14,7 +14,7 @@ import (
 	statsdbase "gopkg.in/alexcesaro/statsd.v2"
 
 	"github.com/geniusrabbit/eventstream"
-	"github.com/geniusrabbit/eventstream/storage"
+	"github.com/geniusrabbit/eventstream/stream"
 	"github.com/geniusrabbit/notificationcenter"
 	"github.com/geniusrabbit/notificationcenter/metrics"
 	"github.com/geniusrabbit/notificationcenter/nats"
@@ -29,7 +29,7 @@ type Metrics struct {
 
 // Stream metrics processor
 func (m *Metrics) Stream(conf interface{}) (eventstream.Streamer, error) {
-	return newStream(m.metrica, conf.(*storage.StreamConfig))
+	return newStream(m.metrica, conf.(*stream.Config))
 }
 
 // Close vertica connection
