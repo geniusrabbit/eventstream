@@ -9,6 +9,7 @@ package sql
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"runtime/debug"
@@ -18,6 +19,10 @@ import (
 	"github.com/geniusrabbit/eventstream"
 )
 
+var (
+	errInvalidQueryObject = errors.New("[sql] invalid query object")
+)
+
 // Connector to DB
 type Connector interface {
 	Connection() (*sql.DB, error)
@@ -25,10 +30,13 @@ type Connector interface {
 
 // StreamSQL stream
 type StreamSQL struct {
+	// Debug mode of the stream
 	debug bool
 
+	// ID of the stream
 	id string
 
+	// Connector interface
 	connector Connector
 
 	buffer        chan eventstream.Message
@@ -37,7 +45,7 @@ type StreamSQL struct {
 	writeLastTime time.Time
 
 	// Query prepared data formater object
-	query Query
+	query *Query
 
 	// Time ticker
 	processTimer *time.Ticker
@@ -46,14 +54,18 @@ type StreamSQL struct {
 }
 
 // NewStreamSQL creates streamer object for SQL based stream integration
-func NewStreamSQL(id string, connector Connector, query Query, options ...Option) (_ eventstream.Streamer, err error) {
+func NewStreamSQL(id string, connector Connector, options ...Option) (_ eventstream.Streamer, err error) {
 	stream := &StreamSQL{
 		id:        id,
 		connector: connector,
-		query:     query,
 	}
 	for _, opt := range options {
-		opt(stream)
+		if err = opt(stream); err != nil {
+			return nil, err
+		}
+	}
+	if stream.query == nil {
+		return nil, errInvalidQueryObject
 	}
 	if stream.blockSize < 1 {
 		stream.blockSize = 1000
@@ -63,15 +75,6 @@ func NewStreamSQL(id string, connector Connector, query Query, options ...Option
 	}
 	stream.buffer = make(chan eventstream.Message, stream.blockSize*2)
 	return stream, nil
-}
-
-// NewStreamSQLByRaw query
-func NewStreamSQLByRaw(id string, connector Connector, query string, fields interface{}, options ...Option) (eventstream.Streamer, error) {
-	q, err := NewQueryByRaw(query, fields)
-	if err != nil {
-		return nil, err
-	}
-	return NewStreamSQL(id, connector, *q, options...)
 }
 
 // ID returns unical stream identificator

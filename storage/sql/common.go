@@ -17,34 +17,24 @@ type config struct {
 
 // New stream for SQL type integrations
 func New(connector Connector, conf *stream.Config, pattern string) (stream eventstream.Streamer, err error) {
-	var config config
-
+	var (
+		config      config
+		queryOption Option
+	)
 	if err = conf.Decode(&config); err != nil {
 		return
 	}
-
 	if config.RawQuery != "" {
-		stream, err = NewStreamSQLByRaw(
-			conf.Name,
-			connector,
-			config.RawQuery,
-			config.Fields,
-			WithBlockSize(int(config.BufferSize)),
-			WithFlushIntervals(time.Duration(config.WriteTimeout)*time.Millisecond),
-			WithDebug(conf.Debug),
-		)
+		queryOption = WithQueryRawFields(config.RawQuery, config.Fields)
 	} else {
-		var query *Query
-		if query, err = NewQueryByPattern(pattern, config.Target, config.Fields); err == nil {
-			stream, err = NewStreamSQL(
-				conf.Name,
-				connector,
-				*query,
-				WithBlockSize(int(config.BufferSize)),
-				WithFlushIntervals(time.Duration(config.WriteTimeout)*time.Millisecond),
-				WithDebug(conf.Debug),
-			)
-		}
+		queryOption = WithQueryByPattern(pattern, config.Target, config.Fields)
 	}
-	return
+	return NewStreamSQL(
+		conf.Name,
+		connector,
+		queryOption,
+		WithBlockSize(int(config.BufferSize)),
+		WithFlushIntervals(time.Duration(config.WriteTimeout)*time.Millisecond),
+		WithDebug(conf.Debug),
+	)
 }
