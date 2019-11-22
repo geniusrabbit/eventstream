@@ -22,17 +22,9 @@ stores {
   //   tmpdir  = "/tmp/hdfs/"
   // }
 
-  metric_1 {
+  nats_1 {
     connect = "nats://nats:4222/?topics=metrics"
-    driver  = "metrics"
-    format  = "influxdb"
-  }
-
-  metric_2 {
-    // Tags as GET params
-    connect = "statsd://metrics:8125/?service=myservice"
-    driver  = "metrics"
-    format  = "influxdb"
+    driver  = "nats"
   }
 }
 
@@ -85,18 +77,28 @@ streams {
     ]
   }
 
-  metric_1 {
-    store   = "metric_1"
+  nats_1 {
+    # Write two messages into the nats_1 store
+    # message1 = {"type": "message", "service": "...", message: "..."}
+    # message2 = {"type": "error",   "service": "...", message: "..."}
+    store   = "nats_1"
     source  = "nats_1"
-
-    target  = "metrics"
-    metrics = [
+    targets = [
       {
-        name = "message.{{type}}.counter"
-        type = "counter"
-        tags {
-          os = "{{os}}"
+        fields {
+          type    = "message"
+          service = "{{service}}"
+          message = "{{msg}}"
         }
+        where = "!error"
+      },
+      {
+        fields {
+          type    = "error"
+          service = "{{service}}"
+          error   = "{{msg}}"
+        }
+        where = "error"
       }
     ]
   }

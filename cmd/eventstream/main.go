@@ -92,7 +92,7 @@ func main() {
 		}
 
 		log.Printf("[stream] %s subscribe on <%s>", name, baseConf.Source)
-		if err = source.Subscribe(baseConf.Source, strm); nil != err {
+		if err = source.Subscribe(baseConf.Source, strm); err != nil {
 			fatalError(fmt.Sprintf("[stream] "+name+" subscribe <%s>", baseConf.Source), err)
 			break
 		}

@@ -1,5 +1,24 @@
 
 PROJDIR ?= $(CURDIR)/../
+MAIN ?= eventstream
+
+drun:
+	docker-compose -p ${MAIN} -f develop/docker-compose.yml build service
+	docker-compose -p ${MAIN} -f develop/docker-compose.yml run --service-ports service
+
+stop:
+	docker-compose -p ${MAIN} -f develop/docker-compose.yml stop
+
+destroy: stop
+	docker-compose -p ${MAIN} -f develop/docker-compose.yml down
+
+# Service data
+
+.PHONY: fmt
+fmt:
+	gofmt -w `find -name "*.go" -type f -not -path "./vendor/*"`
+
+# Build data
 
 buildapp:
 	docker run -it --rm --env CGO_ENABLED=0 --env GO111MODULE=on \

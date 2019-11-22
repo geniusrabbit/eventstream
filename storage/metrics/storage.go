@@ -60,12 +60,10 @@ func connectNATS(connection string) (notificationcenter.Streamer, error) {
 	if len(arr) != 2 {
 		return nil, fmt.Errorf("Undefined NATS topics: %s", connection)
 	}
-
 	var vals, err = url.ParseQuery(arr[1])
 	if err != nil {
 		return nil, err
 	}
-
 	return nats.NewStream(
 		strings.Split(vals.Get("topics"), ","),
 		arr[0],
@@ -77,17 +75,14 @@ func connectStatsD(connection string) (notificationcenter.Streamer, error) {
 		url, err = url.Parse(connection)
 		tags     []string
 	)
-
 	if err != nil {
 		return nil, err
 	}
-
 	for k, v := range url.Query() {
 		if len(v) > 0 {
 			tags = append(tags, k, v[0])
 		}
 	}
-
 	return statsd.NewUDP(
 		url.Host,
 		metrics.InfluxFormat,

@@ -8,7 +8,6 @@ package sql
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -28,8 +27,8 @@ var (
 
 // Value item
 type Value struct {
-	Key       string
-	TargetKey string
+	Key       string // Field key in the object
+	TargetKey string // Target Key in the database
 	Type      eventstream.FieldType
 	Length    int
 	Format    string
@@ -72,8 +71,8 @@ func valueFromArray(target string, a []string) Value {
 
 // Query extractor
 type Query struct {
-	Q      string
-	Values []Value
+	query  string
+	values []Value
 }
 
 // NewQueryByRaw returns query object from raw SQL query
@@ -83,23 +82,23 @@ func NewQueryByRaw(query string, fl interface{}) (q *Query, err error) {
 			values          []Value
 			fields, inserts []string
 		)
-		if values, fields, inserts, err = PrepareFields(fl); nil != err {
+		if values, fields, inserts, err = PrepareFields(fl); err != nil {
 			return nil, err
 		}
 		q = &Query{
-			Q: strings.NewReplacer(
+			query: strings.NewReplacer(
 				"{{fields}}", strings.Join(fields, ", "),
 				"{{values}}", strings.Join(inserts, ", "),
 			).Replace(query),
-			Values: values,
+			values: values,
 		}
 	} else if args := paramsSearch.FindAllStringSubmatch(query, -1); len(args) > 0 {
-		q = &Query{Q: paramsSearch.ReplaceAllString(query, "?")}
+		q = &Query{query: paramsSearch.ReplaceAllString(query, "?")}
 		for _, a := range args {
-			q.Values = append(q.Values, valueFromArray(a[1], a[1:]))
+			q.values = append(q.values, valueFromArray(a[1], a[1:]))
 		}
 	}
-	return
+	return q, err
 }
 
 // NewQueryByPattern returns query object
@@ -108,28 +107,30 @@ func NewQueryByPattern(pattern, target string, fl interface{}) (_ *Query, err er
 		fields, inserts []string
 		values          []Value
 	)
-
 	if fl == nil {
 		return nil, errInvalidQueryFields
 	}
-
 	if values, fields, inserts, err = PrepareFields(fl); nil != err {
 		return nil, err
 	}
-
 	return &Query{
-		Q: strings.NewReplacer(
+		query: strings.NewReplacer(
 			"{{target}}", target,
 			"{{fields}}", strings.Join(fields, ", "),
 			"{{values}}", strings.Join(inserts, ", "),
 		).Replace(pattern),
-		Values: values,
+		values: values,
 	}, nil
+}
+
+// QueryString - returns the SQL query string
+func (q *Query) QueryString() string {
+	return q.query
 }
 
 // ParamsBy by message
 func (q *Query) ParamsBy(msg eventstream.Message) (params []interface{}) {
-	for _, v := range q.Values {
+	for _, v := range q.values {
 		params = append(params, msg.ItemCast(v.Key, v.Type, v.Length, v.Format))
 	}
 	return
@@ -137,7 +138,7 @@ func (q *Query) ParamsBy(msg eventstream.Message) (params []interface{}) {
 
 // StringParamsBy by message
 func (q *Query) StringParamsBy(msg eventstream.Message) (params []string) {
-	for _, v := range q.Values {
+	for _, v := range q.values {
 		params = append(
 			params,
 			gocast.ToString(msg.ItemCast(v.Key, v.Type, v.Length, v.Format)),
@@ -150,7 +151,7 @@ func (q *Query) StringParamsBy(msg eventstream.Message) (params []string) {
 func (q *Query) StringByMessage(msg eventstream.Message) string {
 	var (
 		params = q.StringParamsBy(msg)
-		items  = strings.Split(q.Q, "?")
+		items  = strings.Split(q.query, "?")
 		result bytes.Buffer
 	)
 
@@ -166,7 +167,7 @@ func (q *Query) StringByMessage(msg eventstream.Message) string {
 // Extract message by special fields and types
 func (q *Query) Extract(msg eventstream.Message) map[string]interface{} {
 	var resp = make(map[string]interface{})
-	for _, v := range q.Values {
+	for _, v := range q.values {
 		resp[v.TargetKey] = msg.ItemCast(v.Key, v.Type, v.Length, v.Format)
 	}
 	return resp
@@ -186,12 +187,12 @@ func PrepareFields(fls interface{}) (values []Value, fields, inserts []string, e
 	case string:
 		values, fields, inserts = PrepareFieldsByString(fs)
 	default:
-		fmt.Println("YYY", fls)
-		err = errInvalidQueryFields
+		values, fields, inserts, err = MapObjectIntoQueryParams(fs)
+		if err == errInvalidValue {
+			err = errInvalidQueryFields
+		}
 	}
-
-	if len(inserts) < 1 || len(fields) > len(values) {
-		fmt.Println("ZZZ", fls)
+	if err == nil && (len(inserts) < 1 || len(fields) > len(values)) {
 		err = errInvalidQueryFields
 	}
 	return
@@ -256,7 +257,7 @@ func isEmptyFields(fls interface{}) bool {
 	case string:
 		return strings.TrimSpace(fs) == ""
 	case nil:
-	default:
+		return true
 	}
-	return true
+	return false
 }

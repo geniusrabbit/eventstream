@@ -1,0 +1,33 @@
+version: '3.7'
+
+services:
+  tracer:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"
+    labels:
+      - service.name=eventstream-jaeger-dev
+  
+  nats:
+    image: nats
+    restart: always
+    expose:
+      - "4222"
+    labels:
+      - service.name=eventstream-nats-dev
+
+  service:
+    build: .
+    ports:
+      - "6060:6060"
+    environment:
+      DEBUG: "true"
+      GOPATH: /project/.cache
+      JAEGER_AGENT_HOST: tracer
+    depends_on:
+      - nats
+      - tracer
+    volumes:
+      - ../../:/project
+    labels:
+      - service.name=eventstream

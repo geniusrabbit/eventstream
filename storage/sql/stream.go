@@ -171,7 +171,7 @@ func (s *StreamSQL) writeBuffer(flush bool) (err error) {
 		return
 	}
 
-	if stmt, err = tx.Prepare(s.query.Q); err != nil {
+	if stmt, err = tx.Prepare(s.query.QueryString()); err != nil {
 		tx.Rollback()
 		return
 	}

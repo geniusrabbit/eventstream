@@ -1,6 +1,10 @@
 package sql
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+	"time"
+)
 
 func Test_RawQuery(t *testing.T) {
 	tests := []struct {
@@ -24,9 +28,24 @@ func Test_RawQuery(t *testing.T) {
 			query: `INSERT INTO testlog (service, msg, error, timestamp)` +
 				`VALUES({{srv}}, {{msg}}, {{err}}, toTimestamp({{timestamp:date}}))`,
 		},
+		{
+			query: `INSERT INTO my_table ({{fields}}) VALUES({{values}})`,
+			fields: struct {
+				Service   string    `field:"srv" target:"service"`
+				Message   string    `field:"msg"`
+				Error     string    `field:"err" target:"error"`
+				Timestamp time.Time `field:"fimestamp" format:"2006-01-02"`
+			}{
+				Service:   "test",
+				Message:   "msg",
+				Error:     "error",
+				Timestamp: time.Now(),
+			},
+		},
 	}
 
 	for _, test := range tests {
+		fmt.Println(">>>>", test)
 		if _, err := NewQueryByRaw(test.query, test.fields); err != nil {
 			t.Error(err)
 		}
