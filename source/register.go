@@ -21,14 +21,16 @@ type registry struct {
 	sources    map[string]eventstream.Sourcer
 }
 
-// RegisterConnector stream driver
+// RegisterConnector function which creates new stream coneection by config
+// and bind the connector to the `driver` name
 func (r *registry) RegisterConnector(c connector, driver string) {
 	r.mx.Lock()
 	defer r.mx.Unlock()
 	r.connectors[driver] = c
 }
 
-// Register stream subscriber
+// Register data source connection with `name` and options
+// The source defines by connection options
 func (r *registry) Register(name string, options ...Option) (err error) {
 	var (
 		source eventstream.Sourcer
@@ -45,7 +47,7 @@ func (r *registry) Register(name string, options ...Option) (err error) {
 	return
 }
 
-// Subscribe handler
+// Subscribe some handler interface to processing the stream with `name`
 func (r *registry) Subscribe(name string, stream eventstream.Streamer) error {
 	r.mx.RLock()
 	defer r.mx.RUnlock()
@@ -55,7 +57,7 @@ func (r *registry) Subscribe(name string, stream eventstream.Streamer) error {
 	return nil
 }
 
-// Source object by name
+// Source returns the source object registered with the `name`
 func (r *registry) Source(name string) eventstream.Sourcer {
 	r.mx.RLock()
 	defer r.mx.RUnlock()
@@ -63,7 +65,8 @@ func (r *registry) Source(name string) eventstream.Sourcer {
 	return src
 }
 
-// Listen sources
+// Listen method launch into the background all sources where the supervised
+// daemon mode is required
 func (r *registry) Listen() (err error) {
 	r.mx.RLock()
 	for _, source := range r.sources {
@@ -78,7 +81,7 @@ func (r *registry) Listen() (err error) {
 	return
 }
 
-// Close listener
+// Close all listeners and source connections
 func (r *registry) Close() (err error) {
 	r.mx.RLock()
 	defer r.mx.RUnlock()
@@ -100,44 +103,4 @@ func (r *registry) connection(config *Config) (eventstream.Sourcer, error) {
 		return conn(config)
 	}
 	return nil, fmt.Errorf("[source] undefined source driver: [%s]", config.Driver)
-}
-
-///////////////////////////////////////////////////////////////////////////////
-/// Global
-///////////////////////////////////////////////////////////////////////////////
-
-var _registry = registry{
-	close:      make(chan bool, 1),
-	sources:    map[string]eventstream.Sourcer{},
-	connectors: map[string]connector{},
-}
-
-// RegisterConnector stream subscriber
-func RegisterConnector(c connector, driver string) {
-	_registry.RegisterConnector(c, driver)
-}
-
-// Register connection
-func Register(name string, options ...Option) error {
-	return _registry.Register(name, options...)
-}
-
-// Subscribe handler
-func Subscribe(name string, stream eventstream.Streamer) error {
-	return _registry.Subscribe(name, stream)
-}
-
-// Source object by name
-func Source(name string) eventstream.Sourcer {
-	return _registry.Source(name)
-}
-
-// Close listener
-func Close() error {
-	return _registry.Close()
-}
-
-// Listen sources
-func Listen() error {
-	return _registry.Listen()
 }

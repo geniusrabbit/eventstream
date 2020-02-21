@@ -1,6 +1,9 @@
 package source
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"net/url"
+)
 
 // Option of the connection
 type Option func(cnf *Config)
@@ -19,10 +22,22 @@ func WithDebug(debug bool) Option {
 	}
 }
 
-// WithConnect to the database
+// WithConnect to the source
 func WithConnect(driver, connect string) Option {
 	return func(cnf *Config) {
 		cnf.Driver = driver
+		cnf.Connect = connect
+	}
+}
+
+// WithConnectURL to the source
+func WithConnectURL(connect string) Option {
+	return func(cnf *Config) {
+		url, err := url.Parse(connect)
+		if err != nil {
+			panic(err)
+		}
+		cnf.Driver = url.Scheme
 		cnf.Connect = connect
 	}
 }

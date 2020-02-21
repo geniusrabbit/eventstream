@@ -23,6 +23,9 @@ type StreamConfig struct {
 
 // Decode raw data to the target object
 func (c *StreamConfig) Decode(v interface{}) error {
+	if len(c.Raw) == 0 {
+		return nil
+	}
 	if err := json.Unmarshal(c.Raw, v); err != nil {
 		return fmt.Errorf("decode stream config: %s", err.Error())
 	}
@@ -44,7 +47,6 @@ func (c *StreamConfig) UnmarshalJSON(data []byte) (err error) {
 		c.Source = conf.Source
 		c.Where = conf.Where
 	}
-
 	return err
 }
 

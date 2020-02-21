@@ -22,7 +22,8 @@ var (
 )
 
 var (
-	errInvalidQueryFields = errors.New(`[stream::query] invalid fields build param`)
+	errInvalidQueryFieldsParam = errors.New(`[stream::query] invalid fields build param`)
+	errInvalidQueryFieldsValue = errors.New(`[stream::query] invalid fields build value`)
 )
 
 // Value item
@@ -108,7 +109,7 @@ func NewQueryByPattern(pattern, target string, fl interface{}) (_ *Query, err er
 		values          []Value
 	)
 	if fl == nil {
-		return nil, errInvalidQueryFields
+		return nil, errInvalidQueryFieldsParam
 	}
 	if values, fields, inserts, err = PrepareFields(fl); nil != err {
 		return nil, err
@@ -189,11 +190,11 @@ func PrepareFields(fls interface{}) (values []Value, fields, inserts []string, e
 	default:
 		values, fields, inserts, err = MapObjectIntoQueryParams(fs)
 		if err == errInvalidValue {
-			err = errInvalidQueryFields
+			err = errInvalidQueryFieldsValue
 		}
 	}
 	if err == nil && (len(inserts) < 1 || len(fields) > len(values)) {
-		err = errInvalidQueryFields
+		err = errInvalidQueryFieldsValue
 	}
 	return
 }

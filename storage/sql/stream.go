@@ -91,7 +91,7 @@ func (s *StreamSQL) Put(msg eventstream.Message) error {
 	return nil
 }
 
-// Run loop
+// Run SQL writer daemon
 func (s *StreamSQL) Run() error {
 	if s.processTimer != nil {
 		s.processTimer.Stop()

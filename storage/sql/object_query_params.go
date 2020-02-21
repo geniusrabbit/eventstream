@@ -52,8 +52,10 @@ func MapObjectIntoQueryParams(object interface{}) (values []Value, fields, inser
 				}
 			}
 			inserts = append(inserts, insert)
+			continue
 		}
 
+		inserts = append(inserts, "?")
 		length, _ := strconv.Atoi(size)
 		values = append(values, Value{
 			Key:       name,
