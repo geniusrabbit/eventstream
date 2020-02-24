@@ -35,6 +35,7 @@ type Value struct {
 	Format    string
 }
 
+// vector of options contains of: {key, typeName, [format]}
 func valueFromArray(target string, a []string) Value {
 	var (
 		length   int64

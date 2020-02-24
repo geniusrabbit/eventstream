@@ -47,6 +47,9 @@ func MapObjectIntoQueryParams(object interface{}) (values []Value, fields, inser
 			insert := defexp
 			if match := paramsSearch.FindAllStringSubmatch(insert, -1); len(match) > 0 {
 				for _, v := range match {
+					if v[2] == "" {
+						v[2] = typeByValue(field.Type, fltype, size).String()
+					}
 					values = append(values, valueFromArray(v[1], v[1:]))
 					insert = strings.Replace(insert, v[0], "?", -1)
 				}
@@ -87,7 +90,7 @@ func reflectTargetStruct(val reflect.Value) (reflect.Type, error) {
 func metaByTags(field reflect.StructField, def string, tags ...string) (v string) {
 	for _, tag := range tags {
 		if v = field.Tag.Get(tag); v != "" {
-			break
+			return v
 		}
 	}
 	return def
