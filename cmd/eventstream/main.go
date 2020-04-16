@@ -22,13 +22,13 @@ import (
 	_ "github.com/geniusrabbit/eventstream/source/ncstreams"
 	"github.com/geniusrabbit/eventstream/storage"
 	_ "github.com/geniusrabbit/eventstream/storage/clickhouse"
+	_ "github.com/geniusrabbit/eventstream/storage/ncstreams"
 	_ "github.com/geniusrabbit/eventstream/storage/vertica"
 	"github.com/geniusrabbit/eventstream/stream"
 )
 
 var (
 	flagConfigFile = flag.String("config", "config.hcl", "Configuration file path")
-	flagDebug      = flag.Bool("debug", false, "is debug mode on")
 	flagProfiler   = flag.String("profiler", "", "The hostname and port of golang profiler, for example: :6060")
 )
 
@@ -45,15 +45,14 @@ func init() {
 	err = config.Validate()
 	fatalError("config.validate", err)
 
-	if *flagDebug {
-		config.Debug = *flagDebug
+	if config.IsDebug() {
 		fmt.Println("Config:", config.String())
 	}
 
 	// Register stores connections
 	for name, conf := range config.Stores {
 		log.Printf("[storage] %s register", name)
-		storageConf := &storage.Config{Debug: config.Debug}
+		storageConf := &storage.Config{Debug: config.IsDebug()}
 		err = conf.Decode(storageConf)
 		fatalError("storage config decode <"+name+">", err)
 		err = storage.Register(name, storage.WithConfig(storageConf))
@@ -63,7 +62,7 @@ func init() {
 	// Register sources subscribers
 	for name, conf := range config.Sources {
 		log.Printf("[source] %s register", name)
-		sourceConf := &source.Config{Debug: config.Debug}
+		sourceConf := &source.Config{Debug: config.IsDebug()}
 		err = conf.Decode(sourceConf)
 		fatalError("source config decode <"+name+">", err)
 		err = source.Register(name, source.WithConfig(sourceConf))
@@ -72,8 +71,6 @@ func init() {
 }
 
 func main() {
-	fmt.Println("> Run eventstream service")
-
 	var (
 		err         error
 		config      = &appcontext.Config
@@ -85,7 +82,7 @@ func main() {
 	// Register streams
 	for name, strmConf := range config.Streams {
 		var (
-			baseConf = &stream.Config{Name: name, Debug: config.Debug}
+			baseConf = &stream.Config{Name: name, Debug: config.IsDebug()}
 			strm     eventstream.Streamer
 		)
 		if err = strmConf.Decode(baseConf); err != nil {
@@ -110,9 +107,7 @@ func main() {
 		}
 
 		log.Printf("[stream] %s run stream listener on <%s>", name, baseConf.Source)
-		go func(name string) {
-			fatalError("[stream] "+name+" run", strm.Run(ctx))
-		}(name)
+		go func(name string) { fatalError("[stream] "+name+" run", strm.Run(ctx)) }(name)
 	} // end for
 
 	// Run profiler
@@ -124,6 +119,7 @@ func main() {
 	}
 
 	// Run source listener's
+	fmt.Println("> Run eventstream service")
 	fatalError("profiler", source.Listen(ctx))
 }
 

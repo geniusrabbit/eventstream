@@ -51,8 +51,8 @@ func WithQueryRawFields(query string, fields interface{}) Option {
 // WithQueryByPattern setup query object by query pattern
 func WithQueryByPattern(pattern, target string, fields interface{}) Option {
 	return func(stream *StreamSQL) error {
-		q, err := NewQueryByPattern(pattern, target, fields)
-		stream.query = q
+		query, err := NewQueryByPattern(pattern, target, fields)
+		stream.query = query
 		return err
 	}
 }

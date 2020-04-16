@@ -39,20 +39,26 @@ func (it configItem) Decode(v interface{}) error {
 }
 
 type config struct {
-	mx      sync.RWMutex
-	Debug   bool                  `yaml:"debug" json:"debug"`
+	mx sync.RWMutex
+
+	LogLevel string `default:"debug" env:"LOG_LEVEL"`
+
 	Stores  map[string]configItem `yaml:"stores" json:"stores"`
 	Sources map[string]configItem `yaml:"sources" json:"sources"`
 	Streams map[string]configItem `yaml:"streams" json:"streams"`
+
+	Jaeger struct {
+		AgentHost string `env:"JAEGER_AGENT_HOST"`
+	}
 }
 
-func (c *config) String() string {
-	data, _ := json.MarshalIndent(c, "", "  ")
+func (cfg *config) String() string {
+	data, _ := json.MarshalIndent(cfg, "", "  ")
 	return string(data)
 }
 
 // Load eventstore config
-func (c *config) Load(filename string) error {
+func (cfg *config) Load(filename string) error {
 	file, err := os.Open(filename)
 	if err != nil {
 		return err
@@ -64,16 +70,16 @@ func (c *config) Load(filename string) error {
 	}
 	file.Close()
 
-	c.mx.Lock()
-	defer c.mx.Unlock()
+	cfg.mx.Lock()
+	defer cfg.mx.Unlock()
 
 	switch strings.ToLower(filepath.Ext(filename)) {
 	case ".yml", ".yaml":
-		err = yaml.Unmarshal(data, c)
+		err = yaml.Unmarshal(data, cfg)
 	case ".hcl":
-		err = hcl.Unmarshal(data, c)
+		err = hcl.Unmarshal(data, cfg)
 	case ".json":
-		err = json.Unmarshal(data, c)
+		err = json.Unmarshal(data, cfg)
 	default:
 		err = errInvalidConfigFile
 	}
@@ -81,20 +87,25 @@ func (c *config) Load(filename string) error {
 }
 
 // Validate config
-func (c *config) Validate() error {
-	if c == nil {
+func (cfg *config) Validate() error {
+	if cfg == nil {
 		return errInvalidConfig
 	}
-	if c.Stores == nil || len(c.Stores) < 1 {
+	if cfg.Stores == nil || len(cfg.Stores) < 1 {
 		return errInvalidStoreConnect
 	}
-	if c.Sources == nil || len(c.Sources) < 1 {
+	if cfg.Sources == nil || len(cfg.Sources) < 1 {
 		return errInvalidSourceConnect
 	}
-	if c.Streams == nil || len(c.Streams) < 1 {
+	if cfg.Streams == nil || len(cfg.Streams) < 1 {
 		return errInvalidSourceStream
 	}
 	return nil
+}
+
+// IsDebug mode ON
+func (cfg *config) IsDebug() bool {
+	return strings.ToLower(cfg.LogLevel) == "debug"
 }
 
 // Config instance

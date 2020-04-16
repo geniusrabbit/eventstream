@@ -15,13 +15,6 @@ stores {
     buffer  = 1000
   }
 
-  // hdfs_1 {
-  //   connect = "hdfs://hdfs:8020/"
-  //   driver  = "hdfs"
-  //   buffer  = 1000
-  //   tmpdir  = "/tmp/hdfs/"
-  // }
-
   nats_1 {
     connect = "nats://nats:4222/?topics=metrics"
     driver  = "nats"

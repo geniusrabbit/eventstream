@@ -55,13 +55,13 @@ type StreamSQL struct {
 }
 
 // NewStreamSQL creates streamer object for SQL based stream integration
-func NewStreamSQL(id string, connector Connector, options ...Option) (_ eventstream.Streamer, err error) {
+func NewStreamSQL(id string, connector Connector, options ...Option) (eventstream.Streamer, error) {
 	stream := &StreamSQL{
 		id:        id,
 		connector: connector,
 	}
 	for _, opt := range options {
-		if err = opt(stream); err != nil {
+		if err := opt(stream); err != nil {
 			return nil, err
 		}
 	}

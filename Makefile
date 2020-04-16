@@ -107,16 +107,16 @@ build:
 
 .PHONY: run
 run: build
-	docker-compose -p ${MAIN} -f develop/docker-compose.yml build service
-	docker-compose -p ${MAIN} -f develop/docker-compose.yml run --service-ports service
+	docker-compose -p ${MAIN} -f deploy/develop/docker-compose.yml build service
+	docker-compose -p ${MAIN} -f deploy/develop/docker-compose.yml run --service-ports service
 
 .PHONY: stop
 stop:
-	docker-compose -p ${MAIN} -f develop/docker-compose.yml stop
+	docker-compose -p ${MAIN} -f deploy/develop/docker-compose.yml stop
 
 .PHONY: destroy
 destroy: stop
-	docker-compose -p ${MAIN} -f develop/docker-compose.yml down
+	docker-compose -p ${MAIN} -f deploy/develop/docker-compose.yml down
 
 .PHONY: help
 help:

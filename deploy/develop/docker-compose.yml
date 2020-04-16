@@ -1,0 +1,23 @@
+version: '3.7'
+
+services:
+  tracer:
+    image: jaegertracing/all-in-one:latest
+    ports: ["16686:16686"]
+
+  clickhouse:
+    image: yandex/clickhouse-server:latest
+
+  nats:
+    image: nats
+
+  service:
+    image: golang:latest
+    command: .tmp/build/eventstream --profiler=:6060 --config=deploy/develop/config.hcl
+    ports: ["6060:6060"]
+    working_dir: /project
+    environment:
+      LOG_LEVEL: debug
+      JAEGER_AGENT_HOST: tracer
+    depends_on: [nats,tracer,clickhouse]
+    volumes: [../../:/project]
