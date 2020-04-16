@@ -1,11 +1,12 @@
 //
-// @project geniusrabbit::eventstream 2017, 2019
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019
+// @project geniusrabbit::eventstream 2017, 2020
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2020
 //
 
 package eventstream
 
 import (
+	"context"
 	"io"
 )
 
@@ -19,11 +20,11 @@ type Streamer interface {
 	ID() string
 
 	// Put message to the stream to process information
-	Put(msg Message) error
+	Put(ctx context.Context, msg Message) error
 
 	// Check if message suits for the stream
-	Check(msg Message) bool
+	Check(ctx context.Context, msg Message) bool
 
 	// Run processing loop
-	Run() error
+	Run(ctx context.Context) error
 }

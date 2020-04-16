@@ -1,9 +1,9 @@
 //
-// @project geniusrabbit::eventstream 2017, 2019
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019
+// @project geniusrabbit::eventstream 2017, 2020
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2020
 //
 
-package context
+package appcontext
 
 import (
 	"encoding/json"

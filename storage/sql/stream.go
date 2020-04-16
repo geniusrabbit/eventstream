@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017 - 2019
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2019
+// @project geniusrabbit::eventstream 2017 - 2020
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2020
 //
 
 // TODO: Store all messages if not sended yet
@@ -8,6 +8,7 @@
 package sql
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -83,7 +84,7 @@ func (s *StreamSQL) ID() string {
 }
 
 // Put message to stream
-func (s *StreamSQL) Put(msg eventstream.Message) error {
+func (s *StreamSQL) Put(ctx context.Context, msg eventstream.Message) error {
 	if s.debug {
 		log.Println("[stream] put message", msg)
 	}
@@ -92,7 +93,7 @@ func (s *StreamSQL) Put(msg eventstream.Message) error {
 }
 
 // Run SQL writer daemon
-func (s *StreamSQL) Run() error {
+func (s *StreamSQL) Run(ctx context.Context) error {
 	if s.processTimer != nil {
 		s.processTimer.Stop()
 	}
@@ -110,6 +111,11 @@ func (s *StreamSQL) Run() error {
 	return nil
 }
 
+// Check message value
+func (s *StreamSQL) Check(ctx context.Context, msg eventstream.Message) bool {
+	return true
+}
+
 // Close implementation
 func (s *StreamSQL) Close() error {
 	if s.processTimer != nil {
@@ -122,15 +128,10 @@ func (s *StreamSQL) Close() error {
 	return nil
 }
 
-// Check message value
-func (s *StreamSQL) Check(msg eventstream.Message) bool {
-	return true
-}
-
 // writeBuffer all data
 func (s *StreamSQL) writeBuffer(flush bool) (err error) {
 	if !atomic.CompareAndSwapInt32(&s.isWriting, 0, 1) {
-		return
+		return err
 	}
 
 	var (
@@ -138,42 +139,41 @@ func (s *StreamSQL) writeBuffer(flush bool) (err error) {
 		stmt *sql.Stmt
 		stop = false
 		conn *sql.DB
+		now  = time.Now()
 	)
 
 	defer func() {
 		if rec := recover(); rec != nil {
 			s.logError(rec)
 			s.logError(string(debug.Stack()))
-
 			if tx != nil {
 				tx.Rollback()
 			}
 		}
-
 		atomic.StoreInt32(&s.isWriting, 0)
 	}()
 
 	if !flush {
-		if c := len(s.buffer); c < 1 || (s.blockSize > c && time.Now().Sub(s.writeLastTime) < s.flushInterval) {
-			return
+		if c := len(s.buffer); c < 1 || (s.blockSize > c && now.Sub(s.writeLastTime) < s.flushInterval) {
+			return err
 		}
 	}
 
 	if conn, err = s.connector.Connection(); err != nil {
-		return
+		return err
 	}
 
 	if s.debug {
-		log.Println("[stream] write buffer", flush, time.Now().Sub(s.writeLastTime))
+		log.Println("[stream] write buffer", flush, now.Sub(s.writeLastTime))
 	}
 
 	if tx, err = conn.Begin(); err != nil {
-		return
+		return err
 	}
 
 	if stmt, err = tx.Prepare(s.query.QueryString()); err != nil {
 		tx.Rollback()
-		return
+		return err
 	}
 
 	// Writing loop of prepared requests
@@ -199,7 +199,7 @@ func (s *StreamSQL) writeBuffer(flush bool) (err error) {
 	}
 
 	s.writeLastTime = time.Now()
-	return
+	return err
 }
 
 ///////////////////////////////////////////////////////////////////////////////

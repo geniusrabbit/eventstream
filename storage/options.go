@@ -5,6 +5,12 @@ import (
 	"net/url"
 
 	"github.com/geniusrabbit/eventstream"
+	"github.com/pkg/errors"
+)
+
+var (
+	// ErrInvalidOption if not supported
+	ErrInvalidOption = errors.New(`invalid option`)
 )
 
 // Config of the storage

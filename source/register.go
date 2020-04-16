@@ -1,11 +1,12 @@
 //
-// @project geniusrabbit::eventstream 2017, 2019
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019
+// @project geniusrabbit::eventstream 2017, 2020
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2020
 //
 
 package source
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -48,11 +49,11 @@ func (r *registry) Register(name string, options ...Option) (err error) {
 }
 
 // Subscribe some handler interface to processing the stream with `name`
-func (r *registry) Subscribe(name string, stream eventstream.Streamer) error {
+func (r *registry) Subscribe(ctx context.Context, name string, stream eventstream.Streamer) error {
 	r.mx.RLock()
 	defer r.mx.RUnlock()
 	if src, _ := r.sources[name]; src != nil {
-		return src.Subscribe(stream)
+		return src.Subscribe(ctx, stream)
 	}
 	return nil
 }
@@ -67,10 +68,10 @@ func (r *registry) Source(name string) eventstream.Sourcer {
 
 // Listen method launch into the background all sources where the supervised
 // daemon mode is required
-func (r *registry) Listen() (err error) {
+func (r *registry) Listen(ctx context.Context) (err error) {
 	r.mx.RLock()
 	for _, source := range r.sources {
-		if err = source.Start(); err != nil {
+		if err = source.Start(ctx); err != nil {
 			r.Close()
 			r.mx.RUnlock()
 			return err

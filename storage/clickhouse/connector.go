@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017 - 2019
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2019
+// @project geniusrabbit::eventstream 2017 - 2020
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2020
 //
 
 package clickhouse
@@ -17,6 +17,7 @@ import (
 	"github.com/geniusrabbit/eventstream/storage"
 	sqlstore "github.com/geniusrabbit/eventstream/storage/sql"
 	"github.com/geniusrabbit/eventstream/stream"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -30,23 +31,30 @@ type Clickhouse struct {
 	conn    *sql.DB
 }
 
-func connector(conf *storage.Config) (eventstream.Storager, error) {
+// Open new clickhouse storage stream
+func Open(connect string, options ...interface{}) (eventstream.Storager, error) {
 	var (
-		urlObj, err = url.Parse(conf.Connect)
+		urlObj, err = url.Parse(connect)
 		conn        *sql.DB
+		config      storage.Config
 	)
-
 	if err != nil {
 		return nil, err
 	}
-
-	if conn, err = clickHouseConnect(urlObj, conf.Debug); err != nil {
+	for _, opt := range options {
+		switch o := opt.(type) {
+		case storage.Option:
+			o(&config)
+		default:
+			return nil, errors.Wrapf(storage.ErrInvalidOption, `%+v`, opt)
+		}
+	}
+	if conn, err = clickHouseConnect(urlObj, config.Debug); err != nil {
 		return nil, err
 	}
-
 	return &Clickhouse{
-		debug:   conf.Debug,
-		connect: conf.Connect,
+		debug:   config.Debug,
+		connect: connect,
 		conn:    conn,
 	}, nil
 }
@@ -85,12 +93,10 @@ func (c *Clickhouse) Connection() (_ *sql.DB, err error) {
 			c.conn = nil
 		}
 	}
-
 	if c.conn == nil {
 		urlObj, _ := url.Parse(c.connect)
 		c.conn, err = clickHouseConnect(urlObj, c.debug)
 	}
-
 	return c.conn, err
 }
 
@@ -120,19 +126,15 @@ func clickHouseConnect(u *url.URL, debug bool) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	if count, _ := strconv.Atoi(idle); count >= 0 {
 		conn.SetMaxIdleConns(count)
 	}
-
 	if count, _ := strconv.Atoi(maxcon); count >= 0 {
 		conn.SetMaxOpenConns(count)
 	}
-
 	if lifetime, _ := strconv.Atoi(lifetime); lifetime >= 0 {
 		conn.SetConnMaxLifetime(time.Duration(lifetime) * time.Second)
 	}
-
 	return conn, nil
 }
 

@@ -1,46 +1,125 @@
+SHELL := /bin/bash -o pipefail
+UNAME_OS := $(shell uname -s)
+UNAME_ARCH := $(shell uname -m)
+
+BUILD_GOOS ?= linux
+BUILD_GOARCH ?= amd64
+BUILD_CGO_ENABLED ?= 0
+
+COMMIT_NUMBER ?= $(shell git log -1 --pretty=format:%h)
 
 PROJDIR ?= $(CURDIR)/../
 MAIN ?= eventstream
 
-drun:
-	docker-compose -p ${MAIN} -f develop/docker-compose.yml build service
-	docker-compose -p ${MAIN} -f develop/docker-compose.yml run --service-ports service
+TMP_BASE := .tmp
+TMP := $(TMP_BASE)/$(UNAME_OS)/$(UNAME_ARCH)
+TMP_BIN = $(TMP)/bin
+TMP_ETC := $(TMP)/etc
+TMP_LIB := $(TMP)/lib
+TMP_VERSIONS := $(TMP)/versions
 
-stop:
-	docker-compose -p ${MAIN} -f develop/docker-compose.yml stop
+unexport GOPATH
+export GOPATH=$(abspath $(TMP))
+export GO111MODULE := on
+export GOBIN := $(abspath $(TMP_BIN))
+export PATH := $(GOBIN):$(PATH)
+# Go 1.13 defaults to TLS 1.3 and requires an opt-out.  Opting out for now until certs can be regenerated before 1.14
+# https://golang.org/doc/go1.12#tls_1_3
+export GODEBUG := tls13=0
 
-destroy: stop
-	docker-compose -p ${MAIN} -f develop/docker-compose.yml down
+GOLINT_VERSION := d0100b6bd8b389f0385611eb39152c4d7c3a7905
+GOLINT := $(TMP_VERSIONS)/golint/$(GOLINT_VERSION)
+$(GOLINT):
+	$(eval GOLINT_TMP := $(shell mktemp -d))
+	cd $(GOLINT_TMP); go get golang.org/x/lint/golint@$(GOLINT_VERSION)
+	@rm -rf $(GOLINT_TMP)
+	@rm -rf $(dir $(GOLINT))
+	@mkdir -p $(dir $(GOLINT))
+	@touch $(GOLINT)
 
-# Service data
+ERRCHECK_VERSION := v1.2.0
+ERRCHECK := $(TMP_VERSIONS)/errcheck/$(ERRCHECK_VERSION)
+$(ERRCHECK):
+	$(eval ERRCHECK_TMP := $(shell mktemp -d))
+	cd $(ERRCHECK_TMP); go get github.com/kisielk/errcheck@$(ERRCHECK_VERSION)
+	@rm -rf $(ERRCHECK_TMP)
+	@rm -rf $(dir $(ERRCHECK))
+	@mkdir -p $(dir $(ERRCHECK))
+	@touch $(ERRCHECK)
+
+STATICCHECK_VERSION := c2f93a96b099cbbec1de36336ab049ffa620e6d7
+STATICCHECK := $(TMP_VERSIONS)/staticcheck/$(STATICCHECK_VERSION)
+$(STATICCHECK):
+	$(eval STATICCHECK_TMP := $(shell mktemp -d))
+	cd $(STATICCHECK_TMP); go get honnef.co/go/tools/cmd/staticcheck@$(STATICCHECK_VERSION)
+	@rm -rf $(STATICCHECK_TMP)
+	@rm -rf $(dir $(STATICCHECK))
+	@mkdir -p $(dir $(STATICCHECK))
+	@touch $(STATICCHECK)
+
+.PHONY: deps
+deps: $(GOLINT) $(ERRCHECK) $(STATICCHECK)
+
+.PHONY: generate-code
+generate-code: ## Generate mocks for the project
+	@echo "Generate mocks for the project"
+	@go generate ./...
+
+.PHONY: golint
+golint: $(GOLINT)
+	golint -set_exit_status ./...
+
+.PHONY: vet
+vet:
+	go vet ./...
+
+.PHONY:
+errcheck: $(ERRCHECK)
+	errcheck ./...
+
+.PHONY: staticcheck
+staticcheck: $(STATICCHECK)
+	staticcheck ./...
+
+.PHONY: lint
+lint: golint vet errcheck staticcheck
+
+.PHONY: test
+test: ## Run package test
+	go test -race ./...
 
 .PHONY: fmt
 fmt:
-	gofmt -w `find -name "*.go" -type f -not -path "./vendor/*"`
+	gofmt -w `find -name "*.go" -type f`
 
-# Build data
+.PHONY: tidy
+tidy:
+	go mod tidy
 
-buildapp:
-	docker run -it --rm --env CGO_ENABLED=0 --env GO111MODULE=on \
-    -v="$(CURDIR):/eventstream" -w="/eventstream" golang:latest \
-    go build -tags all -a -installsuffix cgo -gcflags '-B' \
-			-ldflags '-s -w' -o ".build/eventstream" "cmd/eventstream/main.go"
+.PHONY: build
+build:
+	@mkdir -p .tmp/build
+	@rm -rf .tmp/build/eventstream
+	GOOS=${BUILD_GOOS} GOARCH=${BUILD_GOARCH} CGO_ENABLED=${BUILD_CGO_ENABLED} \
+        go build --tags all \
+					-ldflags "-s -w -X internal.appVersion=`date -u +%Y%m%d.%H%M%S` -X internal.commit=${COMMIT_NUMBER}" \
+        	-o ".tmp/build/eventstream" cmd/eventstream/main.go
 
-builddocker:
-	docker build -t geniusrabbit/eventstream -f deploy/docker/Dockerfile .
+.PHONY: run
+run: build
+	docker-compose -p ${MAIN} -f develop/docker-compose.yml build service
+	docker-compose -p ${MAIN} -f develop/docker-compose.yml run --service-ports service
 
-build: buildapp builddocker
+.PHONY: stop
+stop:
+	docker-compose -p ${MAIN} -f develop/docker-compose.yml stop
 
-destroy:
-	-docker rmi -f geniusrabbit/eventstream
+.PHONY: destroy
+destroy: stop
+	docker-compose -p ${MAIN} -f develop/docker-compose.yml down
 
-run:
-	go run -tags all cmd/eventstream/main.go --config=config.example.hcl --profiler=:6060 --debug
+.PHONY: help
+help:
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' Makefile | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-dcbuild:
-	docker build -t eventstream -f Develop.dockerfile .
-
-dcrun: dcbuild
-	docker run --rm -it -e DEBUG=true -p 6060:6060 --name eventstream \
-		-e GOPATH=/project/.cache --link nats:nats-streaming --link clickhouse \
-		-v $(PROJDIR):/project eventstream
+.DEFAULT_GOAL := help

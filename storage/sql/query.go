@@ -135,7 +135,7 @@ func (q *Query) ParamsBy(msg eventstream.Message) (params []interface{}) {
 	for _, v := range q.values {
 		params = append(params, msg.ItemCast(v.Key, v.Type, v.Length, v.Format))
 	}
-	return
+	return params
 }
 
 // StringParamsBy by message
@@ -146,7 +146,7 @@ func (q *Query) StringParamsBy(msg eventstream.Message) (params []string) {
 			gocast.ToString(msg.ItemCast(v.Key, v.Type, v.Length, v.Format)),
 		)
 	}
-	return
+	return params
 }
 
 // StringByMessage prepare
@@ -156,7 +156,6 @@ func (q *Query) StringByMessage(msg eventstream.Message) string {
 		items  = strings.Split(q.query, "?")
 		result bytes.Buffer
 	)
-
 	for i, v := range items {
 		result.WriteString(v)
 		if i < len(params)-1 {
@@ -197,7 +196,7 @@ func PrepareFields(fls interface{}) (values []Value, fields, inserts []string, e
 	if err == nil && (len(inserts) < 1 || len(fields) > len(values)) {
 		err = errInvalidQueryFieldsValue
 	}
-	return
+	return values, fields, inserts, err
 }
 
 // PrepareFieldsByArray matching and returns raw fields for insert
@@ -205,10 +204,9 @@ func PrepareFields(fls interface{}) (values []Value, fields, inserts []string, e
 // Result: [srv:int, name:string], [service,name], [?,?]
 func PrepareFieldsByArray(fls []string) (values []Value, fields, inserts []string) {
 	for _, fl := range fls {
-		if "" == fl {
+		if len(fl) == 0 {
 			continue
 		}
-
 		if strings.ContainsAny(fl, "=") {
 			if field := strings.SplitN(fl, "=", 2); '@' == field[1][0] {
 				fields = append(fields, field[0])
@@ -242,7 +240,7 @@ func PrepareFieldsByArray(fls []string) (values []Value, fields, inserts []strin
 			inserts = append(inserts, "?")
 		}
 	}
-	return
+	return values, fields, inserts
 }
 
 // PrepareFieldsByString matching and returns raw fields for insert

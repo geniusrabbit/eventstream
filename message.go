@@ -42,7 +42,7 @@ func (m Message) JSON() string {
 	return string(data)
 }
 
-// Item by key name
+// Item returns the value by key name or default
 func (m Message) Item(key string, def interface{}) interface{} {
 	if v, ok := m[key]; ok && v != nil {
 		return v
@@ -59,7 +59,7 @@ func (m Message) String(key, def string) string {
 	return gocast.ToString(m.Item(key, def))
 }
 
-// ItemCast value
+// ItemCast converts any key value into the field_type
 func (m Message) ItemCast(key string, t FieldType, length int, format string) (v interface{}) {
 	v = m.Item(key, nil)
 	switch t {
@@ -136,7 +136,7 @@ func (m Message) ItemCast(key string, t FieldType, length int, format string) (v
 	return v
 }
 
-// Map value
+// Map returns the message as map[string]interface{}
 func (m Message) Map() map[string]interface{} {
 	return map[string]interface{}(m)
 }

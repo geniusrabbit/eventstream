@@ -20,15 +20,6 @@ Supports two file formats YAML & HCL
 
 ```js
 stores {
-  // CREATE TABLE stat.testlog (
-  //    timestamp        DateTime
-  //  , datemark         Date default toDate(timestamp)
-  //  , service          String
-  //  , msg              String
-  //  , error            String
-  //  , created_at       DateTime default now()
-  // ) Engine=MergeTree(datemark, (service), 8192);
-
   clickhouse_1 {
     connect = "clickhouse://clickhouse:9000/stat"
     options { # Optional
@@ -52,6 +43,8 @@ streams {
     source = "nats_1"
     target = "testlog"
     // Optional if fields in log and in message the same
+    // Transforms into:
+    //   INSERT INTO testlog (service, msg, error, timestamp) VALUES($srv, $msg, $err, @toDateTime($timestamp))
     fields = "service=srv,msg,error=err,timestamp=@toDateTime({{timestamp:date}})"
     when   = "srv == ""main"""
   }
@@ -61,7 +54,9 @@ streams {
 ## TODO
 
 - [ ] Prepare evetstream as Framework extension
-- [ ] Add Kafka stream writer support
+- [X] Add Kafka stream writer support
+- [X] Add NATS stream writer support
+- [ ] Add RabbitMQ stream writer support
 - [ ] Add RabbitMQ queue source support
 - [ ] Add health check API
 - [ ] Add metrics support (prometheus)

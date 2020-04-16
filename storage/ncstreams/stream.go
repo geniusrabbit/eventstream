@@ -1,16 +1,18 @@
 //
-// @project geniusrabbit::eventstream 2017, 2019
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019
+// @project geniusrabbit::eventstream 2017, 2020
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2020
 //
 
-package nats
+package ncstreams
 
 import (
+	"context"
 	"errors"
+	"io"
 
 	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/stream"
-	"github.com/geniusrabbit/notificationcenter"
+	nc "github.com/geniusrabbit/notificationcenter"
 )
 
 var (
@@ -30,10 +32,10 @@ type nstream struct {
 	debug            bool
 	id               string
 	messageTemplates []*messageTemplate
-	stream           notificationcenter.Streamer
+	stream           nc.Publisher
 }
 
-func newStream(natsStream notificationcenter.Streamer, conf *stream.Config) (eventstream.Streamer, error) {
+func newStream(pub nc.Publisher, conf *stream.Config) (eventstream.Streamer, error) {
 	var preConfig config
 	if err := conf.Decode(&preConfig); err != nil {
 		return nil, err
@@ -41,7 +43,7 @@ func newStream(natsStream notificationcenter.Streamer, conf *stream.Config) (eve
 	stream := &nstream{
 		debug:  conf.Debug,
 		id:     conf.Name,
-		stream: natsStream,
+		stream: pub,
 	}
 	return stream, nil
 }
@@ -52,23 +54,26 @@ func (s *nstream) ID() string {
 }
 
 // Put message to stream
-func (s *nstream) Put(msg eventstream.Message) error {
+func (s *nstream) Put(ctx context.Context, msg eventstream.Message) error {
 	messages := s.prepareMessages(msg)
-	return s.stream.Send(messages...)
+	return s.stream.Publish(ctx, messages...)
 }
 
 // Check the message
-func (s *nstream) Check(msg eventstream.Message) bool {
+func (s *nstream) Check(ctx context.Context, msg eventstream.Message) bool {
 	return true
 }
 
 // Close implementation
 func (s *nstream) Close() error {
+	if closer, _ := s.stream.(io.Closer); closer != nil {
+		return closer.Close()
+	}
 	return nil
 }
 
 // Run loop
-func (s *nstream) Run() error {
+func (s *nstream) Run(ctx context.Context) error {
 	return nil
 }
 

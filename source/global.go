@@ -1,11 +1,15 @@
 //
-// @project geniusrabbit::eventstream 2017, 2019
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019
+// @project geniusrabbit::eventstream 2017, 2020
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2020
 //
 
 package source
 
-import "github.com/geniusrabbit/eventstream"
+import (
+	"context"
+
+	"github.com/geniusrabbit/eventstream"
+)
 
 var _registry = registry{
 	close:      make(chan bool, 1),
@@ -27,8 +31,8 @@ func Register(name string, options ...Option) error {
 
 // Subscribe some handler interface to processing the stream with `name`,
 // in the global registry
-func Subscribe(name string, stream eventstream.Streamer) error {
-	return _registry.Subscribe(name, stream)
+func Subscribe(ctx context.Context, name string, stream eventstream.Streamer) error {
+	return _registry.Subscribe(ctx, name, stream)
 }
 
 // Source returns the source object registered with the `name`, in the global registry
@@ -43,6 +47,6 @@ func Close() error {
 
 // Listen method launch into the background all sources where the supervised
 // daemon mode is required, in the global registry
-func Listen() error {
-	return _registry.Listen()
+func Listen(ctx context.Context) error {
+	return _registry.Listen(ctx)
 }

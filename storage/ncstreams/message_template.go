@@ -1,4 +1,4 @@
-package nats
+package ncstreams
 
 import (
 	"github.com/Knetic/govaluate"
