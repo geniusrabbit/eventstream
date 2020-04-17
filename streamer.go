@@ -12,6 +12,7 @@ import (
 
 // Streamer interface of data processing describes
 // basic methods of data pipeline
+//go:generate mockgen -source $GOFILE -package mocks -destination internal/mocks/stream.go
 type Streamer interface {
 	// Close extension
 	io.Closer

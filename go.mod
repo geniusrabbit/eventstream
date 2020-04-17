@@ -23,4 +23,5 @@ require (
 	gopkg.in/stretchr/testify.v1 v1.2.2 // indirect
 	gopkg.in/yaml.v2 v2.2.8
 	go.uber.org/zap v1.14.1
+	github.com/golang/mock v1.4.3
 )

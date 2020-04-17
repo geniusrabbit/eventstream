@@ -57,8 +57,18 @@ $(STATICCHECK):
 	@mkdir -p $(dir $(STATICCHECK))
 	@touch $(STATICCHECK)
 
+GOMOCK_VERSION := v1.3.1
+GOMOCK := $(TMP_VERSIONS)/mockgen/$(GOMOCK_VERSION)
+$(GOMOCK):
+	$(eval GOMOCK_TMP := $(shell mktemp -d))
+	cd $(GOMOCK_TMP); go get github.com/golang/mock/mockgen@$(GOMOCK_VERSION)
+	@rm -rf $(GOMOCK_TMP)
+	@rm -rf $(dir $(GOMOCK))
+	@mkdir -p $(dir $(GOMOCK))
+	@touch $(GOMOCK)
+
 .PHONY: deps
-deps: $(GOLINT) $(ERRCHECK) $(STATICCHECK)
+deps: $(GOLINT) $(ERRCHECK) $(STATICCHECK) $(GOMOCK)
 
 .PHONY: generate-code
 generate-code: ## Generate mocks for the project
