@@ -28,10 +28,10 @@ sources {
     format  = "json"
     driver  = "nats"
   }
-  kafka_1 {
-    connect = "nats://nats:4222/group?topics=topic1"
-    driver  = "nats"
-  }
+}
+
+variable "service_info" {
+  default = "info"
 }
 
 // Streams it's pipelines which have source and destination store
@@ -40,12 +40,12 @@ streams {
     store   = "clickhouse_1"
     source  = "nats_1"
 
-    rawitem = <<Q
+    sql_query = <<Q
       INSERT INTO testlog (service, msg, error, timestamp)
         VALUES({{srv}}, {{msg}}, {{err}}, toTimestamp({{timestamp:date}}))
     Q
 
-    where   = "service = ${"\"info\""}"
+    where   = "service==\"info\""
   }
 
   log_3 {

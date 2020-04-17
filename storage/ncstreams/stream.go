@@ -7,8 +7,9 @@ package ncstreams
 
 import (
 	"context"
-	"errors"
 	"io"
+
+	"github.com/pkg/errors"
 
 	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/stream"
@@ -20,19 +21,19 @@ var (
 )
 
 type configItem struct {
-	Fields map[string]string `json:"fields"`
-	Where  string            `json:"where"`
+	Fields []map[string]interface{} `json:"fields"`
+	Where  string                   `json:"where"`
 }
 
 type config struct {
-	Target []configItem `json:"targets"`
+	Targets []configItem `json:"targets"`
 }
 
 type nstream struct {
-	debug            bool
-	id               string
-	messageTemplates []*messageTemplate
-	stream           nc.Publisher
+	debug     bool
+	id        string
+	templates []*messageTemplate
+	stream    nc.Publisher
 }
 
 func newStream(pub nc.Publisher, conf *stream.Config) (eventstream.Streamer, error) {
@@ -40,10 +41,24 @@ func newStream(pub nc.Publisher, conf *stream.Config) (eventstream.Streamer, err
 	if err := conf.Decode(&preConfig); err != nil {
 		return nil, err
 	}
+	if len(preConfig.Targets) == 0 {
+		return nil, errInvalidMetricsItemConfig
+	}
 	stream := &nstream{
 		debug:  conf.Debug,
 		id:     conf.Name,
 		stream: pub,
+	}
+	for _, target := range preConfig.Targets {
+		var fields map[string]interface{}
+		if len(target.Fields) > 0 {
+			fields = target.Fields[0]
+		}
+		template, err := newMessageTemplate(fields, target.Where)
+		if err != nil {
+			return nil, errors.Wrap(errInvalidMetricsItemConfig, err.Error())
+		}
+		stream.templates = append(stream.templates, template)
 	}
 	return stream, nil
 }
@@ -61,7 +76,12 @@ func (s *nstream) Put(ctx context.Context, msg eventstream.Message) error {
 
 // Check the message
 func (s *nstream) Check(ctx context.Context, msg eventstream.Message) bool {
-	return true
+	for _, tmp := range s.templates {
+		if tmp.check(msg) {
+			return true
+		}
+	}
+	return false
 }
 
 // Close implementation
@@ -77,28 +97,11 @@ func (s *nstream) Run(ctx context.Context) error {
 	return nil
 }
 
-///////////////////////////////////////////////////////////////////////////////
-/// Internal methods
-///////////////////////////////////////////////////////////////////////////////
-
 func (s *nstream) prepareMessages(msg eventstream.Message) (result []interface{}) {
-	for _, mt := range s.messageTemplates {
+	for _, mt := range s.templates {
 		if msg := mt.prepare(msg); msg != nil {
 			result = append(result, msg)
 		}
 	}
 	return result
-}
-
-///////////////////////////////////////////////////////////////////////////////
-/// Helpers
-///////////////////////////////////////////////////////////////////////////////
-
-func gIndexOfStr(s string, arr [][2]string) int {
-	for i, sv := range arr {
-		if sv[1] == s {
-			return i
-		}
-	}
-	return -1
 }

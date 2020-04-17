@@ -8,7 +8,7 @@ import (
 )
 
 type config struct {
-	RawQuery     string      `json:"raw_query"`
+	SQLQuery     string      `json:"sql_query"`
 	Target       string      `json:"target"`
 	BufferSize   uint        `json:"buffer_size"`
 	WriteTimeout uint        `json:"write_timeout"`
@@ -21,8 +21,8 @@ func New(connector Connector, pattern string, conf *stream.Config, options ...Op
 	if err = conf.Decode(&config); err != nil {
 		return nil, err
 	}
-	if config.RawQuery != "" {
-		options = append(options, WithQueryRawFields(config.RawQuery, config.Fields))
+	if config.SQLQuery != `` {
+		options = append(options, WithQueryRawFields(config.SQLQuery, config.Fields))
 	} else if config.Fields != nil {
 		options = append(options, WithQueryByPattern(pattern, config.Target, config.Fields))
 	}

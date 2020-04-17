@@ -13,11 +13,13 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/geniusrabbit/eventstream"
+	"github.com/geniusrabbit/eventstream/internal/utils"
 	"github.com/geniusrabbit/eventstream/storage"
 	sqlstore "github.com/geniusrabbit/eventstream/storage/sql"
 	"github.com/geniusrabbit/eventstream/stream"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -32,7 +34,7 @@ type Clickhouse struct {
 }
 
 // Open new clickhouse storage stream
-func Open(connect string, options ...interface{}) (eventstream.Storager, error) {
+func Open(connect string, options ...interface{}) (*Clickhouse, error) {
 	var (
 		urlObj, err = url.Parse(connect)
 		conn        *sql.DB
@@ -105,20 +107,16 @@ func (c *Clickhouse) Close() error {
 	return c.conn.Close()
 }
 
-///////////////////////////////////////////////////////////////////////////////
-/// Connection helpers
-///////////////////////////////////////////////////////////////////////////////
-
 // clickHouseConnect source
 // URL example tcp://login:pass@hostname:port/name?sslmode=disable&idle=10&maxcon=30
 func clickHouseConnect(u *url.URL, debug bool) (*sql.DB, error) {
 	var (
 		query         = u.Query()
-		idle          = defString(query.Get("idle"), "30")
-		maxcon        = defString(query.Get("maxcon"), "0")
-		lifetime      = defString(query.Get("lifetime"), "0")
+		idle          = utils.StringOrDefault(query.Get("idle"), "30")
+		maxcon        = utils.StringOrDefault(query.Get("maxcon"), "0")
+		lifetime      = utils.StringOrDefault(query.Get("lifetime"), "0")
 		host, port, _ = net.SplitHostPort(u.Host)
-		dataSource    = fmt.Sprintf("tcp://%s:%s?database=%s", host, defString(port, "9000"), u.Path[1:])
+		dataSource    = fmt.Sprintf("tcp://%s:%s?database=%s", host, utils.StringOrDefault(port, "9000"), u.Path[1:])
 	)
 
 	// Open connection
@@ -136,15 +134,4 @@ func clickHouseConnect(u *url.URL, debug bool) (*sql.DB, error) {
 		conn.SetConnMaxLifetime(time.Duration(lifetime) * time.Second)
 	}
 	return conn, nil
-}
-
-///////////////////////////////////////////////////////////////////////////////
-/// Helpers
-///////////////////////////////////////////////////////////////////////////////
-
-func defString(s, def string) string {
-	if len(s) > 0 {
-		return s
-	}
-	return def
 }

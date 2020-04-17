@@ -1,12 +1,11 @@
 package sql
 
 import (
-	"fmt"
 	"testing"
 	"time"
 )
 
-func Test_RawQuery(t *testing.T) {
+func TestRawQuery(t *testing.T) {
 	tests := []struct {
 		query  string
 		fields interface{}
@@ -45,14 +44,13 @@ func Test_RawQuery(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		fmt.Println(">>>>", test)
 		if _, err := NewQueryByRaw(test.query, test.fields); err != nil {
 			t.Error(err)
 		}
 	}
 }
 
-func Test_PatternQuery(t *testing.T) {
+func TestPatternQuery(t *testing.T) {
 	tests := []struct {
 		pattern string
 		target  string

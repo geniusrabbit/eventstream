@@ -1,4 +1,4 @@
-package storage
+package source
 
 import (
 	"encoding/json"
@@ -24,8 +24,8 @@ func TestOptins(t *testing.T) {
 			config:  Config{Connect: "test3", Driver: "driver", Debug: true},
 		},
 		{
-			options: []Option{WithConnect("driver", "test4"), WithBuffer(100)},
-			config:  Config{Connect: "test4", Driver: "driver", Buffer: 100},
+			options: []Option{WithConnect("driver", "test4"), WithFormat(`json`)},
+			config:  Config{Connect: "test4", Driver: "driver", Format: `json`},
 		},
 		{
 			options: []Option{WithConnect("driver", "test5"), WithRawConfig(json.RawMessage("raw"))},

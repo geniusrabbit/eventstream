@@ -97,7 +97,7 @@ tidy:
 	go mod tidy
 
 .PHONY: build
-build:
+build: test
 	@mkdir -p .tmp/build
 	@rm -rf .tmp/build/eventstream
 	GOOS=${BUILD_GOOS} GOARCH=${BUILD_GOARCH} CGO_ENABLED=${BUILD_CGO_ENABLED} \

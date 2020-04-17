@@ -14,7 +14,7 @@ Eventstream pipeline for storing and re-sending events inside the system.
 go get -v -u -t github.com/geniusrabbit/eventstream/cmd/eventstream
 ```
 
-## Config
+## Config example
 
 Supports two file formats YAML & HCL
 
@@ -46,7 +46,7 @@ streams {
     // Transforms into:
     //   INSERT INTO testlog (service, msg, error, timestamp) VALUES($srv, $msg, $err, @toDateTime($timestamp))
     fields = "service=srv,msg,error=err,timestamp=@toDateTime({{timestamp:date}})"
-    when   = "srv == ""main"""
+    where  = "srv == \"main\""
   }
 }
 ```
@@ -60,7 +60,7 @@ streams {
 - [ ] Add RabbitMQ queue source support
 - [ ] Add health check API
 - [ ] Add metrics support (prometheus)
-- [x] Add 'when' stream condition (http://github.com/Knetic/govaluate)
+- [x] Add 'where' stream condition (http://github.com/Knetic/govaluate)
 - [X] Ack message only if success
 - [X] Buffering all data until be stored
 - [ ] ~~Fix HDFS writer~~

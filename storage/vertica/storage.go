@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017, 2019
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019
+// @project geniusrabbit::eventstream 2017, 2019-2020
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019-2020
 //
 
 package vertica
@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/geniusrabbit/eventstream"
-	"github.com/geniusrabbit/eventstream/storage"
+	"github.com/geniusrabbit/eventstream/internal/utils"
 	sqlstore "github.com/geniusrabbit/eventstream/storage/sql"
 	"github.com/geniusrabbit/eventstream/stream"
 )
@@ -30,21 +30,23 @@ type Vertica struct {
 	conn    *sql.DB
 }
 
-func connector(conf *storage.Config) (eventstream.Storager, error) {
+// Open new vertica storage
+func Open(connectURL string, options ...Option) (*Vertica, error) {
 	var (
-		urlObj, err = url.Parse(conf.Connect)
+		opts        Options
 		conn        *sql.DB
+		urlObj, err = url.Parse(connectURL)
 	)
-
 	if err != nil {
 		return nil, err
 	}
-
-	if conn, err = verticaConnect(urlObj, conf.Debug); err != nil {
+	for _, opt := range options {
+		opt(&opts)
+	}
+	if conn, err = verticaConnect(urlObj, opts.Debug); err != nil {
 		return nil, err
 	}
-
-	return &Vertica{conn: conn, connect: conf.Connect, debug: conf.Debug}, nil
+	return &Vertica{conn: conn, connect: connectURL, debug: opts.Debug}, nil
 }
 
 // Stream vertica processor
@@ -86,7 +88,6 @@ func (st *Vertica) Connection() (_ *sql.DB, err error) {
 		urlObj, _ := url.Parse(st.connect)
 		st.conn, err = verticaConnect(urlObj, st.debug)
 	}
-
 	return st.conn, err
 }
 
@@ -95,23 +96,19 @@ func (st *Vertica) Close() error {
 	return st.conn.Close()
 }
 
-///////////////////////////////////////////////////////////////////////////////
-/// Connection helpers
-///////////////////////////////////////////////////////////////////////////////
-
 // verticaConnect source
 // @param u URL vert://login:password@hostname:5433/name?sslmode=disable&idle=10&maxcon=30
 func verticaConnect(u *url.URL, debug bool) (*sql.DB, error) {
 	var (
 		query          = u.Query()
-		idle           = defString(query.Get("idle"), "30")
-		maxcon         = defString(query.Get("maxcon"), "0")
-		lifetime       = defString(query.Get("lifetime"), "0")
-		sslmode        = defString(query.Get("sslmode"), "disable")
+		idle           = utils.StringOrDefault(query.Get("idle"), "30")
+		maxcon         = utils.StringOrDefault(query.Get("maxcon"), "0")
+		lifetime       = utils.StringOrDefault(query.Get("lifetime"), "0")
+		sslmode        = utils.StringOrDefault(query.Get("sslmode"), "disable")
 		password, _    = u.User.Password()
 		host, port, _  = net.SplitHostPort(u.Host)
 		dataSourceName = fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s sslmode=%s",
-			u.User.Username(), password, host, defString(port, "5432"), u.Path[1:], sslmode)
+			u.User.Username(), password, host, utils.StringOrDefault(port, "5432"), u.Path[1:], sslmode)
 	)
 
 	// Open connection
@@ -135,15 +132,4 @@ func verticaConnect(u *url.URL, debug bool) (*sql.DB, error) {
 		}
 	}
 	return conn, nil
-}
-
-///////////////////////////////////////////////////////////////////////////////
-/// Helpers
-///////////////////////////////////////////////////////////////////////////////
-
-func defString(s, def string) string {
-	if len(s) > 0 {
-		return s
-	}
-	return def
 }
