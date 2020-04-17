@@ -8,7 +8,12 @@ package eventstream
 import (
 	"context"
 	"io"
+
+	"github.com/geniusrabbit/eventstream/stream"
 )
+
+// StreamConfig of the stream
+type StreamConfig = stream.Config
 
 // Streamer interface of data processing describes
 // basic methods of data pipeline

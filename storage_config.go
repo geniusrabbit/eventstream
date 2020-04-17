@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 )
 
 var (
@@ -36,16 +37,24 @@ func (c *StorageConfig) UnmarshalJSON(data []byte) (err error) {
 		Buffer  uint   `json:"buffer"`
 	}
 
-	if err = json.Unmarshal(data, &confData); err == nil {
-		if confData.Buffer <= 0 {
-			confData.Buffer = 100
-		}
-		c.Connect = confData.Connect
-		c.Driver = confData.Driver
-		c.Buffer = confData.Buffer
-		c.Raw = json.RawMessage(data)
+	if err = json.Unmarshal(data, &confData); err != nil {
+		return err
 	}
-	return
+
+	if confData.Buffer <= 0 {
+		confData.Buffer = 100
+	}
+	c.Connect = confData.Connect
+	c.Driver = confData.Driver
+	c.Buffer = confData.Buffer
+	c.Raw = json.RawMessage(data)
+
+	if c.Driver == `` {
+		if urlData := strings.Split(c.Connect, `://`); len(urlData) > 1 {
+			c.Driver = urlData[0]
+		}
+	}
+	return err
 }
 
 // Validate config

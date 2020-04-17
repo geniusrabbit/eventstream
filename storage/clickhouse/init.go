@@ -1,4 +1,4 @@
-// build clickhouse allsource all
+// +build clickhouse allsource all
 
 package clickhouse
 

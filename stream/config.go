@@ -1,4 +1,4 @@
-package eventstream
+package stream
 
 import (
 	"encoding/json"
@@ -11,8 +11,8 @@ var (
 	errInvalidSourceParameter = errors.New("[storage::config] invalid the 'source' parameter")
 )
 
-// StreamConfig of the stream
-type StreamConfig struct {
+// Config of the stream
+type Config struct {
 	Name   string
 	Debug  bool
 	Store  string
@@ -22,7 +22,7 @@ type StreamConfig struct {
 }
 
 // Decode raw data to the target object
-func (c *StreamConfig) Decode(v interface{}) error {
+func (c *Config) Decode(v interface{}) error {
 	if len(c.Raw) == 0 {
 		return nil
 	}
@@ -33,7 +33,7 @@ func (c *StreamConfig) Decode(v interface{}) error {
 }
 
 // UnmarshalJSON data
-func (c *StreamConfig) UnmarshalJSON(data []byte) (err error) {
+func (c *Config) UnmarshalJSON(data []byte) (err error) {
 	c.Raw = json.RawMessage(data)
 
 	var conf struct {
@@ -51,7 +51,7 @@ func (c *StreamConfig) UnmarshalJSON(data []byte) (err error) {
 }
 
 // Validate config object
-func (c *StreamConfig) Validate() error {
+func (c *Config) Validate() error {
 	if c.Store == "" {
 		return errInvalidStoreParameter
 	}

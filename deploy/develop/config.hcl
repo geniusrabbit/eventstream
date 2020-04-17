@@ -11,11 +11,10 @@ stores {
 
   clickhouse_1 {
     connect = "clickhouse://clickhouse:9000/stat"
-    driver  = "clickhouse"
     buffer  = 1000
   }
 
-  nats_1 {
+  nats_store {
     connect = "nats://nats:4222/?topics=metrics"
     driver  = "nats"
   }
@@ -74,7 +73,7 @@ streams {
     # Write two messages into the nats_1 store
     # message1 = {"type": "message", "service": "...", message: "..."}
     # message2 = {"type": "error",   "service": "...", message: "..."}
-    store   = "nats_1"
+    store   = "nats_store"
     source  = "nats_1"
     targets = [
       {

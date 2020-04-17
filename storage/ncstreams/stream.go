@@ -70,8 +70,7 @@ func (s *nstream) ID() string {
 
 // Put message to stream
 func (s *nstream) Put(ctx context.Context, msg eventstream.Message) error {
-	messages := s.prepareMessages(msg)
-	return s.stream.Publish(ctx, messages...)
+	return s.stream.Publish(ctx, s.prepareMessages(msg)...)
 }
 
 // Check the message

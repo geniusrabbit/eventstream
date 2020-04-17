@@ -2,12 +2,7 @@ package stream
 
 import (
 	"encoding/json"
-
-	"github.com/geniusrabbit/eventstream"
 )
-
-// Config of the stream
-type Config = eventstream.StreamConfig
 
 // Option of the stream
 type Option func(cnf *Config)
