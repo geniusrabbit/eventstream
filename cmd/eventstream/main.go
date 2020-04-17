@@ -7,14 +7,17 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
 
 	_ "github.com/ClickHouse/clickhouse-go"
 	_ "github.com/lib/pq"
+	"github.com/pkg/profile"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/cmd/eventstream/appcontext"
@@ -27,18 +30,10 @@ import (
 	"github.com/geniusrabbit/eventstream/stream"
 )
 
-var (
-	flagConfigFile = flag.String("config", "config.hcl", "Configuration file path")
-	flagProfiler   = flag.String("profiler", "", "The hostname and port of golang profiler, for example: :6060")
-)
-
 func init() {
-	// Parse flags
-	flag.Parse()
-
 	// Load config
 	config := &appcontext.Config
-	err := config.Load(*flagConfigFile)
+	err := config.Load()
 	fatalError("config.load", err)
 
 	// Validate config
@@ -79,6 +74,9 @@ func main() {
 
 	defer cancel()
 
+	logger, err := newLogger(config.IsDebug(), config.LogLevel)
+	fatalError("logger", err)
+
 	// Register streams
 	for name, strmConf := range config.Streams {
 		var (
@@ -110,13 +108,8 @@ func main() {
 		go func(name string) { fatalError("[stream] "+name+" run", strm.Run(ctx)) }(name)
 	} // end for
 
-	// Run profiler
-	if *flagProfiler != "" {
-		go func() {
-			fmt.Println("Run profile: " + *flagProfiler)
-			fatalError("profiler", http.ListenAndServe(*flagProfiler, nil))
-		}()
-	}
+	// Profiling server of collector
+	runProfile(config, logger)
 
 	// Run source listener's
 	fmt.Println("> Run eventstream service")
@@ -129,6 +122,54 @@ func newStream(conf *stream.Config) (eventstream.Streamer, error) {
 		return store.Stream(conf)
 	}
 	return nil, fmt.Errorf("[stream] %s undefined storage [%s]", conf.Name, conf.Store)
+}
+
+func runProfile(conf *appcontext.ConfigType, logger *zap.Logger) {
+	switch conf.Profile.Mode {
+	case "cpu":
+		defer profile.Start(profile.CPUProfile).Stop()
+	case "mem", "memory":
+		defer profile.Start(profile.MemProfile).Stop()
+	case "mutex":
+		defer profile.Start(profile.MutexProfile).Stop()
+	case "block":
+		defer profile.Start(profile.BlockProfile).Stop()
+	case "net":
+		go func() {
+			fmt.Printf("Run profile (port %s)\n", conf.Profile.Listen)
+			if err := http.ListenAndServe(conf.Profile.Listen, nil); err != nil {
+				logger.Error("profile server error", zap.Error(err))
+			}
+		}()
+	}
+}
+
+func newLogger(debug bool, loglevel string, options ...zap.Option) (logger *zap.Logger, err error) {
+	if debug {
+		return zap.NewDevelopment(options...)
+	}
+
+	var (
+		level         zapcore.Level
+		loggerEncoder = zapcore.NewJSONEncoder(zapcore.EncoderConfig{
+			TimeKey:        "ts",
+			LevelKey:       "level",
+			NameKey:        "logger",
+			CallerKey:      "caller",
+			MessageKey:     "msg",
+			StacktraceKey:  "stacktrace",
+			EncodeLevel:    zapcore.LowercaseLevelEncoder,
+			EncodeTime:     zapcore.ISO8601TimeEncoder,
+			EncodeDuration: zapcore.StringDurationEncoder,
+		})
+	)
+	if err := level.UnmarshalText([]byte(loglevel)); err != nil {
+		logger.Error("parse log level error", zap.Error(err))
+	}
+	core := zapcore.NewCore(loggerEncoder, os.Stdout, level)
+	logger = zap.New(core, options...)
+
+	return logger, nil
 }
 
 func fatalError(block string, err error) {

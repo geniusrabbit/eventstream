@@ -9,15 +9,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 
-	"github.com/hashicorp/hcl"
-
-	yaml "gopkg.in/yaml.v2"
+	"github.com/demdxx/goconfig"
 )
 
 var (
@@ -38,10 +33,20 @@ func (it configItem) Decode(v interface{}) error {
 	return json.Unmarshal(raw, v)
 }
 
-type config struct {
+type profilerConfig struct {
+	Mode   string `json:"mode" yaml:"mode" default:"" env:"SERVER_PROFILE_MODE"`
+	Listen string `json:"listen" yaml:"listen" cli:"profiler" default:"" env:"SERVER_PROFILE_LISTEN"`
+}
+
+// ConfigType contains all application options
+type ConfigType struct {
 	mx sync.RWMutex
 
+	Config string `json:"-" cli:"config"`
+
 	LogLevel string `default:"debug" env:"LOG_LEVEL"`
+
+	Profile profilerConfig `yaml:"profile" json:"profile"`
 
 	Stores  map[string]configItem `yaml:"stores" json:"stores"`
 	Sources map[string]configItem `yaml:"sources" json:"sources"`
@@ -52,42 +57,25 @@ type config struct {
 	}
 }
 
-func (cfg *config) String() string {
+func (cfg *ConfigType) String() string {
 	data, _ := json.MarshalIndent(cfg, "", "  ")
 	return string(data)
 }
 
+// ConfigFilepath name
+func (cfg *ConfigType) ConfigFilepath() string {
+	return cfg.Config
+}
+
 // Load eventstore config
-func (cfg *config) Load(filename string) error {
-	file, err := os.Open(filename)
-	if err != nil {
-		return err
-	}
-
-	data, err := ioutil.ReadAll(file)
-	if err != nil {
-		return err
-	}
-	file.Close()
-
+func (cfg *ConfigType) Load() error {
 	cfg.mx.Lock()
 	defer cfg.mx.Unlock()
-
-	switch strings.ToLower(filepath.Ext(filename)) {
-	case ".yml", ".yaml":
-		err = yaml.Unmarshal(data, cfg)
-	case ".hcl":
-		err = hcl.Unmarshal(data, cfg)
-	case ".json":
-		err = json.Unmarshal(data, cfg)
-	default:
-		err = errInvalidConfigFile
-	}
-	return err
+	return goconfig.Load(cfg)
 }
 
 // Validate config
-func (cfg *config) Validate() error {
+func (cfg *ConfigType) Validate() error {
 	if cfg == nil {
 		return errInvalidConfig
 	}
@@ -104,9 +92,9 @@ func (cfg *config) Validate() error {
 }
 
 // IsDebug mode ON
-func (cfg *config) IsDebug() bool {
-	return strings.ToLower(cfg.LogLevel) == "debug"
+func (cfg *ConfigType) IsDebug() bool {
+	return strings.ToLower(cfg.LogLevel) == `debug`
 }
 
 // Config instance
-var Config config
+var Config ConfigType

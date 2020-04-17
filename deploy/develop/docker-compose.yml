@@ -13,7 +13,7 @@ services:
 
   service:
     image: golang:latest
-    command: .tmp/build/eventstream --profiler=:6060 --config=deploy/develop/config.hcl
+    command: .tmp/build/eventstream --config=deploy/develop/config.hcl --profiler=:6060
     ports: ["6060:6060"]
     working_dir: /project
     environment:
