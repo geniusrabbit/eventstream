@@ -108,12 +108,12 @@ tidy:
 
 .PHONY: build
 build: test
-	@mkdir -p .tmp/build
-	@rm -rf .tmp/build/eventstream
+	@mkdir -p .build
+	@rm -rf .build/eventstream
 	GOOS=${BUILD_GOOS} GOARCH=${BUILD_GOARCH} CGO_ENABLED=${BUILD_CGO_ENABLED} \
         go build --tags all \
 					-ldflags "-s -w -X internal.appVersion=`date -u +%Y%m%d.%H%M%S` -X internal.commit=${COMMIT_NUMBER}" \
-        	-o ".tmp/build/eventstream" cmd/eventstream/main.go
+        	-o ".build/eventstream" cmd/eventstream/main.go
 
 .PHONY: run
 run: build
@@ -127,6 +127,11 @@ stop:
 .PHONY: destroy
 destroy: stop
 	docker-compose -p ${MAIN} -f deploy/develop/docker-compose.yml down
+
+.PHONY: image
+image: build ## Build docker image
+	@echo "Build docker image"
+	docker build -t eventstream:${COMMIT_NUMBER} -f deploy/production/Dockerfile .
 
 .PHONY: help
 help:
