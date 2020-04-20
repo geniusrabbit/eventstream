@@ -24,6 +24,9 @@ func Open(url string, options ...Option) (eventstream.Sourcer, error) {
 		ctx        = context.Background()
 		subscriber nc.Subscriber
 	)
+	for _, opt := range options {
+		opt(&opts)
+	}
 	switch {
 	case strings.HasPrefix(url, `nats://`):
 		subscriber, err = nats.NewSubscriber(nats.WithNatsURL(url))
@@ -38,6 +41,7 @@ func Open(url string, options ...Option) (eventstream.Sourcer, error) {
 	subscriberWrapper := &sourceSubscriber{
 		debug:      opts.Debug,
 		subscriber: subscriber,
+		logger:     opts.getLogger(),
 		format:     opts.getFormat(),
 	}
 	if err := subscriber.Subscribe(ctx, subscriberWrapper); err != nil {

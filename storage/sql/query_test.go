@@ -33,13 +33,31 @@ func TestRawQuery(t *testing.T) {
 				Service   string    `field:"srv" target:"service"`
 				Message   string    `field:"msg"`
 				Error     string    `field:"err" target:"error"`
-				Timestamp time.Time `field:"fimestamp" format:"2006-01-02"`
+				Timestamp time.Time `field:"timestamp" format:"2006-01-02"`
 			}{
 				Service:   "test",
 				Message:   "msg",
 				Error:     "error",
 				Timestamp: time.Now(),
 			},
+		},
+		{
+			query: `INSERT INTO my_table ({{fields}}) VALUES({{values}})`,
+			fields: map[string]interface{}{
+				"service":   "srv",
+				"msg":       "msg",
+				"error":     "err",
+				"timestamp": "timestamp:date|2006-01-02",
+			},
+		},
+		{
+			query: `INSERT INTO my_table ({{fields}}) VALUES({{values}})`,
+			fields: []interface{}{map[string]interface{}{
+				"service":   "srv",
+				"msg":       "msg",
+				"error":     "err",
+				"timestamp": "timestamp:date|2006-01-02",
+			}},
 		},
 	}
 
@@ -70,6 +88,26 @@ func TestPatternQuery(t *testing.T) {
 				"error=err:string",
 				"timestamp=@toTimestamp('{{timestamp:date|2006-01-02 15:04:05}}')",
 			},
+		},
+		{
+			pattern: `INSERT INTO {{target}} ({{fields}}) VALUES({{values}})`,
+			target:  "test_target",
+			fields: map[string]interface{}{
+				"service":   "srv",
+				"msg":       "msg",
+				"error":     "err",
+				"timestamp": "timestamp:date|2006-01-02",
+			},
+		},
+		{
+			pattern: `INSERT INTO {{target}} ({{fields}}) VALUES({{values}})`,
+			target:  "test_target",
+			fields: []interface{}{map[string]interface{}{
+				"service":   "srv",
+				"msg":       "msg",
+				"error":     "err",
+				"timestamp": "timestamp:date|2006-01-02",
+			}},
 		},
 	}
 

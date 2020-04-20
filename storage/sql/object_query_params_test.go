@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_Reflection(t *testing.T) {
+func TestReflection(t *testing.T) {
 	var tests = []struct {
 		ref   interface{}
 		found bool
@@ -36,13 +36,13 @@ func Test_Reflection(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if tp, _ := reflectTargetStruct(reflect.ValueOf(test.ref)); (tp != nil) != test.found {
+		if _, err := reflectTargetStruct(reflect.ValueOf(test.ref)); (err == nil) != test.found {
 			t.Errorf("invalid ref[%T] result %v", test.ref, test.found)
 		}
 	}
 }
 
-func Test_MapObjectIntoQueryParams(t *testing.T) {
+func TestMapObjectIntoQueryParams(t *testing.T) {
 	var tests = []struct {
 		ref     interface{}
 		values  []Value

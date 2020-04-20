@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017, 2019
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019
+// @project geniusrabbit::eventstream 2017, 2019-2020
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019-2020
 //
 
 package eventstream
@@ -97,10 +97,12 @@ func (m Message) ItemCast(key string, t FieldType, length int, format string) (v
 	case FieldTypeBoolean:
 		return gocast.ToBool(v)
 	case FieldTypeIP:
-		var ip = valueToIP(v)
+		ip := valueToIP(v)
 		switch format {
 		case "binarystring":
 			v = ip2EscapeString(ip)
+		case "fix":
+			v = bytesSize(ip, 16)
 		default:
 			v = ip
 		}

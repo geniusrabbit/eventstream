@@ -9,6 +9,9 @@ import (
 	"io"
 )
 
+// StorageConfig of the storage
+// type StorageConfig = storage.Config
+
 // Storager describe method of interaction with storage.
 // Storage creates new stream interfaces to process
 // data from sources.

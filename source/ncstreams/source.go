@@ -11,6 +11,7 @@ import (
 	"github.com/geniusrabbit/eventstream/converter"
 	nc "github.com/geniusrabbit/notificationcenter"
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
 
 	"github.com/geniusrabbit/eventstream"
 )
@@ -23,6 +24,7 @@ var (
 type sourceSubscriber struct {
 	debug      bool
 	format     converter.Converter
+	logger     *zap.Logger
 	subscriber nc.Subscriber
 	streams    []eventstream.Streamer
 }
@@ -45,6 +47,7 @@ func (s *sourceSubscriber) Subscribe(ctx context.Context, stream eventstream.Str
 func (s *sourceSubscriber) Receive(message nc.Message) error {
 	msg, err := eventstream.MessageDecode(message.Body(), s.format)
 	if err != nil {
+		s.logger.Error(`messgage decode`, zap.Error(err))
 		return err
 	}
 	ctx := context.Background()

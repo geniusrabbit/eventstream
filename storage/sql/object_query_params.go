@@ -8,12 +8,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/demdxx/gocast"
 	ev "github.com/geniusrabbit/eventstream"
 )
 
 var (
-	errInvalidValue         = errors.New("[sql.queryObject] object value is not valid")
-	errUnsupportedValueType = errors.New("[sql.queryObject] object value type os not supported")
+	errInvalidValue         = errors.New("[sql.queryObject] value is not valid")
+	errInvalidObjectValue   = errors.New("[sql.queryObject] object value is not valid")
+	errInvalidMapValue      = errors.New("[sql.queryObject] map value is not valid")
+	errUnsupportedValueType = errors.New("[sql.queryObject] object value type is not supported")
 )
 
 var (
@@ -25,10 +28,14 @@ var (
 
 // MapObjectIntoQueryParams returns object which links object Fields and Data Fields
 func MapObjectIntoQueryParams(object interface{}) (values []Value, fields, inserts []string, err error) {
-	objectType, err := reflectTargetStruct(reflect.ValueOf(object))
+	objectValue, err := reflectTargetStruct(reflect.ValueOf(object))
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	if objectValue.Kind() != reflect.Struct {
+		return nil, nil, nil, errInvalidObjectValue
+	}
+	objectType := objectValue.Type()
 	for i := 0; i < objectType.NumField(); i++ {
 		field := objectType.Field(i)
 		// defval := metaByTags(field, "", "field_default", "default")
@@ -71,18 +78,48 @@ func MapObjectIntoQueryParams(object interface{}) (values []Value, fields, inser
 	return values, fields, inserts, nil
 }
 
-func reflectTargetStruct(val reflect.Value) (reflect.Type, error) {
+// MapIntoQueryParams returns object which links map fields
+func MapIntoQueryParams(object interface{}) (values []Value, fieldNames, inserts []string, err error) {
+	objectValue, err := reflectTargetStruct(reflect.ValueOf(object))
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if objectValue.Kind() != reflect.Map {
+		return nil, nil, nil, errInvalidMapValue
+	}
+	data, err := gocast.ToStringMap(object, ``, false)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	for target, value := range data {
+		fieldValues, fieldValue, insertValue := prepareOneFieldByString(target + `=` + value)
+		if len(fieldValues) != 0 {
+			values = append(values, fieldValues...)
+		}
+		if len(fieldValue) != 0 {
+			fieldNames = append(fieldNames, fieldValue)
+		}
+		if len(insertValue) != 0 {
+			inserts = append(inserts, insertValue)
+		}
+	}
+	return values, fieldNames, inserts, nil
+}
+
+func reflectTargetStruct(val reflect.Value) (reflect.Value, error) {
 	for {
 		if !val.IsValid() {
-			return nil, errInvalidValue
+			return reflect.Value{}, errInvalidValue
 		}
 		switch val.Kind() {
 		case reflect.Struct:
-			return val.Type(), nil
+			return val, nil
 		case reflect.Interface, reflect.Ptr:
 			val = val.Elem()
+		case reflect.Map:
+			return val, nil
 		default:
-			return nil, errUnsupportedValueType
+			return reflect.Value{}, errUnsupportedValueType
 		}
 	}
 }

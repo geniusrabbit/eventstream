@@ -76,6 +76,7 @@ func main() {
 
 	logger, err := newLogger(config.IsDebug(), config.LogLevel)
 	fatalError("logger", err)
+	zap.ReplaceGlobals(logger)
 
 	// Register streams
 	for name, strmConf := range config.Streams {

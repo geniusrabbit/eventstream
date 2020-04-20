@@ -6,7 +6,7 @@ BUILD_GOOS ?= linux
 BUILD_GOARCH ?= amd64
 BUILD_CGO_ENABLED ?= 0
 
-COMMIT_NUMBER ?= $(shell git log -1 --pretty=format:%h)
+COMMIT_NUMBER ?= staging # $(shell git log -1 --pretty=format:%h)
 
 PROJDIR ?= $(CURDIR)/../
 MAIN ?= eventstream

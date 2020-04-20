@@ -8,6 +8,7 @@ package sql
 import (
 	"bytes"
 	"errors"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -78,7 +79,7 @@ type Query struct {
 }
 
 // NewQueryByRaw returns query object from raw SQL query
-func NewQueryByRaw(query string, fl interface{}) (q *Query, err error) {
+func NewQueryByRaw(query string, fl interface{}) (queryBuilder *Query, err error) {
 	if !isEmptyFields(fl) {
 		var (
 			values          []Value
@@ -87,7 +88,7 @@ func NewQueryByRaw(query string, fl interface{}) (q *Query, err error) {
 		if values, fields, inserts, err = PrepareFields(fl); err != nil {
 			return nil, err
 		}
-		q = &Query{
+		queryBuilder = &Query{
 			query: strings.NewReplacer(
 				"{{fields}}", strings.Join(fields, ", "),
 				"{{values}}", strings.Join(inserts, ", "),
@@ -95,12 +96,12 @@ func NewQueryByRaw(query string, fl interface{}) (q *Query, err error) {
 			values: values,
 		}
 	} else if args := paramsSearch.FindAllStringSubmatch(query, -1); len(args) > 0 {
-		q = &Query{query: paramsSearch.ReplaceAllString(query, "?")}
+		queryBuilder = &Query{query: paramsSearch.ReplaceAllString(query, "?")}
 		for _, a := range args {
-			q.values = append(q.values, valueFromArray(a[1], a[1:]))
+			queryBuilder.values = append(queryBuilder.values, valueFromArray(a[1], a[1:]))
 		}
 	}
-	return q, err
+	return queryBuilder, err
 }
 
 // NewQueryByPattern returns query object
@@ -184,16 +185,29 @@ func PrepareFields(fls interface{}) (values []Value, fields, inserts []string, e
 	case []string:
 		values, fields, inserts = PrepareFieldsByArray(fs)
 	case []interface{}:
-		values, fields, inserts = PrepareFieldsByArray(gocast.ToStringSlice(fs))
+		if len(fs) == 1 {
+			switch reflect.TypeOf(fs[0]).Kind() {
+			case reflect.Map:
+				values, fields, inserts, err = MapIntoQueryParams(fs[0])
+			case reflect.Struct, reflect.Ptr:
+				values, fields, inserts, err = MapObjectIntoQueryParams(fs[0])
+			default:
+				values, fields, inserts = PrepareFieldsByArray(gocast.ToStringSlice(fs))
+			}
+		} else {
+			values, fields, inserts = PrepareFieldsByArray(gocast.ToStringSlice(fs))
+		}
 	case string:
 		values, fields, inserts = PrepareFieldsByString(fs)
 	default:
-		values, fields, inserts, err = MapObjectIntoQueryParams(fs)
-		if err == errInvalidValue {
-			err = errInvalidQueryFieldsValue
+		switch reflect.TypeOf(fs).Kind() {
+		case reflect.Map:
+			values, fields, inserts, err = MapIntoQueryParams(fs)
+		default:
+			values, fields, inserts, err = MapObjectIntoQueryParams(fs)
 		}
 	}
-	if err == nil && (len(inserts) < 1 || len(fields) > len(values)) {
+	if err == errInvalidValue || (err == nil && (len(inserts) < 1 || len(fields) > len(values))) {
 		err = errInvalidQueryFieldsValue
 	}
 	return values, fields, inserts, err
@@ -202,50 +216,62 @@ func PrepareFields(fls interface{}) (values []Value, fields, inserts []string, e
 // PrepareFieldsByArray matching and returns raw fields for insert
 // Example: [service=srv:int, name:string]
 // Result: [srv:int, name:string], [service,name], [?,?]
-func PrepareFieldsByArray(fls []string) (values []Value, fields, inserts []string) {
-	for _, fl := range fls {
-		if len(fl) == 0 {
+func PrepareFieldsByArray(fields []string) (values []Value, fieldNames, inserts []string) {
+	for _, field := range fields {
+		if len(field) == 0 {
 			continue
 		}
-		if strings.ContainsAny(fl, "=") {
-			if field := strings.SplitN(fl, "=", 2); '@' == field[1][0] {
-				fields = append(fields, field[0])
-				insert := field[1][1:]
-				if match := paramsSearch.FindAllStringSubmatch(insert, -1); len(match) > 0 {
-					for _, v := range match {
-						values = append(values, valueFromArray(v[1], v[1:]))
-						insert = strings.Replace(insert, v[0], "?", -1)
-					}
-				}
-				inserts = append(inserts, insert)
-			} else {
-				fields = append(fields, field[0])
-				if !strings.ContainsAny(field[1], ":|") {
-					values = append(values, Value{Key: field[1], TargetKey: field[0]})
-				} else {
-					match := paramParser.FindAllStringSubmatch(field[1], -1)
-					values = append(values, valueFromArray(field[0], match[0][1:]))
-				}
-				inserts = append(inserts, "?")
-			}
-		} else {
-			if !strings.ContainsAny(fl, ":|") {
-				fields = append(fields, fl)
-				values = append(values, Value{Key: fl, TargetKey: fl})
-			} else {
-				match := paramParser.FindAllStringSubmatch(fl, -1)
-				fields = append(fields, match[0][1])
-				values = append(values, valueFromArray(match[0][1], match[0][1:]))
-			}
-			inserts = append(inserts, "?")
+		fieldValues, fieldValue, insertValue := prepareOneFieldByString(field)
+		if len(fieldValues) != 0 {
+			values = append(values, fieldValues...)
+		}
+		if len(fieldValue) != 0 {
+			fieldNames = append(fieldNames, fieldValue)
+		}
+		if len(insertValue) != 0 {
+			inserts = append(inserts, insertValue)
 		}
 	}
-	return values, fields, inserts
+	return values, fieldNames, inserts
 }
 
 // PrepareFieldsByString matching and returns raw fields for insert
 func PrepareFieldsByString(fls string) (values []Value, fields, inserts []string) {
 	return PrepareFieldsByArray(strings.Split(fls, ","))
+}
+
+func prepareOneFieldByString(field string) (values []Value, fieldValue, insert string) {
+	insert = "?"
+	if strings.ContainsAny(field, "=") {
+		if field := strings.SplitN(field, "=", 2); '@' == field[1][0] {
+			fieldValue = field[0]
+			insert = field[1][1:]
+			if match := paramsSearch.FindAllStringSubmatch(insert, -1); len(match) > 0 {
+				for _, v := range match {
+					values = append(values, valueFromArray(v[1], v[1:]))
+					insert = strings.Replace(insert, v[0], "?", -1)
+				}
+			}
+		} else {
+			fieldValue = field[0]
+			if !strings.ContainsAny(field[1], ":|") {
+				values = append(values, Value{Key: field[1], TargetKey: field[0]})
+			} else {
+				match := paramParser.FindAllStringSubmatch(field[1], -1)
+				values = append(values, valueFromArray(field[0], match[0][1:]))
+			}
+		}
+	} else {
+		if !strings.ContainsAny(field, ":|") {
+			fieldValue = field
+			values = append(values, Value{Key: field, TargetKey: field})
+		} else {
+			match := paramParser.FindAllStringSubmatch(field, -1)
+			fieldValue = match[0][1]
+			values = append(values, valueFromArray(match[0][1], match[0][1:]))
+		}
+	}
+	return values, fieldValue, insert
 }
 
 func isEmptyFields(fls interface{}) bool {

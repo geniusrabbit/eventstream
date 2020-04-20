@@ -1,6 +1,9 @@
 package ncstreams
 
-import "github.com/geniusrabbit/eventstream/converter"
+import (
+	"github.com/geniusrabbit/eventstream/converter"
+	"go.uber.org/zap"
+)
 
 // Options contains options of the source
 type Options struct {
@@ -16,6 +19,10 @@ func (opts *Options) getFormat() converter.Converter {
 		return opts.Format
 	}
 	return converter.ByName(`raw`)
+}
+
+func (opts *Options) getLogger() *zap.Logger {
+	return zap.L()
 }
 
 // Option modificator callback
