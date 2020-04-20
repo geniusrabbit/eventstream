@@ -1,0 +1,20 @@
+version: '3.7'
+
+services:
+  clickhouse:
+    image: yandex/clickhouse-server:latest
+
+  nats:
+    image: nats:latest
+
+  logger:
+    tty: true
+    image: golang:latest
+    command: go run ./main.go
+    working_dir: /project
+    volumes: [.:/project]
+    depends_on: [clickhouse, nats]
+    environment:
+      - LOGGER_LEVEL=debug
+      - SOURCE_CONNECT=nats://nats:4222/logger?topics=log
+      - STORAGE_CONNECT=clickhouse://clickhouse:9000/logs

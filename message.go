@@ -1,11 +1,12 @@
 //
-// @project geniusrabbit::eventstream 2017, 2019
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019
+// @project geniusrabbit::eventstream 2017, 2019-2020
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019-2020
 //
 
 package eventstream
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"net"
@@ -41,7 +42,7 @@ func (m Message) JSON() string {
 	return string(data)
 }
 
-// Item by key name
+// Item returns the value by key name or default
 func (m Message) Item(key string, def interface{}) interface{} {
 	if v, ok := m[key]; ok && v != nil {
 		return v
@@ -58,7 +59,7 @@ func (m Message) String(key, def string) string {
 	return gocast.ToString(m.Item(key, def))
 }
 
-// ItemCast value
+// ItemCast converts any key value into the field_type
 func (m Message) ItemCast(key string, t FieldType, length int, format string) (v interface{}) {
 	v = m.Item(key, nil)
 	switch t {
@@ -75,24 +76,9 @@ func (m Message) ItemCast(key string, t FieldType, length int, format string) (v
 			return escapeBytes(v.([]byte), 0)
 		}
 	case FieldTypeUUID:
-		switch vv := v.(type) {
-		case []byte:
-			if len(vv) > 16 {
-				v, _ = uuid.Parse(string(vv))
-			} else {
-				v = bytesSize(vv, 16)
-			}
-		default:
-			if v == nil {
-				v = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-			} else {
-				if v, _ = uuid.Parse(gocast.ToString(v)); v != nil {
-					v = v.(*uuid.UUID).Bytes()
-				}
-			}
-		}
-		if v != nil && format == "escape" {
-			return escapeBytes(v.([]byte), 0)
+		res := valueToUUIDBytes(v)
+		if res != nil && format == "escape" {
+			return escapeBytes(res, 0)
 		}
 	case FieldTypeInt:
 		return gocast.ToInt64(v)
@@ -111,34 +97,23 @@ func (m Message) ItemCast(key string, t FieldType, length int, format string) (v
 	case FieldTypeBoolean:
 		return gocast.ToBool(v)
 	case FieldTypeIP:
-		var ip = net.ParseIP(gocast.ToString(v))
+		ip := valueToIP(v)
 		switch format {
 		case "binarystring":
 			v = ip2EscapeString(ip)
+		case "fix":
+			v = bytesSize(ip, 16)
 		default:
 			v = ip
 		}
 	case FieldTypeDate:
-		var tm time.Time
-		if v != nil {
-			switch v.(type) {
-			case int64, uint64, float64:
-				tm = time.Unix(gocast.ToInt64(v), 0)
-			default:
-				tm, _ = parseTime(gocast.ToString(v))
-			}
-		}
-
-		if "" != format {
+		var tm = valueToTime(v)
+		if format != "" {
 			return tm.Format(format)
 		}
 		v = tm
 	case FieldTypeUnixnano:
-		var tm time.Time
-		if v != nil {
-			tm = time.Unix(0, gocast.ToInt64(v))
-		}
-
+		var tm = valueUnixNanoToTime(v)
 		if format != "" {
 			return tm.Format(format)
 		}
@@ -163,7 +138,85 @@ func (m Message) ItemCast(key string, t FieldType, length int, format string) (v
 	return v
 }
 
-// Map value
+// Map returns the message as map[string]interface{}
 func (m Message) Map() map[string]interface{} {
 	return map[string]interface{}(m)
+}
+
+func valueToTime(v interface{}) (tm time.Time) {
+	switch vl := v.(type) {
+	case nil:
+	case int64:
+		tm = time.Unix(vl, 0)
+	case uint64:
+		tm = time.Unix(int64(vl), 0)
+	case float64:
+		tm = time.Unix(int64(vl), 0)
+	case string:
+		tm, _ = parseTime(gocast.ToString(v))
+	default:
+		tm, _ = parseTime(gocast.ToString(v))
+	}
+	return tm
+}
+
+func valueUnixNanoToTime(v interface{}) (tm time.Time) {
+	switch vl := v.(type) {
+	case nil:
+	case int64:
+		tm = time.Unix(0, vl)
+	case uint64:
+		tm = time.Unix(0, int64(vl))
+	case float64:
+		tm = time.Unix(0, int64(vl))
+	case string:
+		tm, _ = parseTime(gocast.ToString(v))
+	default:
+		tm, _ = parseTime(gocast.ToString(v))
+	}
+	return tm
+}
+
+func valueToIP(v interface{}) (ip net.IP) {
+	switch vl := v.(type) {
+	case net.IP:
+		ip = vl
+	case uint:
+		ip = make(net.IP, 4)
+		binary.BigEndian.PutUint32(ip, uint32(vl))
+	case uint32:
+		ip = make(net.IP, 4)
+		binary.BigEndian.PutUint32(ip, vl)
+	case int:
+		ip = make(net.IP, 4)
+		binary.BigEndian.PutUint32(ip, uint32(vl))
+	case int32:
+		ip = make(net.IP, 4)
+		binary.BigEndian.PutUint32(ip, uint32(vl))
+	default:
+		ip = net.ParseIP(gocast.ToString(v))
+	}
+	return ip
+}
+
+func valueToUUIDBytes(v interface{}) (res []byte) {
+	switch vv := v.(type) {
+	case []byte:
+		if len(vv) > 16 {
+			if _uuid, _ := uuid.Parse(string(vv)); _uuid != nil {
+				v = _uuid.Bytes()
+			}
+		} else {
+			res = bytesSize(vv, 16)
+		}
+	default:
+		if v == nil {
+			res = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+		} else {
+			if v, _ = uuid.Parse(gocast.ToString(v)); v != nil {
+				res = v.(*uuid.UUID).Bytes()
+			}
+		}
+	}
+	return res
 }

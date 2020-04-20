@@ -2,8 +2,15 @@ package storage
 
 import (
 	"encoding/json"
+	"net/url"
 
 	"github.com/geniusrabbit/eventstream"
+	"github.com/pkg/errors"
+)
+
+var (
+	// ErrInvalidOption if not supported
+	ErrInvalidOption = errors.New(`invalid option`)
 )
 
 // Config of the storage
@@ -30,6 +37,18 @@ func WithDebug(debug bool) Option {
 func WithConnect(driver, connect string) Option {
 	return func(cnf *Config) {
 		cnf.Driver = driver
+		cnf.Connect = connect
+	}
+}
+
+// WithConnectURL to the database
+func WithConnectURL(connect string) Option {
+	return func(cnf *Config) {
+		url, err := url.Parse(connect)
+		if err != nil {
+			panic(err)
+		}
+		cnf.Driver = url.Scheme
 		cnf.Connect = connect
 	}
 }

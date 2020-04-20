@@ -1,8 +1,11 @@
 package sql
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
-func Test_RawQuery(t *testing.T) {
+func TestRawQuery(t *testing.T) {
 	tests := []struct {
 		query  string
 		fields interface{}
@@ -24,6 +27,38 @@ func Test_RawQuery(t *testing.T) {
 			query: `INSERT INTO testlog (service, msg, error, timestamp)` +
 				`VALUES({{srv}}, {{msg}}, {{err}}, toTimestamp({{timestamp:date}}))`,
 		},
+		{
+			query: `INSERT INTO my_table ({{fields}}) VALUES({{values}})`,
+			fields: struct {
+				Service   string    `field:"srv" target:"service"`
+				Message   string    `field:"msg"`
+				Error     string    `field:"err" target:"error"`
+				Timestamp time.Time `field:"timestamp" format:"2006-01-02"`
+			}{
+				Service:   "test",
+				Message:   "msg",
+				Error:     "error",
+				Timestamp: time.Now(),
+			},
+		},
+		{
+			query: `INSERT INTO my_table ({{fields}}) VALUES({{values}})`,
+			fields: map[string]interface{}{
+				"service":   "srv",
+				"msg":       "msg",
+				"error":     "err",
+				"timestamp": "timestamp:date|2006-01-02",
+			},
+		},
+		{
+			query: `INSERT INTO my_table ({{fields}}) VALUES({{values}})`,
+			fields: []interface{}{map[string]interface{}{
+				"service":   "srv",
+				"msg":       "msg",
+				"error":     "err",
+				"timestamp": "timestamp:date|2006-01-02",
+			}},
+		},
 	}
 
 	for _, test := range tests {
@@ -33,7 +68,7 @@ func Test_RawQuery(t *testing.T) {
 	}
 }
 
-func Test_PatternQuery(t *testing.T) {
+func TestPatternQuery(t *testing.T) {
 	tests := []struct {
 		pattern string
 		target  string
@@ -53,6 +88,26 @@ func Test_PatternQuery(t *testing.T) {
 				"error=err:string",
 				"timestamp=@toTimestamp('{{timestamp:date|2006-01-02 15:04:05}}')",
 			},
+		},
+		{
+			pattern: `INSERT INTO {{target}} ({{fields}}) VALUES({{values}})`,
+			target:  "test_target",
+			fields: map[string]interface{}{
+				"service":   "srv",
+				"msg":       "msg",
+				"error":     "err",
+				"timestamp": "timestamp:date|2006-01-02",
+			},
+		},
+		{
+			pattern: `INSERT INTO {{target}} ({{fields}}) VALUES({{values}})`,
+			target:  "test_target",
+			fields: []interface{}{map[string]interface{}{
+				"service":   "srv",
+				"msg":       "msg",
+				"error":     "err",
+				"timestamp": "timestamp:date|2006-01-02",
+			}},
 		},
 	}
 

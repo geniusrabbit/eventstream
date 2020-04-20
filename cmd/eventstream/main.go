@@ -1,79 +1,87 @@
 //
-// @project geniusrabbit::eventstream 2017 - 2019
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2019
+// @project geniusrabbit::eventstream 2017 - 2020
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2020
 //
 
 package main
 
 import (
-	"flag"
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
 
-	_ "github.com/kshvakov/clickhouse"
+	_ "github.com/ClickHouse/clickhouse-go"
 	_ "github.com/lib/pq"
+	"github.com/pkg/profile"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/geniusrabbit/eventstream"
-	"github.com/geniusrabbit/eventstream/context"
+	"github.com/geniusrabbit/eventstream/cmd/eventstream/appcontext"
 	"github.com/geniusrabbit/eventstream/source"
-	_ "github.com/geniusrabbit/eventstream/source/kafka"
-	_ "github.com/geniusrabbit/eventstream/source/nats"
+	_ "github.com/geniusrabbit/eventstream/source/ncstreams"
 	"github.com/geniusrabbit/eventstream/storage"
 	_ "github.com/geniusrabbit/eventstream/storage/clickhouse"
-	_ "github.com/geniusrabbit/eventstream/storage/metrics"
+	_ "github.com/geniusrabbit/eventstream/storage/ncstreams"
 	_ "github.com/geniusrabbit/eventstream/storage/vertica"
 	"github.com/geniusrabbit/eventstream/stream"
 )
 
-var (
-	flagConfigFile = flag.String("config", "config.hcl", "Configuration file path")
-	flagDebug      = flag.Bool("debug", false, "is debug mode on")
-	flagProfiler   = flag.String("profiler", "", "The hostname and port of golang profiler, for example: :6060")
-)
-
 func init() {
-	// Parse flags
-	flag.Parse()
-
 	// Load config
-	fatalError("config.load", context.Config.Load(*flagConfigFile))
+	config := &appcontext.Config
+	err := config.Load()
+	fatalError("config.load", err)
 
 	// Validate config
-	fatalError("config.validate", context.Config.Validate())
+	err = config.Validate()
+	fatalError("config.validate", err)
 
-	if *flagDebug {
-		context.Config.Debug = *flagDebug
-		fmt.Println("Config:", context.Config.String())
+	if config.IsDebug() {
+		fmt.Println("Config:", config.String())
 	}
 
 	// Register stores connections
-	for name, conf := range context.Config.Stores {
+	for name, conf := range config.Stores {
 		log.Printf("[storage] %s register", name)
-		storageConf := &storage.Config{Debug: context.Config.Debug}
-		fatalError("storage config decode <"+name+">", conf.Decode(storageConf))
-		fatalError("register store <"+name+">", storage.Register(name, storage.WithConfig(storageConf)))
+		storageConf := &storage.Config{Debug: config.IsDebug()}
+		err = conf.Decode(storageConf)
+		fatalError("storage config decode <"+name+">", err)
+		err = storage.Register(name, storage.WithConfig(storageConf))
+		fatalError("register store <"+name+">", err)
 	}
 
 	// Register sources subscribers
-	for name, conf := range context.Config.Sources {
+	for name, conf := range config.Sources {
 		log.Printf("[source] %s register", name)
-		sourceConf := &source.Config{Debug: context.Config.Debug}
-		fatalError("source config decode <"+name+">", conf.Decode(sourceConf))
-		fatalError("register source <"+name+">", source.Register(name, source.WithConfig(sourceConf)))
+		sourceConf := &source.Config{Debug: config.IsDebug()}
+		err = conf.Decode(sourceConf)
+		fatalError("source config decode <"+name+">", err)
+		err = source.Register(name, source.WithConfig(sourceConf))
+		fatalError("register source <"+name+">", err)
 	}
 }
 
 func main() {
-	fmt.Println("> Run eventstream service")
+	var (
+		err         error
+		config      = &appcontext.Config
+		ctx, cancel = context.WithCancel(context.Background())
+	)
 
-	var err error
+	defer cancel()
+
+	logger, err := newLogger(config.IsDebug(), config.LogLevel)
+	fatalError("logger", err)
+	zap.ReplaceGlobals(logger)
 
 	// Register streams
-	for name, strmConf := range context.Config.Streams {
+	for name, strmConf := range config.Streams {
 		var (
-			baseConf = &stream.Config{Name: name, Debug: context.Config.Debug}
+			baseConf = &stream.Config{Name: name, Debug: config.IsDebug()}
 			strm     eventstream.Streamer
 		)
 		if err = strmConf.Decode(baseConf); err != nil {
@@ -92,26 +100,21 @@ func main() {
 		}
 
 		log.Printf("[stream] %s subscribe on <%s>", name, baseConf.Source)
-		if err = source.Subscribe(baseConf.Source, strm); nil != err {
+		if err = source.Subscribe(ctx, baseConf.Source, strm); err != nil {
 			fatalError(fmt.Sprintf("[stream] "+name+" subscribe <%s>", baseConf.Source), err)
 			break
 		}
 
 		log.Printf("[stream] %s run stream listener on <%s>", name, baseConf.Source)
-		go func(name string) { fatalError("[stream] "+name+" run", strm.Run()) }(name)
+		go func(name string) { fatalError("[stream] "+name+" run", strm.Run(ctx)) }(name)
 	} // end for
 
-	// Run profiler
-	if *flagProfiler != "" {
-		go func() {
-			fmt.Println("Run profile: " + *flagProfiler)
-			fatalError("profiler", http.ListenAndServe(*flagProfiler, nil))
-		}()
-	}
+	// Profiling server of collector
+	runProfile(config, logger)
 
 	// Run source listener's
-	defer close()
-	fatalError("profiler", source.Listen())
+	fmt.Println("> Run eventstream service")
+	fatalError("profiler", source.Listen(ctx))
 }
 
 func newStream(conf *stream.Config) (eventstream.Streamer, error) {
@@ -122,18 +125,56 @@ func newStream(conf *stream.Config) (eventstream.Streamer, error) {
 	return nil, fmt.Errorf("[stream] %s undefined storage [%s]", conf.Name, conf.Store)
 }
 
-///////////////////////////////////////////////////////////////////////////////
-/// Helpers
-///////////////////////////////////////////////////////////////////////////////
+func runProfile(conf *appcontext.ConfigType, logger *zap.Logger) {
+	switch conf.Profile.Mode {
+	case "cpu":
+		defer profile.Start(profile.CPUProfile).Stop()
+	case "mem", "memory":
+		defer profile.Start(profile.MemProfile).Stop()
+	case "mutex":
+		defer profile.Start(profile.MutexProfile).Stop()
+	case "block":
+		defer profile.Start(profile.BlockProfile).Stop()
+	case "net":
+		go func() {
+			fmt.Printf("Run profile (port %s)\n", conf.Profile.Listen)
+			if err := http.ListenAndServe(conf.Profile.Listen, nil); err != nil {
+				logger.Error("profile server error", zap.Error(err))
+			}
+		}()
+	}
+}
 
-func close() {
-	source.Close()
-	storage.Close()
+func newLogger(debug bool, loglevel string, options ...zap.Option) (logger *zap.Logger, err error) {
+	if debug {
+		return zap.NewDevelopment(options...)
+	}
+
+	var (
+		level         zapcore.Level
+		loggerEncoder = zapcore.NewJSONEncoder(zapcore.EncoderConfig{
+			TimeKey:        "ts",
+			LevelKey:       "level",
+			NameKey:        "logger",
+			CallerKey:      "caller",
+			MessageKey:     "msg",
+			StacktraceKey:  "stacktrace",
+			EncodeLevel:    zapcore.LowercaseLevelEncoder,
+			EncodeTime:     zapcore.ISO8601TimeEncoder,
+			EncodeDuration: zapcore.StringDurationEncoder,
+		})
+	)
+	if err := level.UnmarshalText([]byte(loglevel)); err != nil {
+		logger.Error("parse log level error", zap.Error(err))
+	}
+	core := zapcore.NewCore(loggerEncoder, os.Stdout, level)
+	logger = zap.New(core, options...)
+
+	return logger, nil
 }
 
 func fatalError(block string, err error) {
 	if err != nil {
-		close()
 		log.Fatal("[main] fatal: ", block+" ", err)
 	}
 }

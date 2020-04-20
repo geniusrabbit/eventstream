@@ -1,15 +1,21 @@
 //
-// @project geniusrabbit::eventstream 2017, 2019
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019
+// @project geniusrabbit::eventstream 2017, 2020
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2020
 //
 
 package storage
 
 import (
-	"fmt"
 	"sync"
 
+	"github.com/pkg/errors"
+
 	"github.com/geniusrabbit/eventstream"
+)
+
+// Error list...
+var (
+	ErrUndefinedDriver = errors.New(`[storage::registry] undefined driver`)
 )
 
 type connector func(config *Config) (eventstream.Storager, error)
@@ -77,34 +83,5 @@ func (r *registry) connection(config *Config) (eventstream.Storager, error) {
 	if conn, _ := r.connectors[config.Driver]; conn != nil {
 		return conn(config)
 	}
-	return nil, fmt.Errorf("[storage::registry] undefined driver: [%s]", config.Driver)
-}
-
-///////////////////////////////////////////////////////////////////////////////
-/// Global
-///////////////////////////////////////////////////////////////////////////////
-
-var _registry = registry{
-	connections: map[string]eventstream.Storager{},
-	connectors:  map[string]connector{},
-}
-
-// RegisterConnector function
-func RegisterConnector(conn connector, driver string) {
-	_registry.RegisterConnector(conn, driver)
-}
-
-// Register connection
-func Register(name string, options ...Option) error {
-	return _registry.Register(name, options...)
-}
-
-// Storage connection object
-func Storage(name string) eventstream.Storager {
-	return _registry.Storage(name)
-}
-
-// Close listener
-func Close() error {
-	return _registry.Close()
+	return nil, errors.Wrap(ErrUndefinedDriver, config.Driver)
 }

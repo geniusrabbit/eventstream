@@ -6,6 +6,7 @@
 package eventstream
 
 import (
+	"context"
 	"strings"
 
 	"github.com/Knetic/govaluate"
@@ -48,13 +49,13 @@ func (s *StreamWrapper) ID() string {
 }
 
 // Put message to the stream to process information
-func (s *StreamWrapper) Put(msg Message) error {
-	return s.stream.Put(msg)
+func (s *StreamWrapper) Put(ctx context.Context, msg Message) error {
+	return s.stream.Put(ctx, msg)
 }
 
 // Check if the message meets the conditions
-func (s *StreamWrapper) Check(msg Message) bool {
-	if !s.stream.Check(msg) {
+func (s *StreamWrapper) Check(ctx context.Context, msg Message) bool {
+	if !s.stream.Check(ctx, msg) {
 		return false
 	}
 	if s.whereCondition != nil {
@@ -65,8 +66,8 @@ func (s *StreamWrapper) Check(msg Message) bool {
 }
 
 // Run the stream reading loop
-func (s *StreamWrapper) Run() error {
-	return s.stream.Run()
+func (s *StreamWrapper) Run(ctx context.Context) error {
+	return s.stream.Run(ctx)
 }
 
 // Close stream and shut down all process

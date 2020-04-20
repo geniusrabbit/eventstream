@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017 - 2019
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2019
+// @project geniusrabbit::eventstream 2017 - 2020
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2020
 //
 
 // TODO: Store all messages if not sended yet
@@ -8,13 +8,13 @@
 package sql
 
 import (
+	"context"
 	"database/sql"
 	"errors"
-	"fmt"
-	"log"
-	"runtime/debug"
 	"sync/atomic"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/geniusrabbit/eventstream"
 )
@@ -30,6 +30,8 @@ type Connector interface {
 
 // StreamSQL stream
 type StreamSQL struct {
+	isWriting int32
+
 	// Debug mode of the stream
 	debug bool
 
@@ -47,34 +49,34 @@ type StreamSQL struct {
 	// Query prepared data formater object
 	query *Query
 
-	// Time ticker
+	// Time ticker to pereodic data flush
 	processTimer *time.Ticker
 
-	isWriting int32
+	// Logger object of log writing
+	logger *zap.Logger
 }
 
 // NewStreamSQL creates streamer object for SQL based stream integration
-func NewStreamSQL(id string, connector Connector, options ...Option) (_ eventstream.Streamer, err error) {
-	stream := &StreamSQL{
-		id:        id,
-		connector: connector,
-	}
+func NewStreamSQL(id string, connector Connector, options ...Option) (eventstream.Streamer, error) {
+	var opts Options
 	for _, opt := range options {
-		if err = opt(stream); err != nil {
+		if err := opt(&opts); err != nil {
 			return nil, err
 		}
 	}
-	if stream.query == nil {
+	if opts.QueryBuilder == nil {
 		return nil, errInvalidQueryObject
 	}
-	if stream.blockSize < 1 {
-		stream.blockSize = 1000
-	}
-	if stream.flushInterval <= 0 {
-		stream.flushInterval = time.Second * 1
-	}
-	stream.buffer = make(chan eventstream.Message, stream.blockSize*2)
-	return stream, nil
+	return &StreamSQL{
+		debug:         opts.Debug,
+		id:            id,
+		connector:     connector,
+		blockSize:     opts.getBlockSize(),
+		flushInterval: opts.getFlushInterval(),
+		buffer:        make(chan eventstream.Message, opts.getBlockSize()*2),
+		query:         opts.QueryBuilder,
+		logger:        opts.getLogger(),
+	}, nil
 }
 
 // ID returns unical stream identificator
@@ -83,16 +85,16 @@ func (s *StreamSQL) ID() string {
 }
 
 // Put message to stream
-func (s *StreamSQL) Put(msg eventstream.Message) error {
+func (s *StreamSQL) Put(ctx context.Context, msg eventstream.Message) error {
 	if s.debug {
-		log.Println("[stream] put message", msg)
+		s.logger.Debug(`put-message`, zap.Any(`message`, msg))
 	}
 	s.buffer <- msg
 	return nil
 }
 
-// Run loop
-func (s *StreamSQL) Run() error {
+// Run SQL writer daemon
+func (s *StreamSQL) Run(ctx context.Context) error {
 	if s.processTimer != nil {
 		s.processTimer.Stop()
 	}
@@ -103,11 +105,16 @@ func (s *StreamSQL) Run() error {
 
 	for _, ok := <-ch; ok; {
 		if err := s.writeBuffer(false); err != nil {
-			return err
+			s.logger.Error(`write-buffer`, zap.Error(err))
 		}
 		time.Sleep(time.Millisecond * 50)
 	}
 	return nil
+}
+
+// Check message value
+func (s *StreamSQL) Check(ctx context.Context, msg eventstream.Message) bool {
+	return true
 }
 
 // Close implementation
@@ -116,64 +123,60 @@ func (s *StreamSQL) Close() error {
 		s.processTimer.Stop()
 		s.processTimer = nil
 	}
-
 	s.writeBuffer(true)
 	close(s.buffer)
 	return nil
 }
 
-// Check message value
-func (s *StreamSQL) Check(msg eventstream.Message) bool {
-	return true
-}
-
 // writeBuffer all data
-func (s *StreamSQL) writeBuffer(flush bool) (err error) {
+func (s *StreamSQL) writeBuffer(flush bool) error {
 	if !atomic.CompareAndSwapInt32(&s.isWriting, 0, 1) {
-		return
+		return nil
 	}
 
 	var (
-		tx   *sql.Tx
-		stmt *sql.Stmt
-		stop = false
-		conn *sql.DB
+		err      error
+		tx       *sql.Tx
+		stmt     *sql.Stmt
+		stop     = false
+		conn     *sql.DB
+		now      = time.Now()
+		interval = now.Sub(s.writeLastTime)
 	)
 
 	defer func() {
 		if rec := recover(); rec != nil {
-			s.logError(rec)
-			s.logError(string(debug.Stack()))
-
+			s.logger.Error(`write-buffer`, zap.Any(`error`, rec))
 			if tx != nil {
 				tx.Rollback()
 			}
 		}
-
 		atomic.StoreInt32(&s.isWriting, 0)
 	}()
 
 	if !flush {
-		if c := len(s.buffer); c < 1 || (s.blockSize > c && time.Now().Sub(s.writeLastTime) < s.flushInterval) {
-			return
+		if c := len(s.buffer); c < 1 || (s.blockSize > c && interval < s.flushInterval) {
+			return err
 		}
 	}
-
 	if conn, err = s.connector.Connection(); err != nil {
-		return
+		return err
 	}
 
 	if s.debug {
-		log.Println("[stream] write buffer", flush, time.Now().Sub(s.writeLastTime))
+		s.logger.Debug(`write-buffer`,
+			zap.Bool(`hardflush`, flush),
+			zap.Duration(`interval`, interval),
+			zap.String(`query`, s.query.QueryString()),
+		)
 	}
 
 	if tx, err = conn.Begin(); err != nil {
-		return
+		return err
 	}
-
-	if stmt, err = tx.Prepare(s.query.Q); err != nil {
+	if stmt, err = tx.Prepare(s.query.QueryString()); err != nil {
 		tx.Rollback()
-		return
+		return err
 	}
 
 	// Writing loop of prepared requests
@@ -181,7 +184,7 @@ func (s *StreamSQL) writeBuffer(flush bool) (err error) {
 		select {
 		case msg := <-s.buffer:
 			if s.debug {
-				s.log(msg.JSON())
+				s.logger.Debug(`write-message`, zap.Any(`message`, msg))
 			}
 			if _, err = stmt.Exec(s.query.ParamsBy(msg)...); err != nil {
 				stop = true
@@ -199,21 +202,5 @@ func (s *StreamSQL) writeBuffer(flush bool) (err error) {
 	}
 
 	s.writeLastTime = time.Now()
-	return
-}
-
-///////////////////////////////////////////////////////////////////////////////
-/// Logs
-///////////////////////////////////////////////////////////////////////////////
-
-func (s *StreamSQL) log(args ...interface{}) {
-	if len(args) > 0 {
-		log.Println("[clickhouse] ", fmt.Sprintln(args...))
-	}
-}
-
-func (s *StreamSQL) logError(err interface{}) {
-	if err != nil {
-		log.Println("[clickhouse] ", err)
-	}
+	return err
 }

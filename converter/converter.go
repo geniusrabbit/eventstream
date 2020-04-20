@@ -1,15 +1,21 @@
 //
-// @project geniusrabbit::eventstream 2017, 2019
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019
+// @project geniusrabbit::eventstream 2017, 2019-2020
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019-2020
 //
 
 package converter
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"gopkg.in/mgo.v2/bson"
+
+	"github.com/pkg/errors"
+)
+
+var (
+	errUnsupportedDecodeType = errors.New(`unsupported converter decode type`)
+	errUnsupportedEncodeType = errors.New(`unsupported converter encode type`)
 )
 
 // Converter interaface
@@ -20,8 +26,13 @@ type Converter interface {
 
 // Fnk decoder wrapper
 type Fnk struct {
+	name    string
 	encoder func(v interface{}) ([]byte, error)
 	decoder func(data []byte, v interface{}) error
+}
+
+func (f Fnk) String() string {
+	return f.name
 }
 
 // Marshal value to data
@@ -36,9 +47,10 @@ func (f Fnk) Unmarshal(data []byte, v interface{}) error {
 
 // Converters
 var (
-	JSON Converter = Fnk{encoder: json.Marshal, decoder: json.Unmarshal}
-	BSON Converter = Fnk{encoder: bson.Marshal, decoder: bson.Unmarshal}
+	JSON Converter = Fnk{name: "json", encoder: json.Marshal, decoder: json.Unmarshal}
+	BSON Converter = Fnk{name: "bson", encoder: bson.Marshal, decoder: bson.Unmarshal}
 	RAW  Converter = Fnk{
+		name: "raw",
 		encoder: func(v interface{}) ([]byte, error) {
 			switch b := v.(type) {
 			case []byte:
@@ -46,7 +58,7 @@ var (
 			case string:
 				return []byte(b), nil
 			}
-			return nil, fmt.Errorf("[raw] unsupported converter encode type %T", v)
+			return nil, errors.Wrapf(errUnsupportedEncodeType, "[raw] %T", v)
 		},
 		decoder: func(data []byte, v interface{}) error {
 			switch pt := v.(type) {
@@ -57,7 +69,7 @@ var (
 			case []byte:
 				copy(pt, data)
 			}
-			return fmt.Errorf("[raw] unsupported converter decode type %T", v)
+			return errors.Wrapf(errUnsupportedDecodeType, "[raw] %T", v)
 		},
 	}
 )

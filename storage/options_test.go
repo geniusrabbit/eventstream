@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func Test_Optins(t *testing.T) {
+func TestOptins(t *testing.T) {
 	var tests = []struct {
 		options []Option
 		config  Config

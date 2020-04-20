@@ -1,6 +1,9 @@
 package source
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"strings"
+)
 
 // Config of the source connection
 type Config struct {
@@ -24,11 +27,19 @@ func (c *Config) UnmarshalJSON(data []byte) (err error) {
 		Format  string `json:"format"`
 	}
 
-	if err = json.Unmarshal(data, &confData); err == nil {
-		c.Connect = confData.Connect
-		c.Driver = confData.Driver
-		c.Format = confData.Format
-		c.Raw = json.RawMessage(data)
+	if err = json.Unmarshal(data, &confData); err != nil {
+		return err
 	}
-	return
+
+	c.Connect = confData.Connect
+	c.Driver = confData.Driver
+	c.Format = confData.Format
+	c.Raw = json.RawMessage(data)
+
+	if c.Driver == `` {
+		if urlData := strings.Split(c.Connect, `://`); len(urlData) > 1 {
+			c.Driver = urlData[0]
+		}
+	}
+	return err
 }
