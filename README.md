@@ -1,4 +1,4 @@
-# Eventstream
+# Eventstream message pipeline service
 
 [![Build Status](https://travis-ci.org/geniusrabbit/eventstream.svg?branch=master)](https://travis-ci.org/geniusrabbit/eventstream)
 [![Go Report Card](https://goreportcard.com/badge/github.com/geniusrabbit/eventstream)](https://goreportcard.com/report/github.com/geniusrabbit/eventstream)
@@ -11,7 +11,14 @@ Eventstream pipeline for storing and re-sending events inside the system.
 > Copyright 2017 GeniusRabbit Dmitry Ponomarev <demdxx@gmail.com>
 
 ```sh
-go get -v -u -t github.com/geniusrabbit/eventstream/cmd/eventstream
+go get -v -u github.com/geniusrabbit/eventstream/cmd/eventstream
+```
+
+## Run eventstream service in docker
+
+```sh
+docker run -d -it -v ./custom.config.hcl:/config.hcl \
+  geniusrabbit/eventstream
 ```
 
 ## Config example

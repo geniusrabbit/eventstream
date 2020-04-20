@@ -133,6 +133,12 @@ image: build ## Build docker image
 	@echo "Build docker image"
 	docker build -t eventstream:${COMMIT_NUMBER} -f deploy/production/Dockerfile .
 
+.PHONY: image_push
+image_push: image ## Build docker image and push to the hub.docker.com
+	@echo "Build docker image and push to the hub.docker.com"
+	docker tag eventstream:${COMMIT_NUMBER} geniusrabbit/eventstream
+	docker push geniusrabbit/eventstream
+
 .PHONY: help
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' Makefile | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
