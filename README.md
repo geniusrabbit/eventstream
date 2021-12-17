@@ -21,6 +21,20 @@ docker run -d -it -v ./custom.config.hcl:/config.hcl \
   geniusrabbit/eventstream
 ```
 
+## Source list
+
+- *kafka*
+- *NATS* & *NATS stream*
+- *Redis* stream
+
+## Storage list
+
+- *Clickhouse*
+- *Vertica*
+- *kafka*
+- *NATS*
+- *Redis* stream
+
 ## Config example
 
 Supports two file formats YAML & HCL
@@ -60,16 +74,18 @@ streams {
 
 ## TODO
 
-- [ ] Prepare evetstream as Framework extension
+- [ ] Add Mysql database storage
+- [ ] Add PostgreSQL database storage
+- [ ] Add MongoDB database storage
+- [ ] Add Redis database storage
+- [X] Prepare evetstream as Framework extension
 - [X] Add Kafka stream writer support
 - [X] Add NATS stream writer support
 - [X] Add Redis stream source/storage support
-- [ ] Add RabbitMQ stream writer support
-- [ ] Add RabbitMQ queue source support
+- [ ] Add RabbitMQ stream source/storage support
 - [ ] Add health check API
 - [ ] Add metrics support (prometheus)
 - [x] Add 'where' stream condition (http://github.com/Knetic/govaluate)
 - [X] Ack message only if success
 - [X] Buffering all data until be stored
-- [ ] ~~Fix HDFS writer~~
 - [X] Add support HCL config
