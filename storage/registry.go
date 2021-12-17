@@ -6,6 +6,7 @@
 package storage
 
 import (
+	"context"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -18,7 +19,7 @@ var (
 	ErrUndefinedDriver = errors.New(`[storage::registry] undefined driver`)
 )
 
-type connector func(config *Config) (eventstream.Storager, error)
+type connector func(ctx context.Context, config *Config) (eventstream.Storager, error)
 
 type registry struct {
 	mx          sync.RWMutex
@@ -27,14 +28,14 @@ type registry struct {
 }
 
 // RegisterConnector function
-func (r *registry) RegisterConnector(c connector, driver string) {
+func (r *registry) RegisterConnector(driver string, c connector) {
 	r.mx.Lock()
 	defer r.mx.Unlock()
 	r.connectors[driver] = c
 }
 
 // Register connection
-func (r *registry) Register(name string, options ...Option) (err error) {
+func (r *registry) Register(ctx context.Context, name string, options ...Option) (err error) {
 	var (
 		storage eventstream.Storager
 		config  Config
@@ -42,20 +43,19 @@ func (r *registry) Register(name string, options ...Option) (err error) {
 	for _, opt := range options {
 		opt(&config)
 	}
-	if storage, err = r.connection(&config); err == nil {
+	if storage, err = r.connection(ctx, &config); err == nil {
 		r.mx.Lock()
 		defer r.mx.Unlock()
 		r.connections[name] = storage
 	}
-	return
+	return err
 }
 
 // Storage connection object
 func (r *registry) Storage(name string) eventstream.Storager {
 	r.mx.RLock()
 	defer r.mx.RUnlock()
-	conn, _ := r.connections[name]
-	return conn
+	return r.connections[name]
 }
 
 // Close listener
@@ -69,19 +69,18 @@ func (r *registry) Close() (err error) {
 
 	// Reset connections
 	r.connections = map[string]eventstream.Storager{}
-	return
+	return err
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Internal methods
 ///////////////////////////////////////////////////////////////////////////////
 
-func (r *registry) connection(config *Config) (eventstream.Storager, error) {
+func (r *registry) connection(ctx context.Context, config *Config) (eventstream.Storager, error) {
 	r.mx.RLock()
 	defer r.mx.RUnlock()
-
-	if conn, _ := r.connectors[config.Driver]; conn != nil {
-		return conn(config)
+	if conn := r.connectors[config.Driver]; conn != nil {
+		return conn(ctx, config)
 	}
 	return nil, errors.Wrap(ErrUndefinedDriver, config.Driver)
 }

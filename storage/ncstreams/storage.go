@@ -8,16 +8,14 @@ package ncstreams
 import (
 	"context"
 	"io"
-	"strings"
 
 	nc "github.com/geniusrabbit/notificationcenter"
-	"github.com/geniusrabbit/notificationcenter/kafka"
-	"github.com/geniusrabbit/notificationcenter/nats"
-	"github.com/geniusrabbit/notificationcenter/natstream"
 
 	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/stream"
 )
+
+type getPublisherFnk func(ctx context.Context, url string) (nc.Publisher, error)
 
 // PublishStorage processor
 type PublishStorage struct {
@@ -29,11 +27,10 @@ type PublishStorage struct {
 }
 
 // Open new storage connection
-func Open(url string, options ...Option) (eventstream.Storager, error) {
+func Open(ctx context.Context, url string, pubFnk getPublisherFnk, options ...Option) (eventstream.Storager, error) {
 	var (
 		opts           Options
-		ctx            = context.Background()
-		publisher, err = connect(ctx, url)
+		publisher, err = pubFnk(ctx, url)
 	)
 	if err != nil {
 		return nil, err
@@ -69,16 +66,4 @@ func (m *PublishStorage) Close() (err error) {
 		err = cl.Close()
 	}
 	return err
-}
-
-func connect(ctx context.Context, connection string) (nc.Publisher, error) {
-	switch {
-	case strings.HasPrefix(connection, "nats://"):
-		return nats.NewPublisher(nats.WithNatsURL(connection))
-	case strings.HasPrefix(connection, "natstream://"):
-		return natstream.NewPublisher(natstream.WithNatsURL(connection))
-	case strings.HasPrefix(connection, "kafka://"):
-		return kafka.NewPublisher(ctx, kafka.WithKafkaURL(connection))
-	}
-	return nil, nc.ErrUndefinedPublisherInterface
 }

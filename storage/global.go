@@ -1,6 +1,10 @@
 package storage
 
-import "github.com/geniusrabbit/eventstream"
+import (
+	"context"
+
+	"github.com/geniusrabbit/eventstream"
+)
 
 var _registry = registry{
 	connections: map[string]eventstream.Storager{},
@@ -8,13 +12,13 @@ var _registry = registry{
 }
 
 // RegisterConnector function
-func RegisterConnector(conn connector, driver string) {
-	_registry.RegisterConnector(conn, driver)
+func RegisterConnector(driver string, conn connector) {
+	_registry.RegisterConnector(driver, conn)
 }
 
 // Register connection
-func Register(name string, options ...Option) error {
-	return _registry.Register(name, options...)
+func Register(ctx context.Context, name string, options ...Option) error {
+	return _registry.Register(ctx, name, options...)
 }
 
 // Storage connection object

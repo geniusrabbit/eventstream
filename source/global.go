@@ -19,14 +19,14 @@ var _registry = registry{
 
 // RegisterConnector function which creates new stream coneection by config
 // and bind the connector to the `driver` name, in the global registry
-func RegisterConnector(c connector, driver string) {
-	_registry.RegisterConnector(c, driver)
+func RegisterConnector(driver string, c connector) {
+	_registry.RegisterConnector(driver, c)
 }
 
 // Register data source connection with `name` and options
 // The source defines by connection options, in the global registry
-func Register(name string, options ...Option) error {
-	return _registry.Register(name, options...)
+func Register(ctx context.Context, name string, options ...Option) error {
+	return _registry.Register(ctx, name, options...)
 }
 
 // Subscribe some handler interface to processing the stream with `name`,

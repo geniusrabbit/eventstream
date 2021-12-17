@@ -3,13 +3,13 @@ package main
 import (
 	"context"
 	"log"
-	"os"
 	"time"
 
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 
-	"github.com/geniusrabbit/eventstream/source/ncstreams"
+	"github.com/geniusrabbit/eventstream/internal/zlogger"
+	"github.com/geniusrabbit/eventstream/source"
+	_ "github.com/geniusrabbit/eventstream/source/ncstreams"
 	"github.com/geniusrabbit/eventstream/storage"
 	"github.com/geniusrabbit/eventstream/storage/clickhouse"
 )
@@ -21,6 +21,8 @@ var (
 
 type config struct {
 	LogLevel       string `env:"LOGGER_LEVEL"`
+	LogAddr        string `env:"LOG_ADDR"`
+	LogEncoder     string `env:"LOG_ENCODER"`
 	SourceConnect  string `env:"SOURCE_CONNECT"`
 	StorageConnect string `env:"STORAGE_CONNECT"`
 }
@@ -39,26 +41,26 @@ type logMessage struct {
 }
 
 func main() {
-
-}
-
-func commandLogwriter() {
 	var conf config
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	// Init new logger object
-	logger, err := newLogger(conf.isDebug(), conf.LogLevel, zap.Fields(
+	logger, err := zlogger.New("example", conf.LogEncoder, conf.LogLevel, conf.LogAddr, zap.Fields(
 		zap.String("commit", commit),
 		zap.String("version", appVersion),
 	))
-
 	fatalError("init logger", err)
+
+	commandLogwriter(&conf, logger)
+}
+
+func commandLogwriter(conf *config, logger *zap.Logger) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	logger.Info(`RUN`)
 
 	// Open source connection
-	datasource, err := ncstreams.Open(conf.SourceConnect)
+	err := source.Register(ctx, "global", source.WithConnectURL(conf.SourceConnect))
 	fatalError(`source connect`, err)
 
 	// Open clickhouse storage connect
@@ -70,40 +72,13 @@ func commandLogwriter() {
 	fatalError(`get new writer stream`, err)
 
 	// Subscribe stream writer of the clickhouse
-	err = datasource.Subscribe(ctx, stream)
+	err = source.Subscribe(ctx, "global", stream)
 	fatalError(`subscribe storage target`, err)
 
-	err = datasource.Start(ctx)
+	err = source.Listen(ctx)
 	fatalError(`start source`, err)
 
 	<-ctx.Done()
-}
-
-func newLogger(debug bool, loglevel string, options ...zap.Option) (logger *zap.Logger, err error) {
-	if debug {
-		return zap.NewDevelopment(options...)
-	}
-	var (
-		level         zapcore.Level
-		loggerEncoder = zapcore.NewJSONEncoder(zapcore.EncoderConfig{
-			TimeKey:        "ts",
-			LevelKey:       "level",
-			NameKey:        "logger",
-			CallerKey:      "caller",
-			MessageKey:     "msg",
-			StacktraceKey:  "stacktrace",
-			EncodeLevel:    zapcore.LowercaseLevelEncoder,
-			EncodeTime:     zapcore.ISO8601TimeEncoder,
-			EncodeDuration: zapcore.StringDurationEncoder,
-		})
-	)
-	if err := level.UnmarshalText([]byte(loglevel)); err != nil {
-		logger.Error("parse log level error", zap.Error(err))
-	}
-	core := zapcore.NewCore(loggerEncoder, os.Stdout, level)
-	logger = zap.New(core, options...)
-
-	return logger, nil
 }
 
 func fatalError(block string, err error) {

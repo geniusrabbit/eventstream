@@ -117,8 +117,7 @@ func verticaConnect(u *url.URL, debug bool) (*sql.DB, error) {
 		return nil, err
 	}
 
-	conn.Ping()
-	{
+	if err = conn.Ping(); err == nil {
 		if count, _ := strconv.Atoi(idle); count >= 0 {
 			conn.SetMaxIdleConns(count)
 		}
@@ -131,5 +130,5 @@ func verticaConnect(u *url.URL, debug bool) (*sql.DB, error) {
 			conn.SetConnMaxLifetime(time.Duration(lifetime) * time.Second)
 		}
 	}
-	return conn, nil
+	return conn, err
 }

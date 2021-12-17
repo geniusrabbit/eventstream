@@ -1,6 +1,6 @@
 # Eventstream message pipeline service
 
-[![Build Status](https://travis-ci.org/geniusrabbit/eventstream.svg?branch=master)](https://travis-ci.org/geniusrabbit/eventstream)
+[![Build Status](https://github.com/geniusrabbit/eventstream/workflows/run%20tests/badge.svg)](https://github.com/geniusrabbit/eventstream/actions?workflow=run%20tests)
 [![Go Report Card](https://goreportcard.com/badge/github.com/geniusrabbit/eventstream)](https://goreportcard.com/report/github.com/geniusrabbit/eventstream)
 [![GoDoc](https://godoc.org/github.com/geniusrabbit/eventstream?status.svg)](https://godoc.org/github.com/geniusrabbit/eventstream)
 [![Coverage Status](https://coveralls.io/repos/github/geniusrabbit/eventstream/badge.svg)](https://coveralls.io/github/geniusrabbit/eventstream)
@@ -63,6 +63,7 @@ streams {
 - [ ] Prepare evetstream as Framework extension
 - [X] Add Kafka stream writer support
 - [X] Add NATS stream writer support
+- [X] Add Redis stream source/storage support
 - [ ] Add RabbitMQ stream writer support
 - [ ] Add RabbitMQ queue source support
 - [ ] Add health check API

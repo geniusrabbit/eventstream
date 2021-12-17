@@ -121,7 +121,7 @@ func (m Message) ItemCast(key string, t FieldType, length int, format string) (v
 	case FieldTypeArrayInt32:
 		if v != nil {
 			var arr = []int32{}
-			gocast.ToSlice(arr, v, "")
+			_ = gocast.ToSlice(arr, v, "")
 			v = arr
 		} else {
 			v = []int32{}
@@ -129,7 +129,7 @@ func (m Message) ItemCast(key string, t FieldType, length int, format string) (v
 	case FieldTypeArrayInt64:
 		if v != nil {
 			var arr = []int64{}
-			gocast.ToSlice(arr, v, "")
+			_ = gocast.ToSlice(arr, v, "")
 			v = arr
 		} else {
 			v = []int64{}
@@ -204,7 +204,7 @@ func valueToUUIDBytes(v interface{}) (res []byte) {
 	case []byte:
 		if len(vv) > 16 {
 			if _uuid, _ := uuid.Parse(string(vv)); _uuid != nil {
-				v = _uuid.Bytes()
+				res = _uuid.Bytes()
 			}
 		} else {
 			res = bytesSize(vv, 16)
@@ -213,8 +213,8 @@ func valueToUUIDBytes(v interface{}) (res []byte) {
 		if v == nil {
 			res = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 		} else {
-			if v, _ = uuid.Parse(gocast.ToString(v)); v != nil {
-				res = v.(*uuid.UUID).Bytes()
+			if _uuid, _ := uuid.Parse(gocast.ToString(v)); _uuid != nil {
+				res = _uuid.Bytes()
 			}
 		}
 	}

@@ -123,9 +123,9 @@ func (s *StreamSQL) Close() error {
 		s.processTimer.Stop()
 		s.processTimer = nil
 	}
-	s.writeBuffer(true)
+	err := s.writeBuffer(true)
 	close(s.buffer)
-	return nil
+	return err
 }
 
 // writeBuffer all data
@@ -148,7 +148,7 @@ func (s *StreamSQL) writeBuffer(flush bool) error {
 		if rec := recover(); rec != nil {
 			s.logger.Error(`write-buffer`, zap.Any(`error`, rec))
 			if tx != nil {
-				tx.Rollback()
+				_ = tx.Rollback()
 			}
 		}
 		atomic.StoreInt32(&s.isWriting, 0)
@@ -175,7 +175,7 @@ func (s *StreamSQL) writeBuffer(flush bool) error {
 		return err
 	}
 	if stmt, err = tx.Prepare(s.query.QueryString()); err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return err
 	}
 
@@ -195,10 +195,10 @@ func (s *StreamSQL) writeBuffer(flush bool) error {
 	}
 
 	if err == nil {
-		stmt.Exec()
+		_, _ = stmt.Exec()
 		err = tx.Commit()
 	} else {
-		tx.Rollback()
+		_ = tx.Rollback()
 	}
 
 	s.writeLastTime = time.Now()

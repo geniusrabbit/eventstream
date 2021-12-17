@@ -27,35 +27,16 @@ export PATH := $(GOBIN):$(PATH)
 # https://golang.org/doc/go1.12#tls_1_3
 export GODEBUG := tls13=0
 
-GOLINT_VERSION := d0100b6bd8b389f0385611eb39152c4d7c3a7905
-GOLINT := $(TMP_VERSIONS)/golint/$(GOLINT_VERSION)
-$(GOLINT):
-	$(eval GOLINT_TMP := $(shell mktemp -d))
-	cd $(GOLINT_TMP); go get golang.org/x/lint/golint@$(GOLINT_VERSION)
-	@rm -rf $(GOLINT_TMP)
-	@rm -rf $(dir $(GOLINT))
-	@mkdir -p $(dir $(GOLINT))
-	@touch $(GOLINT)
+GOLANGLINTCI_VERSION := latest
+GOLANGLINTCI := $(TMP_VERSIONS)/golangci-lint/$(GOLANGLINTCI_VERSION)
+$(GOLANGLINTCI):
+	$(eval GOLANGLINTCI_TMP := $(shell mktemp -d))
+	cd $(GOLANGLINTCI_TMP); go get github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGLINTCI_VERSION)
+	@rm -rf $(GOLANGLINTCI_TMP)
+	@rm -rf $(dir $(GOLANGLINTCI))
+	@mkdir -p $(dir $(GOLANGLINTCI))
+	@touch $(GOLANGLINTCI)
 
-ERRCHECK_VERSION := v1.2.0
-ERRCHECK := $(TMP_VERSIONS)/errcheck/$(ERRCHECK_VERSION)
-$(ERRCHECK):
-	$(eval ERRCHECK_TMP := $(shell mktemp -d))
-	cd $(ERRCHECK_TMP); go get github.com/kisielk/errcheck@$(ERRCHECK_VERSION)
-	@rm -rf $(ERRCHECK_TMP)
-	@rm -rf $(dir $(ERRCHECK))
-	@mkdir -p $(dir $(ERRCHECK))
-	@touch $(ERRCHECK)
-
-STATICCHECK_VERSION := c2f93a96b099cbbec1de36336ab049ffa620e6d7
-STATICCHECK := $(TMP_VERSIONS)/staticcheck/$(STATICCHECK_VERSION)
-$(STATICCHECK):
-	$(eval STATICCHECK_TMP := $(shell mktemp -d))
-	cd $(STATICCHECK_TMP); go get honnef.co/go/tools/cmd/staticcheck@$(STATICCHECK_VERSION)
-	@rm -rf $(STATICCHECK_TMP)
-	@rm -rf $(dir $(STATICCHECK))
-	@mkdir -p $(dir $(STATICCHECK))
-	@touch $(STATICCHECK)
 
 GOMOCK_VERSION := v1.3.1
 GOMOCK := $(TMP_VERSIONS)/mockgen/$(GOMOCK_VERSION)
@@ -68,7 +49,7 @@ $(GOMOCK):
 	@touch $(GOMOCK)
 
 .PHONY: deps
-deps: $(GOLINT) $(ERRCHECK) $(STATICCHECK) $(GOMOCK)
+deps: $(GOLANGLINTCI) $(GOMOCK)
 
 .PHONY: generate-code
 generate-code: ## Generate mocks for the project
@@ -76,34 +57,22 @@ generate-code: ## Generate mocks for the project
 	@go generate ./...
 
 .PHONY: golint
-golint: $(GOLINT)
-	golint -set_exit_status ./...
-
-.PHONY: vet
-vet:
-	go vet ./...
-
-.PHONY:
-errcheck: $(ERRCHECK)
-	errcheck ./...
-
-.PHONY: staticcheck
-staticcheck: $(STATICCHECK)
-	staticcheck ./...
+golint: $(GOLANGLINTCI)
+	golangci-lint run -v ./...
 
 .PHONY: lint
-lint: golint vet errcheck staticcheck
+lint: golint
 
 .PHONY: test
 test: ## Run package test
 	go test -race ./...
 
 .PHONY: fmt
-fmt:
+fmt: ## format code
 	gofmt -w `find -name "*.go" -type f`
 
 .PHONY: tidy
-tidy:
+tidy: ## sanitize/update modules
 	go mod tidy
 
 .PHONY: build
@@ -111,9 +80,9 @@ build: test
 	@mkdir -p .build
 	@rm -rf .build/eventstream
 	GOOS=${BUILD_GOOS} GOARCH=${BUILD_GOARCH} CGO_ENABLED=${BUILD_CGO_ENABLED} \
-        go build --tags all \
-					-ldflags "-s -w -X internal.appVersion=`date -u +%Y%m%d.%H%M%S` -X internal.commit=${COMMIT_NUMBER}" \
-        	-o ".build/eventstream" cmd/eventstream/main.go
+		go build --tags all \
+			-ldflags "-s -w -X internal.appVersion=`date -u +%Y%m%d.%H%M%S` -X internal.commit=${COMMIT_NUMBER}" \
+			-o ".build/eventstream" cmd/eventstream/main.go
 
 .PHONY: run
 run: build

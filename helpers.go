@@ -11,7 +11,6 @@ import (
 	"math/big"
 	"net"
 	"time"
-	"unicode"
 )
 
 var (
@@ -38,15 +37,6 @@ func parseTime(tm string) (t time.Time, err error) {
 		}
 	}
 	return
-}
-
-func isInt(s string) bool {
-	for _, c := range s {
-		if !unicode.IsDigit(c) {
-			return false
-		}
-	}
-	return true
 }
 
 func ip2EscapeString(ip net.IP) string {
