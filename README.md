@@ -68,6 +68,15 @@ streams {
     //   INSERT INTO testlog (service, msg, error, timestamp) VALUES($srv, $msg, $err, @toDateTime($timestamp))
     fields = "service=srv,msg,error=err,timestamp=@toDateTime({{timestamp:date}})"
     where  = "srv == \"main\""
+    metrics = [
+      {
+        name = "log.counter"
+        type = "increment"
+        tags {
+          server  = "{{srv}}"
+        }
+      }
+    ]
   }
 }
 ```

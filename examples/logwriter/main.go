@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	_ "github.com/ClickHouse/clickhouse-go"
 	"go.uber.org/zap"
 
 	"github.com/geniusrabbit/eventstream/internal/zlogger"

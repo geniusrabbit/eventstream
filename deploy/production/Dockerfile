@@ -1,4 +1,8 @@
-FROM alpine:latest AS basic
+# syntax=docker/dockerfile:1.2
+FROM --platform=$BUILDPLATFORM alpine:latest AS basic
+
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
 
 # Create appuser.
 ENV USER=appuser
@@ -17,11 +21,14 @@ RUN adduser \
     "${USER}"
 
 ############################
-FROM scratch
+FROM --platform=$TARGETPLATFORM scratch
 
 LABEL maintainer="GeniusRabbit (Dmitry Ponomarev github.com/demdxx)"
 LABEL service.name=eventstream
-LABEL service.veight=1
+LABEL service.weight=1
+
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
 
 ENV LOG_LEVEL=info
 ENV ZONEINFO=/usr/share/zoneinfo/
@@ -30,8 +37,8 @@ ENV ZONEINFO=/usr/share/zoneinfo/
 COPY --from=basic /etc/passwd /etc/passwd
 COPY --from=basic /etc/group /etc/group
 COPY --from=basic /usr/share/zoneinfo/ /usr/share/zoneinfo/
-COPY .build/eventstream /
-COPY ./deploy/production/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
+ADD .build/${TARGETPLATFORM}/eventstream /eventstream
+ADD ./deploy/production/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
 
 # Use an unprivileged user.
 USER appuser:appuser
