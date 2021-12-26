@@ -13,11 +13,13 @@ services:
 
   service:
     image: golang:latest
-    command: .build/eventstream --config=deploy/develop/config.hcl --profiler=:6060
+    command: .build/${LOCAL_TARGETPLATFORM}/eventstream --config=deploy/develop/config.hcl --profiler=:6060
     ports: ["6060:6060"]
     working_dir: /project
-    environment:
-      LOG_LEVEL: debug
-      JAEGER_AGENT_HOST: tracer
+    env_file: ../../.env
     depends_on: [nats,tracer,clickhouse]
     volumes: [../../:/project]
+    environment:
+      - CLICKHOUSE_STORE_CONNECT=clickhouse://clickhouse:9000/stat
+      - NATS_STREAM_CONNECT=nats://nats:4222/?topics=topic1,topic2
+      - NATS_STORE_CONNECT=nats://nats:4222/?topics=metrics

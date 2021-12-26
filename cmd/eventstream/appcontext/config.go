@@ -17,7 +17,6 @@ import (
 
 var (
 	errInvalidConfig        = errors.New("[config] invalid config")
-	errInvalidConfigFile    = errors.New("[config] invalid config file format")
 	errInvalidStoreConnect  = errors.New("[config] invalid store config connect")
 	errInvalidSourceConnect = errors.New("[config] invalid source config connect")
 	errInvalidSourceStream  = errors.New("[config] invalid stream config connect")
@@ -42,9 +41,12 @@ type profilerConfig struct {
 type ConfigType struct {
 	mx sync.RWMutex
 
-	Config string `json:"-" cli:"config"`
+	Config      string `json:"-" cli:"config"`
+	ServiceName string `json:"service_name" yaml:"service_name" toml:"service_name" env:"SERVICE_NAME" default:"eventstream"`
 
-	LogLevel string `default:"debug" env:"LOG_LEVEL"`
+	LogAddr    string `json:"log_addr" yaml:"log_addr" toml:"log_addr" default:"" env:"LOG_ADDR"`
+	LogLevel   string `json:"log_level" yaml:"log_level" toml:"log_level" default:"debug" env:"LOG_LEVEL"`
+	LogEncoder string `json:"log_encoder" yaml:"log_encoder" toml:"server" env:"LOG_ENCODER"`
 
 	Profile profilerConfig `yaml:"profile" json:"profile"`
 
@@ -93,7 +95,7 @@ func (cfg *ConfigType) Validate() error {
 
 // IsDebug mode ON
 func (cfg *ConfigType) IsDebug() bool {
-	return strings.ToLower(cfg.LogLevel) == `debug`
+	return strings.EqualFold(cfg.LogLevel, `debug`)
 }
 
 // Config instance

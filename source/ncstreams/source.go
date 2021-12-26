@@ -8,12 +8,12 @@ package ncstreams
 import (
 	"context"
 
-	"github.com/geniusrabbit/eventstream/converter"
-	nc "github.com/geniusrabbit/notificationcenter"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
 	"github.com/geniusrabbit/eventstream"
+	"github.com/geniusrabbit/eventstream/converter"
+	nc "github.com/geniusrabbit/notificationcenter"
 )
 
 var (
@@ -21,12 +21,36 @@ var (
 	errStreamAlreadyRegistered = errors.New("stream already registered")
 )
 
+type getSubscriberFnk func(ctx context.Context, url string) (nc.Subscriber, error)
+
 type sourceSubscriber struct {
 	debug      bool
 	format     converter.Converter
 	logger     *zap.Logger
 	subscriber nc.Subscriber
 	streams    []eventstream.Streamer
+}
+
+// Open new source by URLs
+func Open(ctx context.Context, url string, subFnk getSubscriberFnk, options ...Option) (eventstream.Sourcer, error) {
+	var opts Options
+	for _, opt := range options {
+		opt(&opts)
+	}
+	subscriber, err := subFnk(ctx, url)
+	if err != nil {
+		return nil, err
+	}
+	subscriberWrapper := &sourceSubscriber{
+		debug:      opts.Debug,
+		subscriber: subscriber,
+		logger:     opts.getLogger(),
+		format:     opts.getFormat(),
+	}
+	if err := subscriber.Subscribe(ctx, subscriberWrapper); err != nil {
+		return nil, err
+	}
+	return subscriberWrapper, nil
 }
 
 // Subscribe new stream object

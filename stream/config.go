@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"github.com/geniusrabbit/eventstream/internal/metrics"
 )
 
 var (
@@ -13,12 +15,13 @@ var (
 
 // Config of the stream
 type Config struct {
-	Name   string
-	Debug  bool
-	Store  string
-	Source string
-	Where  string
-	Raw    json.RawMessage
+	Name    string
+	Debug   bool
+	Store   string
+	Source  string
+	Where   string
+	Metrics metrics.MetricList
+	Raw     json.RawMessage
 }
 
 // Decode raw data to the target object
@@ -37,15 +40,17 @@ func (c *Config) UnmarshalJSON(data []byte) (err error) {
 	c.Raw = json.RawMessage(data)
 
 	var conf struct {
-		Store  string `json:"store"`
-		Source string `json:"source"`
-		Where  string `json:"where"`
+		Store   string             `json:"store"`
+		Source  string             `json:"source"`
+		Where   string             `json:"where"`
+		Metrics metrics.MetricList `json:"metrics"`
 	}
 
 	if err = json.Unmarshal(data, &conf); err == nil {
 		c.Store = conf.Store
 		c.Source = conf.Source
 		c.Where = conf.Where
+		c.Metrics = conf.Metrics
 	}
 	return err
 }

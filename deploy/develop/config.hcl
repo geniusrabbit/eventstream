@@ -10,22 +10,20 @@ stores {
   # ) Engine=MergeTree(datemark, (service), 8192);
 
   clickhouse_1 {
-    connect = "clickhouse://clickhouse:9000/stat"
+    connect = "@env:CLICKHOUSE_STORE_CONNECT"
     buffer  = 1000
   }
 
   nats_store {
-    connect = "nats://nats:4222/?topics=metrics"
-    driver  = "nats"
+    connect = "@env:NATS_STORE_CONNECT"
   }
 }
 
 // Source could be any supported stream service like kafka, nats, etc...
 sources {
   nats_1 {
-    connect = "nats://nats:4222/?topics=topic1,topic2"
+    connect = "@env:NATS_STREAM_CONNECT"
     format  = "json"
-    driver  = "nats"
   }
 }
 

@@ -3,7 +3,7 @@
 // @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2019
 //
 
-package eventstream
+package message
 
 import "github.com/demdxx/gocast"
 
@@ -107,7 +107,7 @@ func (t FieldType) Cast(v interface{}) interface{} {
 	case FieldTypeArrayInt32:
 		if v != nil {
 			var arr = []int32{}
-			gocast.ToSlice(arr, v, "")
+			_ = gocast.ToSlice(arr, v, "")
 			v = arr
 		} else {
 			v = []int32{}
@@ -115,7 +115,7 @@ func (t FieldType) Cast(v interface{}) interface{} {
 	case FieldTypeArrayInt64:
 		if v != nil {
 			var arr = []int64{}
-			gocast.ToSlice(arr, v, "")
+			_ = gocast.ToSlice(arr, v, "")
 			v = arr
 		} else {
 			v = []int64{}

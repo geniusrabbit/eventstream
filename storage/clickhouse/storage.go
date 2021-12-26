@@ -16,6 +16,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/geniusrabbit/eventstream"
+	"github.com/geniusrabbit/eventstream/internal/metrics"
 	"github.com/geniusrabbit/eventstream/internal/utils"
 	"github.com/geniusrabbit/eventstream/storage"
 	sqlstore "github.com/geniusrabbit/eventstream/storage/sql"
@@ -66,6 +67,7 @@ func (c *Clickhouse) Stream(options ...interface{}) (strm eventstream.Streamer, 
 	var (
 		conf         stream.Config
 		storeOptions []sqlstore.Option
+		metricExec   metrics.Metricer
 	)
 	for _, opt := range options {
 		switch o := opt.(type) {
@@ -79,10 +81,13 @@ func (c *Clickhouse) Stream(options ...interface{}) (strm eventstream.Streamer, 
 			stream.WithObjectConfig(o)(&conf)
 		}
 	}
+	if metricExec, err = conf.Metrics.Metric(); err != nil {
+		return nil, err
+	}
 	if strm, err = sqlstore.New(c, queryPattern, &conf, storeOptions...); err != nil {
 		return nil, err
 	}
-	return eventstream.NewStreamWrapper(strm, conf.Where)
+	return eventstream.NewStreamWrapper(strm, conf.Where, metricExec)
 }
 
 // Connection to clickhouse DB

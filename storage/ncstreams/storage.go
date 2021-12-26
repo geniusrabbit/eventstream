@@ -8,16 +8,16 @@ package ncstreams
 import (
 	"context"
 	"io"
-	"strings"
 
 	nc "github.com/geniusrabbit/notificationcenter"
-	"github.com/geniusrabbit/notificationcenter/kafka"
-	"github.com/geniusrabbit/notificationcenter/nats"
-	"github.com/geniusrabbit/notificationcenter/natstream"
 
 	"github.com/geniusrabbit/eventstream"
+	"github.com/geniusrabbit/eventstream/internal/metrics"
+	"github.com/geniusrabbit/eventstream/storage"
 	"github.com/geniusrabbit/eventstream/stream"
 )
+
+type getPublisherFnk func(ctx context.Context, url string) (nc.Publisher, error)
 
 // PublishStorage processor
 type PublishStorage struct {
@@ -29,24 +29,26 @@ type PublishStorage struct {
 }
 
 // Open new storage connection
-func Open(url string, options ...Option) (eventstream.Storager, error) {
+func Open(ctx context.Context, url string, pubFnk getPublisherFnk, options ...storage.Option) (eventstream.Storager, error) {
 	var (
-		opts           Options
-		ctx            = context.Background()
-		publisher, err = connect(ctx, url)
+		conf           storage.Config
+		publisher, err = pubFnk(ctx, url)
 	)
 	if err != nil {
 		return nil, err
 	}
 	for _, opt := range options {
-		opt(&opts)
+		opt(&conf)
 	}
-	return &PublishStorage{publisher: publisher, debug: opts.Debug}, nil
+	return &PublishStorage{publisher: publisher, debug: conf.Debug}, nil
 }
 
 // Stream metrics processor
 func (m *PublishStorage) Stream(options ...interface{}) (streamObj eventstream.Streamer, err error) {
-	var conf stream.Config
+	var (
+		conf       stream.Config
+		metricExec metrics.Metricer
+	)
 	for _, opt := range options {
 		switch o := opt.(type) {
 		case stream.Option:
@@ -57,10 +59,13 @@ func (m *PublishStorage) Stream(options ...interface{}) (streamObj eventstream.S
 			stream.WithObjectConfig(o)(&conf)
 		}
 	}
+	if metricExec, err = conf.Metrics.Metric(); err != nil {
+		return nil, err
+	}
 	if streamObj, err = newStream(m.publisher, &conf); err != nil {
 		return nil, err
 	}
-	return eventstream.NewStreamWrapper(streamObj, conf.Where)
+	return eventstream.NewStreamWrapper(streamObj, conf.Where, metricExec)
 }
 
 // Close vertica connection
@@ -69,16 +74,4 @@ func (m *PublishStorage) Close() (err error) {
 		err = cl.Close()
 	}
 	return err
-}
-
-func connect(ctx context.Context, connection string) (nc.Publisher, error) {
-	switch {
-	case strings.HasPrefix(connection, "nats://"):
-		return nats.NewPublisher(nats.WithNatsURL(connection))
-	case strings.HasPrefix(connection, "natstream://"):
-		return natstream.NewPublisher(natstream.WithNatsURL(connection))
-	case strings.HasPrefix(connection, "kafka://"):
-		return kafka.NewPublisher(ctx, kafka.WithKafkaURL(connection))
-	}
-	return nil, nc.ErrUndefinedPublisherInterface
 }

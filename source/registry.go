@@ -11,9 +11,13 @@ import (
 	"sync"
 
 	"github.com/geniusrabbit/eventstream"
+	"github.com/pkg/errors"
 )
 
-type connector func(config *Config) (eventstream.Sourcer, error)
+// ErrUndefinedSourceDriver in case if source not exists
+var ErrUndefinedSourceDriver = errors.New(`undefined source driver`)
+
+type connector func(ctx context.Context, config *Config) (eventstream.Sourcer, error)
 
 type registry struct {
 	mx         sync.RWMutex
@@ -24,7 +28,7 @@ type registry struct {
 
 // RegisterConnector function which creates new stream coneection by config
 // and bind the connector to the `driver` name
-func (r *registry) RegisterConnector(c connector, driver string) {
+func (r *registry) RegisterConnector(driver string, c connector) {
 	r.mx.Lock()
 	defer r.mx.Unlock()
 	r.connectors[driver] = c
@@ -32,7 +36,7 @@ func (r *registry) RegisterConnector(c connector, driver string) {
 
 // Register data source connection with `name` and options
 // The source defines by connection options
-func (r *registry) Register(name string, options ...Option) (err error) {
+func (r *registry) Register(ctx context.Context, name string, options ...Option) (err error) {
 	var (
 		source eventstream.Sourcer
 		config Config
@@ -40,19 +44,19 @@ func (r *registry) Register(name string, options ...Option) (err error) {
 	for _, opt := range options {
 		opt(&config)
 	}
-	if source, err = r.connection(&config); err == nil {
+	if source, err = r.connection(ctx, &config); err == nil {
 		r.mx.Lock()
 		defer r.mx.Unlock()
 		r.sources[name] = source
 	}
-	return
+	return err
 }
 
 // Subscribe some handler interface to processing the stream with `name`
 func (r *registry) Subscribe(ctx context.Context, name string, stream eventstream.Streamer) error {
 	r.mx.RLock()
 	defer r.mx.RUnlock()
-	if src, _ := r.sources[name]; src != nil {
+	if src := r.sources[name]; src != nil {
 		return src.Subscribe(ctx, stream)
 	}
 	return nil
@@ -62,8 +66,7 @@ func (r *registry) Subscribe(ctx context.Context, name string, stream eventstrea
 func (r *registry) Source(name string) eventstream.Sourcer {
 	r.mx.RLock()
 	defer r.mx.RUnlock()
-	src, _ := r.sources[name]
-	return src
+	return r.sources[name]
 }
 
 // Listen method launch into the background all sources where the supervised
@@ -79,7 +82,7 @@ func (r *registry) Listen(ctx context.Context) (err error) {
 	}
 	r.mx.RUnlock()
 	<-r.close
-	return
+	return nil
 }
 
 // Close all listeners and source connections
@@ -90,18 +93,18 @@ func (r *registry) Close() (err error) {
 		err = source.Close()
 	}
 	r.close <- true
-	return
+	return err
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Internal methods
 ///////////////////////////////////////////////////////////////////////////////
 
-func (r *registry) connection(config *Config) (eventstream.Sourcer, error) {
+func (r *registry) connection(ctx context.Context, config *Config) (eventstream.Sourcer, error) {
 	r.mx.RLock()
 	defer r.mx.RUnlock()
-	if conn, _ := r.connectors[config.Driver]; conn != nil {
-		return conn(config)
+	if conn := r.connectors[config.Driver]; conn != nil {
+		return conn(ctx, config)
 	}
 	return nil, fmt.Errorf("[source] undefined source driver: [%s]", config.Driver)
 }

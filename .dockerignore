@@ -1,1 +1,6 @@
 .tmp
+internal
+.github
+cmd
+source
+storage

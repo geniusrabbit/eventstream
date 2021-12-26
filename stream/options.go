@@ -2,6 +2,8 @@ package stream
 
 import (
 	"encoding/json"
+
+	"github.com/geniusrabbit/eventstream/internal/metrics"
 )
 
 // Option of the stream
@@ -39,6 +41,13 @@ func WithWhere(where string) Option {
 func WithRawConfig(raw json.RawMessage) Option {
 	return func(cnf *Config) {
 		cnf.Raw = raw
+	}
+}
+
+// WithMetrics of the stream
+func WithMetrics(metrics metrics.MetricList) Option {
+	return func(cnf *Config) {
+		cnf.Metrics = metrics
 	}
 }
 
