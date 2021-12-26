@@ -23,6 +23,9 @@ func OpenRedis(ctx context.Context, url string, options ...Option) (eventstream.
 
 func init() {
 	source.RegisterConnector("redistream", func(ctx context.Context, config *source.Config) (eventstream.Sourcer, error) {
-		return OpenKafka(ctx, config.Connect, WithDebug(config.Debug), WithFormat(config.Format))
+		return OpenRedis(ctx, config.Connect, WithDebug(config.Debug), WithFormat(config.Format))
+	})
+	source.RegisterConnector("redis", func(ctx context.Context, config *source.Config) (eventstream.Sourcer, error) {
+		return OpenRedis(ctx, config.Connect, WithDebug(config.Debug), WithFormat(config.Format))
 	})
 }

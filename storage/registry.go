@@ -82,5 +82,5 @@ func (r *registry) connection(ctx context.Context, config *Config) (eventstream.
 	if conn := r.connectors[config.Driver]; conn != nil {
 		return conn(ctx, config)
 	}
-	return nil, errors.Wrap(ErrUndefinedDriver, config.Driver)
+	return nil, errors.Wrap(ErrUndefinedDriver, config.Connect)
 }

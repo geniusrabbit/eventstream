@@ -243,7 +243,7 @@ func PrepareFieldsByString(fls string) (values []Value, fields, inserts []string
 func prepareOneFieldByString(field string) (values []Value, fieldValue, insert string) {
 	insert = "?"
 	if strings.ContainsAny(field, "=") {
-		if field := strings.SplitN(field, "=", 2); '@' == field[1][0] {
+		if field := strings.SplitN(field, "=", 2); field[1][0] == '@' {
 			fieldValue = field[0]
 			insert = field[1][1:]
 			if match := paramsSearch.FindAllStringSubmatch(insert, -1); len(match) > 0 {

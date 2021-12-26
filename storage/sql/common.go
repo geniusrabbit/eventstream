@@ -30,10 +30,11 @@ func New(connector Connector, pattern string, conf *stream.Config, options ...Op
 		conf.Name,
 		connector,
 		append(
-			options,
-			WithBlockSize(int(config.BufferSize)),
-			WithFlushIntervals(time.Duration(config.WriteTimeout)*time.Millisecond),
-			WithDebug(conf.Debug),
-		)...,
+			[]Option{
+				WithBlockSize(int(config.BufferSize)),
+				WithFlushIntervals(time.Duration(config.WriteTimeout) * time.Millisecond),
+				WithDebug(conf.Debug),
+			},
+			options...)...,
 	)
 }

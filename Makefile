@@ -7,6 +7,11 @@ BUILD_GOARCH ?= $(or ${DOCKER_DEFAULT_GOARCH},amd64)
 BUILD_GOARM ?= 7
 BUILD_CGO_ENABLED ?= 0
 
+LOCAL_TARGETPLATFORM=${BUILD_GOOS}/${BUILD_GOARCH}
+ifeq (${BUILD_GOARCH},arm)
+	LOCAL_TARGETPLATFORM=${BUILD_GOOS}/${BUILD_GOARCH}/v${BUILD_GOARM}
+endif
+
 COMMIT_NUMBER ?= $(shell git log -1 --pretty=format:%h)
 TAG_VALUE ?= $(shell git describe --exact-match --tags ${COMMIT_NUMBER})
 
@@ -15,7 +20,7 @@ ifeq (${TAG_VALUE},)
 endif
 
 PROJDIR ?= $(CURDIR)/../
-MAIN ?= eventstream
+PROJECT_NAME ?= eventstream
 
 TMP_BASE := .tmp
 TMP := $(TMP_BASE)/$(UNAME_OS)/$(UNAME_ARCH)
@@ -87,8 +92,9 @@ test: ## Run package test
 
 
 .PHONY: fmt
-fmt: ## format code
-	gofmt -w `find -name "*.go" -type f`
+fmt: ## Run formatting code
+	@echo "Fix formatting"
+	@gofmt -w ${GO_FMT_FLAGS} $$(go list -f "{{ .Dir }}" ./...); if [ "$${errors}" != "" ]; then echo "$${errors}"; fi
 
 
 .PHONY: tidy
@@ -119,18 +125,18 @@ build: test ## Build application
 
 .PHONY: run
 run: build
-	docker-compose -p ${MAIN} -f deploy/develop/docker-compose.yml build service
-	docker-compose -p ${MAIN} -f deploy/develop/docker-compose.yml run --service-ports service
+	docker-compose -p ${PROJECT_NAME} -f deploy/develop/docker-compose.yml build service
+	docker-compose -p ${PROJECT_NAME} -f deploy/develop/docker-compose.yml run --service-ports service
 
 
 .PHONY: stop
 stop:
-	docker-compose -p ${MAIN} -f deploy/develop/docker-compose.yml stop
+	docker-compose -p ${PROJECT_NAME} -f deploy/develop/docker-compose.yml stop
 
 
 .PHONY: destroy
 destroy: stop
-	docker-compose -p ${MAIN} -f deploy/develop/docker-compose.yml down
+	docker-compose -p ${PROJECT_NAME} -f deploy/develop/docker-compose.yml down
 
 
 .PHONY: build-docker

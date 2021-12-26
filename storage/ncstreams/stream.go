@@ -21,8 +21,8 @@ var (
 )
 
 type configItem struct {
-	Fields []map[string]interface{} `json:"fields"`
-	Where  string                   `json:"where"`
+	Fields map[string]interface{} `json:"fields"`
+	Where  string                 `json:"where"`
 }
 
 type config struct {
@@ -51,8 +51,8 @@ func newStream(pub nc.Publisher, conf *stream.Config) (eventstream.Streamer, err
 	}
 	for _, target := range preConfig.Targets {
 		var fields map[string]interface{}
-		if len(target.Fields) > 0 {
-			fields = target.Fields[0]
+		if target.Fields != nil && len(target.Fields) > 0 {
+			fields = target.Fields
 		}
 		template, err := newMessageTemplate(fields, target.Where)
 		if err != nil {

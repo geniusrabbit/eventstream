@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/geniusrabbit/eventstream"
+	"github.com/geniusrabbit/eventstream/internal/metrics"
 	"github.com/geniusrabbit/eventstream/internal/utils"
 	sqlstore "github.com/geniusrabbit/eventstream/storage/sql"
 	"github.com/geniusrabbit/eventstream/stream"
@@ -31,17 +32,17 @@ type Vertica struct {
 }
 
 // Open new vertica storage
-func Open(connectURL string, options ...Option) (*Vertica, error) {
+func Open(connectURL string, options ...sqlstore.Option) (*Vertica, error) {
 	var (
-		opts        Options
 		conn        *sql.DB
+		opts        sqlstore.Options
 		urlObj, err = url.Parse(connectURL)
 	)
 	if err != nil {
 		return nil, err
 	}
-	for _, opt := range options {
-		opt(&opts)
+	for _, o := range options {
+		o(&opts)
 	}
 	if conn, err = verticaConnect(urlObj, opts.Debug); err != nil {
 		return nil, err
@@ -54,6 +55,7 @@ func (st *Vertica) Stream(options ...interface{}) (strm eventstream.Streamer, er
 	var (
 		conf         stream.Config
 		storeOptions []sqlstore.Option
+		metricExec   metrics.Metricer
 	)
 	for _, opt := range options {
 		switch o := opt.(type) {
@@ -67,10 +69,13 @@ func (st *Vertica) Stream(options ...interface{}) (strm eventstream.Streamer, er
 			stream.WithObjectConfig(o)(&conf)
 		}
 	}
+	if metricExec, err = conf.Metrics.Metric(); err != nil {
+		return nil, err
+	}
 	if strm, err = sqlstore.New(st, queryPattern, &conf, storeOptions...); err != nil {
 		return nil, err
 	}
-	return eventstream.NewStreamWrapper(strm, conf.Where)
+	return eventstream.NewStreamWrapper(strm, conf.Where, metricExec)
 }
 
 // Connection to clickhouse DB

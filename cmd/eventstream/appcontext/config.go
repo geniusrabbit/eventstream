@@ -95,7 +95,7 @@ func (cfg *ConfigType) Validate() error {
 
 // IsDebug mode ON
 func (cfg *ConfigType) IsDebug() bool {
-	return strings.ToLower(cfg.LogLevel) == `debug`
+	return strings.EqualFold(cfg.LogLevel, `debug`)
 }
 
 // Config instance

@@ -12,6 +12,8 @@ import (
 	nc "github.com/geniusrabbit/notificationcenter"
 
 	"github.com/geniusrabbit/eventstream"
+	"github.com/geniusrabbit/eventstream/internal/metrics"
+	"github.com/geniusrabbit/eventstream/storage"
 	"github.com/geniusrabbit/eventstream/stream"
 )
 
@@ -27,23 +29,26 @@ type PublishStorage struct {
 }
 
 // Open new storage connection
-func Open(ctx context.Context, url string, pubFnk getPublisherFnk, options ...Option) (eventstream.Storager, error) {
+func Open(ctx context.Context, url string, pubFnk getPublisherFnk, options ...storage.Option) (eventstream.Storager, error) {
 	var (
-		opts           Options
+		conf           storage.Config
 		publisher, err = pubFnk(ctx, url)
 	)
 	if err != nil {
 		return nil, err
 	}
 	for _, opt := range options {
-		opt(&opts)
+		opt(&conf)
 	}
-	return &PublishStorage{publisher: publisher, debug: opts.Debug}, nil
+	return &PublishStorage{publisher: publisher, debug: conf.Debug}, nil
 }
 
 // Stream metrics processor
 func (m *PublishStorage) Stream(options ...interface{}) (streamObj eventstream.Streamer, err error) {
-	var conf stream.Config
+	var (
+		conf       stream.Config
+		metricExec metrics.Metricer
+	)
 	for _, opt := range options {
 		switch o := opt.(type) {
 		case stream.Option:
@@ -54,10 +59,13 @@ func (m *PublishStorage) Stream(options ...interface{}) (streamObj eventstream.S
 			stream.WithObjectConfig(o)(&conf)
 		}
 	}
+	if metricExec, err = conf.Metrics.Metric(); err != nil {
+		return nil, err
+	}
 	if streamObj, err = newStream(m.publisher, &conf); err != nil {
 		return nil, err
 	}
-	return eventstream.NewStreamWrapper(streamObj, conf.Where)
+	return eventstream.NewStreamWrapper(streamObj, conf.Where, metricExec)
 }
 
 // Close vertica connection

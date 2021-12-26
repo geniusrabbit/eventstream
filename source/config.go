@@ -2,6 +2,7 @@ package source
 
 import (
 	"encoding/json"
+	"os"
 	"strings"
 )
 
@@ -35,6 +36,10 @@ func (c *Config) UnmarshalJSON(data []byte) (err error) {
 	c.Driver = confData.Driver
 	c.Format = confData.Format
 	c.Raw = json.RawMessage(data)
+
+	if strings.HasPrefix(c.Connect, "@env:") {
+		c.Connect = os.Getenv(c.Connect[5:])
+	}
 
 	if c.Driver == `` {
 		if urlData := strings.Split(c.Connect, `://`); len(urlData) > 1 {

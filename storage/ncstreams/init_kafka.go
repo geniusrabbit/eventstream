@@ -17,12 +17,12 @@ func kafkaNewPublisher(ctx context.Context, url string) (nc.Publisher, error) {
 }
 
 // OpenKafka publisher connectior
-func OpenKafka(ctx context.Context, url string, options ...Option) (eventstream.Storager, error) {
+func OpenKafka(ctx context.Context, url string, options ...storage.Option) (eventstream.Storager, error) {
 	return Open(ctx, url, kafkaNewPublisher, options...)
 }
 
 func init() {
 	storage.RegisterConnector("kafka", func(ctx context.Context, conf *storage.Config) (eventstream.Storager, error) {
-		return OpenKafka(ctx, conf.Connect, WithDebug(conf.Debug))
+		return OpenKafka(ctx, conf.Connect, storage.WithDebug(conf.Debug))
 	})
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 )
 
@@ -42,12 +43,16 @@ func (c *StorageConfig) UnmarshalJSON(data []byte) (err error) {
 	}
 
 	if confData.Buffer <= 0 {
-		confData.Buffer = 100
+		confData.Buffer = 1000
 	}
 	c.Connect = confData.Connect
 	c.Driver = confData.Driver
 	c.Buffer = confData.Buffer
 	c.Raw = json.RawMessage(data)
+
+	if strings.HasPrefix(c.Connect, "@env:") {
+		c.Connect = os.Getenv(c.Connect[5:])
+	}
 
 	if c.Driver == `` {
 		if urlData := strings.Split(c.Connect, `://`); len(urlData) > 1 {

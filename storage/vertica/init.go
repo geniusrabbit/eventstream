@@ -8,10 +8,11 @@ import (
 
 	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/storage"
+	sqlstore "github.com/geniusrabbit/eventstream/storage/sql"
 )
 
 func connector(ctx context.Context, conf *storage.Config) (eventstream.Storager, error) {
-	return Open(conf.Connect, WithDebug(conf.Debug))
+	return Open(conf.Connect, sqlstore.WithDebug(conf.Debug))
 }
 
 func init() {

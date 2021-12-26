@@ -17,12 +17,12 @@ func redisNewPublisher(ctx context.Context, url string) (nc.Publisher, error) {
 }
 
 // OpenRedis publisher connectior
-func OpenRedis(ctx context.Context, url string, options ...Option) (eventstream.Storager, error) {
+func OpenRedis(ctx context.Context, url string, options ...storage.Option) (eventstream.Storager, error) {
 	return Open(ctx, url, redisNewPublisher, options...)
 }
 
 func init() {
 	storage.RegisterConnector("redistream", func(ctx context.Context, conf *storage.Config) (eventstream.Storager, error) {
-		return OpenRedis(ctx, conf.Connect, WithDebug(conf.Debug))
+		return OpenRedis(ctx, conf.Connect, storage.WithDebug(conf.Debug))
 	})
 }

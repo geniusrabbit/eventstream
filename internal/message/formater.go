@@ -3,7 +3,7 @@
 // @author Dmitry Ponomarev <demdxx@gmail.com> 2017
 //
 
-package eventstream
+package message
 
 // Formater processor
 type Formater interface {

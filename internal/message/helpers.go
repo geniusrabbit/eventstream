@@ -3,7 +3,7 @@
 // @author Dmitry Ponomarev <demdxx@gmail.com> 2017
 //
 
-package eventstream
+package message
 
 import (
 	"bytes"
@@ -36,7 +36,7 @@ func parseTime(tm string) (t time.Time, err error) {
 			break
 		}
 	}
-	return
+	return t, err
 }
 
 func ip2EscapeString(ip net.IP) string {
@@ -44,11 +44,9 @@ func ip2EscapeString(ip net.IP) string {
 		data    = make([]byte, 16)
 		ipBytes = ip2Int(ip).Bytes()
 	)
-
 	for i := range ipBytes {
 		data[15-i] = ipBytes[len(ipBytes)-i-1]
 	}
-
 	return escapeBytes(data, 0)
 }
 
@@ -60,11 +58,9 @@ func escapeBytes(data []byte, size int) string {
 		}
 		buff.WriteString(fmt.Sprintf("\\%03o", b))
 	}
-
 	for i := len(data); i < size; i++ {
 		buff.WriteString(fmt.Sprintf("\\%03o", byte(0)))
 	}
-
 	return buff.String()
 }
 

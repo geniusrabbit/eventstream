@@ -23,17 +23,17 @@ docker run -d -it -v ./custom.config.hcl:/config.hcl \
 
 ## Source list
 
-- *kafka*
-- *NATS* & *NATS stream*
-- *Redis* stream
+- **kafka**
+- **NATS** & **NATS stream**
+- **Redis** stream
 
 ## Storage list
 
-- *Clickhouse*
-- *Vertica*
-- *kafka*
-- *NATS*
-- *Redis* stream
+- **Clickhouse**
+- **Vertica**
+- **kafka**
+- **NATS**
+- **Redis** stream
 
 ## Config example
 
@@ -42,17 +42,20 @@ Supports two file formats YAML & HCL
 ```js
 stores {
   clickhouse_1 {
-    connect = "clickhouse://clickhouse:9000/stat"
+    connect = "@env:CLICKHOUSE_STORE_CONNECT"
     options { # Optional
       buffer = 1000
     }
+  }
+  kafka_1 {
+    connect = "@env:KAFKA_EVENTS_CONNECT"
   }
 }
 
 // Source could be any supported stream service like kafka, nats, etc...
 sources {
   nats_1 {
-    connect = "nats://nats:4222/?topics=topic1,topic2"
+    connect = "@env:NATS_SOURCE_CONNECT"
     format  = "json"
   }
 }
@@ -71,19 +74,64 @@ streams {
     metrics = [
       {
         name = "log.counter"
-        type = "increment"
+        type = "counter"
         tags {
           server  = "{{srv}}"
         }
       }
     ]
   }
+  kafka_retranslate {
+    store  = "kafka_1"
+    source = "nats_1"
+    targets = [
+      {
+        fields = {
+          server = "{{srv}}"
+          timestamp = "{{timestamp}}"
+        }
+        where = "type = \"statistic\""
+      }
+    ]
+    where = "srv = \"events\""
+  }
 }
+```
+
+## Metrics
+
+Metrics helps analyze some events during processing and monitor streams state.
+Every stream can process metrics with the keyword `metrics`.
+
+Example:
+```js
+metrics = [
+  {
+    name = "log.counter"
+    type = "counter"
+    tags { server = "{{srv}}" }
+  },
+  {
+    name = "actions.counter"
+    type = "counter"
+    tags { action = "{{action}}" }
+  },
+  {...}
+]
+```
+
+All metrics available by URL `/metrics` with prometheus protocol.
+To activate metrics need to define profile connection port.
+
+```env
+SERVER_PROFILE_MODE=net
+SERVER_PROFILE_LISTEN=:6060
 ```
 
 ## TODO
 
-- [ ] Add Mysql database storage
+- [X] Add customizable prometheus metrics
+- [ ] Add MySQL database storage
 - [ ] Add PostgreSQL database storage
 - [ ] Add MongoDB database storage
 - [ ] Add Redis database storage

@@ -124,9 +124,9 @@ func reflectTargetStruct(val reflect.Value) (reflect.Value, error) {
 	}
 }
 
-func metaByTags(field reflect.StructField, def string, tags ...string) (v string) {
+func metaByTags(field reflect.StructField, def string, tags ...string) string {
 	for _, tag := range tags {
-		if v = field.Tag.Get(tag); v != "" {
+		if v := field.Tag.Get(tag); v != "" {
 			return v
 		}
 	}
