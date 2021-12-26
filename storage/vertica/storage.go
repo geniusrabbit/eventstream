@@ -42,7 +42,9 @@ func Open(connectURL string, options ...sqlstore.Option) (*Vertica, error) {
 		return nil, err
 	}
 	for _, o := range options {
-		o(&opts)
+		if err = o(&opts); err != nil {
+			return nil, err
+		}
 	}
 	if conn, err = verticaConnect(urlObj, opts.Debug); err != nil {
 		return nil, err
