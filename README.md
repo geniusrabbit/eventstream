@@ -130,7 +130,6 @@ SERVER_PROFILE_LISTEN=:6060
 
 ## TODO
 
-- [X] Add customizable prometheus metrics
 - [ ] Add MySQL database storage
 - [ ] Add PostgreSQL database storage
 - [ ] Add MongoDB database storage
@@ -141,7 +140,7 @@ SERVER_PROFILE_LISTEN=:6060
 - [X] Add Redis stream source/storage support
 - [ ] Add RabbitMQ stream source/storage support
 - [ ] Add health check API
-- [ ] Add metrics support (prometheus)
+- [X] Add customizable prometheus metrics
 - [x] Add 'where' stream condition (http://github.com/Knetic/govaluate)
 - [X] Ack message only if success
 - [X] Buffering all data until be stored
