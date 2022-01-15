@@ -112,7 +112,7 @@ build: test ## Build application
 			if [ "$$os/$$arch" != "darwin/arm" ]; then \
 				echo "Build $$os/$$arch"; \
 				GOOS=$$os GOARCH=$$arch CGO_ENABLED=${BUILD_CGO_ENABLED} GOARM=${BUILD_GOARM} \
-					go build -ldflags "-s -w -X internal.appVersion=`date -u +%Y%m%d.%H%M%S` -X internal.commit=${COMMIT_NUMBER}"  \
+					go build -ldflags "-s -w -X main.appVersion=`date -u +%Y%m%d` -X main.buildCommit=${COMMIT_NUMBER} -X main.buildVersion=${TAG_VALUE} -X main.buildDate=`date -u +%Y%m%d.%H%M%S`"  \
 						-tags ${APP_TAGS} -o .build/$$os/$$arch/eventstream cmd/eventstream/main.go; \
 				if [ "$$arch" = "arm" ]; then \
 					mkdir -p .build/$$os/$$arch/v${BUILD_GOARM}; \
@@ -144,7 +144,7 @@ build-docker: build ## Build production docker image and push to the hub.docker.
 	@echo "Build docker image"
 	DOCKER_BUILDKIT=${DOCKER_BUILDKIT} docker buildx build \
 		--push --platform linux/amd64,linux/arm64,linux/arm,darwin/amd64,darwin/arm64 \
-		-t  ${CONTAINER_IMAGE}:${TAG_VALUE} -t ${CONTAINER_IMAGE}:latest -f deploy/production/Dockerfile .
+		-t ${CONTAINER_IMAGE}:${TAG_VALUE} -t ${CONTAINER_IMAGE}:latest -f deploy/production/Dockerfile .
 
 
 .PHONY: help

@@ -38,6 +38,9 @@ func MessageDecode(data []byte, converter unmarshalel) (msg Message, err error) 
 
 // JSON data string
 func (m Message) JSON() string {
+	if m == nil {
+		return "null"
+	}
 	data, _ := json.Marshal(m)
 	return string(data)
 }
@@ -66,20 +69,23 @@ func (m Message) ItemCast(key string, t FieldType, length int, format string) (v
 	case FieldTypeString:
 		return gocast.ToString(v)
 	case FieldTypeFixed:
+		var res []byte
 		switch vv := v.(type) {
 		case []byte:
-			v = bytesSize(vv, length)
+			res = bytesSize(vv, length)
 		default:
-			v = bytesSize([]byte(gocast.ToString(v)), length)
+			res = bytesSize([]byte(gocast.ToString(v)), length)
 		}
 		if format == "escape" {
-			return escapeBytes(v.([]byte), 0)
+			return escapeBytes(res, 0)
 		}
+		v = res
 	case FieldTypeUUID:
 		res := valueToUUIDBytes(v)
 		if res != nil && format == "escape" {
 			return escapeBytes(res, 0)
 		}
+		v = res
 	case FieldTypeInt:
 		return gocast.ToInt64(v)
 	case FieldTypeInt32:
@@ -208,6 +214,10 @@ func valueToUUIDBytes(v interface{}) (res []byte) {
 			}
 		} else {
 			res = bytesSize(vv, 16)
+		}
+	case string:
+		if _uuid, _ := uuid.Parse(string(vv)); _uuid != nil {
+			res = _uuid.Bytes()
 		}
 	default:
 		if v == nil {

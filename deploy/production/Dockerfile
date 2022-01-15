@@ -8,7 +8,8 @@ ARG BUILDPLATFORM
 ENV USER=appuser
 ENV UID=10001 
 
-RUN apk add --no-cache tzdata
+RUN apk --update --no-cache add tzdata curl && rm -rf /var/cache/apk/*
+RUN cp "$(which curl)" /tmp/curl
 
 # See https://stackoverflow.com/a/55757473/12429735RUN 
 RUN adduser \    
@@ -34,11 +35,12 @@ ENV LOG_LEVEL=info
 ENV ZONEINFO=/usr/share/zoneinfo/
 
 # Import the user and group files from the builder.
+COPY --from=basic /tmp/curl /curl
 COPY --from=basic /etc/passwd /etc/passwd
 COPY --from=basic /etc/group /etc/group
 COPY --from=basic /usr/share/zoneinfo/ /usr/share/zoneinfo/
-ADD .build/${TARGETPLATFORM}/eventstream /eventstream
 ADD ./deploy/production/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
+ADD .build/${TARGETPLATFORM}/eventstream /eventstream
 
 # Use an unprivileged user.
 USER appuser:appuser

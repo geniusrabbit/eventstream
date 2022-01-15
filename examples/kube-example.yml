@@ -1,0 +1,69 @@
+# kubectl create --namespace=${KUBE_NAMESPACE} configmap app-eventstream-config --from-file=deploy/eventstream.hcl -o yaml --dry-run=client | kubectl apply -f -
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-eventstream-env
+  labels:
+    app: test-eventstream
+data:
+  LOG_LEVEL:                             error
+  SERVER_PROFILE_MODE:                   net
+  SERVER_PROFILE_LISTEN:                 :6060
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-eventstream
+  labels:
+    service-type: app
+spec:
+  ports:
+  - port: 6060
+    targetPort: 6060
+  selector:
+    app: test-eventstream
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-eventstream
+  labels:
+    service-type: app
+spec:
+  selector:
+    matchLabels:
+      app: test-eventstream
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: test-eventstream
+    spec:
+      imagePullSecrets:
+      - name: registry-access
+      containers:
+      - name: test-eventstream
+        image: geniusrabbit/eventstream:latest
+        imagePullPolicy: Always
+        command: ["/eventstream", "--config=/config.hcl", "--profiler=:6060"]
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "400m"
+        volumeMounts:
+          - name: app-eventstream-config
+            mountPath: /config.hcl
+            subPath: eventstream.hcl
+        ports:
+          - containerPort: 6060
+        envFrom:
+          - configMapRef:
+              name: app-eventstream-env
+      volumes:
+        - name: app-eventstream-config
+          configMap:
+            name: app-eventstream-config

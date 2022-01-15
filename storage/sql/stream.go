@@ -17,6 +17,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/geniusrabbit/eventstream"
+	"github.com/geniusrabbit/eventstream/internal/message"
 )
 
 var (
@@ -104,8 +105,10 @@ func (s *StreamSQL) Run(ctx context.Context) error {
 	ch := s.processTimer.C
 
 	for _, ok := <-ch; ok; {
-		if err := s.writeBuffer(false); err != nil {
-			s.logger.Error(`write-buffer`, zap.Error(err))
+		if lastMsg, err := s.writeBuffer(false); err != nil {
+			s.logger.Error(`write-buffer`,
+				zap.String(`last_message`, lastMsg.JSON()),
+				zap.Error(err))
 		}
 		time.Sleep(time.Millisecond * 50)
 	}
@@ -118,24 +121,28 @@ func (s *StreamSQL) Check(ctx context.Context, msg eventstream.Message) bool {
 }
 
 // Close implementation
-func (s *StreamSQL) Close() error {
+func (s *StreamSQL) Close() (err error) {
 	if s.processTimer != nil {
 		s.processTimer.Stop()
 		s.processTimer = nil
 	}
-	err := s.writeBuffer(true)
+	var lastMsg message.Message
+	if lastMsg, err = s.writeBuffer(true); err != nil {
+		s.logger.Error(`Close::write-buffer`,
+			zap.String(`last_message`, lastMsg.JSON()),
+			zap.Error(err))
+	}
 	close(s.buffer)
 	return err
 }
 
 // writeBuffer all data
-func (s *StreamSQL) writeBuffer(flush bool) error {
+func (s *StreamSQL) writeBuffer(flush bool) (msg message.Message, err error) {
 	if !atomic.CompareAndSwapInt32(&s.isWriting, 0, 1) {
-		return nil
+		return nil, nil
 	}
 
 	var (
-		err      error
 		tx       *sql.Tx
 		stmt     *sql.Stmt
 		stop     = false
@@ -146,7 +153,9 @@ func (s *StreamSQL) writeBuffer(flush bool) error {
 
 	defer func() {
 		if rec := recover(); rec != nil {
-			s.logger.Error(`write-buffer`, zap.Any(`error`, rec))
+			s.logger.Error(`write-buffer`,
+				zap.String(`last_message`, msg.JSON()),
+				zap.Any(`error`, rec))
 			if tx != nil {
 				_ = tx.Rollback()
 			}
@@ -156,11 +165,11 @@ func (s *StreamSQL) writeBuffer(flush bool) error {
 
 	if !flush {
 		if c := len(s.buffer); c < 1 || (s.blockSize > c && interval < s.flushInterval) {
-			return err
+			return nil, err
 		}
 	}
 	if conn, err = s.connector.Connection(); err != nil {
-		return err
+		return nil, err
 	}
 
 	if s.debug {
@@ -172,17 +181,17 @@ func (s *StreamSQL) writeBuffer(flush bool) error {
 	}
 
 	if tx, err = conn.Begin(); err != nil {
-		return err
+		return nil, err
 	}
 	if stmt, err = tx.Prepare(s.query.QueryString()); err != nil {
 		_ = tx.Rollback()
-		return err
+		return nil, err
 	}
 
 	// Writing loop of prepared requests
 	for !stop {
 		select {
-		case msg := <-s.buffer:
+		case msg = <-s.buffer:
 			if s.debug {
 				s.logger.Debug(`write-message`, zap.Any(`message`, msg))
 			}
@@ -202,5 +211,5 @@ func (s *StreamSQL) writeBuffer(flush bool) error {
 	}
 
 	s.writeLastTime = time.Now()
-	return err
+	return msg, err
 }
