@@ -7,10 +7,14 @@ package message
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"math/big"
 	"net"
 	"time"
+
+	"github.com/demdxx/gocast/v2"
+	"github.com/google/uuid"
 )
 
 var (
@@ -83,4 +87,86 @@ func ip2Int(ip net.IP) *big.Int {
 	ipInt := big.NewInt(0)
 	ipInt.SetBytes(ip)
 	return ipInt
+}
+
+func valueToTime(v any) (tm time.Time) {
+	switch vl := v.(type) {
+	case nil:
+	case int64:
+		tm = time.Unix(vl, 0)
+	case uint64:
+		tm = time.Unix(int64(vl), 0)
+	case float64:
+		tm = time.Unix(int64(vl), 0)
+	case string:
+		tm, _ = parseTime(gocast.Str(v))
+	default:
+		tm, _ = parseTime(gocast.Str(v))
+	}
+	return tm
+}
+
+func valueUnixNanoToTime(v any) (tm time.Time) {
+	switch vl := v.(type) {
+	case nil:
+	case int64:
+		tm = time.Unix(0, vl)
+	case uint64:
+		tm = time.Unix(0, int64(vl))
+	case float64:
+		tm = time.Unix(0, int64(vl))
+	case string:
+		tm, _ = parseTime(gocast.Str(v))
+	default:
+		tm, _ = parseTime(gocast.Str(v))
+	}
+	return tm
+}
+
+func valueToIP(v any) (ip net.IP) {
+	switch vl := v.(type) {
+	case net.IP:
+		ip = vl
+	case uint:
+		ip = make(net.IP, 4)
+		binary.BigEndian.PutUint32(ip, uint32(vl))
+	case uint32:
+		ip = make(net.IP, 4)
+		binary.BigEndian.PutUint32(ip, vl)
+	case int:
+		ip = make(net.IP, 4)
+		binary.BigEndian.PutUint32(ip, uint32(vl))
+	case int32:
+		ip = make(net.IP, 4)
+		binary.BigEndian.PutUint32(ip, uint32(vl))
+	default:
+		ip = net.ParseIP(gocast.Str(v))
+	}
+	return ip
+}
+
+func valueToUUIDBytes(v any) (res []byte) {
+	switch vv := v.(type) {
+	case []byte:
+		if len(vv) > 16 {
+			if _uuid, err := uuid.Parse(string(vv)); err == nil {
+				res = _uuid[:]
+			}
+		} else {
+			res = bytesSize(vv, 16)
+		}
+	case string:
+		if _uuid, err := uuid.Parse(vv); err == nil {
+			res = _uuid[:]
+		}
+	default:
+		if v == nil {
+			res = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+		} else {
+			if _uuid, err := uuid.Parse(gocast.Str(v)); err == nil {
+				res = _uuid[:]
+			}
+		}
+	}
+	return res
 }

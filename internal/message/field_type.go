@@ -5,18 +5,20 @@
 
 package message
 
-import "github.com/demdxx/gocast/v2"
+import (
+	"github.com/demdxx/gocast/v2"
+)
 
 var typeList = []string{
 	"string",
 	"fix", // String
 	"uuid",
 	"int",
-	"int32",
 	"int8",
+	"int32",
 	"uint",
-	"uint32",
 	"uint8",
+	"uint32",
 	"float",
 	"bool",
 	"ip",
@@ -32,11 +34,11 @@ const (
 	FieldTypeFixed
 	FieldTypeUUID
 	FieldTypeInt
-	FieldTypeInt32
 	FieldTypeInt8
+	FieldTypeInt32
 	FieldTypeUint
-	FieldTypeUint32
 	FieldTypeUint8
+	FieldTypeUint32
 	FieldTypeFloat
 	FieldTypeBoolean
 	FieldTypeIP
@@ -84,16 +86,16 @@ func (t FieldType) Cast(v any) any {
 		v = valueToUUIDBytes(v)
 	case FieldTypeInt:
 		return gocast.Number[int64](v)
-	case FieldTypeInt32:
-		return gocast.Number[int32](v)
 	case FieldTypeInt8:
 		return gocast.Number[int8](v)
+	case FieldTypeInt32:
+		return gocast.Number[int32](v)
 	case FieldTypeUint:
 		return gocast.Number[uint64](v)
-	case FieldTypeUint32:
-		return gocast.Number[uint32](v)
 	case FieldTypeUint8:
 		return gocast.Number[uint8](v)
+	case FieldTypeUint32:
+		return gocast.Number[uint32](v)
 	case FieldTypeFloat:
 		return gocast.Number[float64](v)
 	case FieldTypeBoolean:
@@ -105,23 +107,9 @@ func (t FieldType) Cast(v any) any {
 	case FieldTypeUnixnano:
 		v = valueUnixNanoToTime(v)
 	case FieldTypeArrayInt32:
-		if v != nil {
-			var arr = []int32{}
-			//lint:ignore SA1019 deprecation
-			_ = gocast.ToSlice(arr, v, "")
-			v = arr
-		} else {
-			v = []int32{}
-		}
+		v = gocast.Cast[[]int32](v)
 	case FieldTypeArrayInt64:
-		if v != nil {
-			var arr = []int64{}
-			//lint:ignore SA1019 deprecation
-			_ = gocast.ToSlice(arr, v, "")
-			v = arr
-		} else {
-			v = []int64{}
-		}
+		v = gocast.Cast[[]int64](v)
 	}
 	return v
 }
