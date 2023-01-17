@@ -57,7 +57,7 @@ func (m *MockSourcer) Subscribe(ctx context.Context, stream eventstream.Streamer
 }
 
 // Subscribe indicates an expected call of Subscribe
-func (mr *MockSourcerMockRecorder) Subscribe(ctx, stream interface{}) *gomock.Call {
+func (mr *MockSourcerMockRecorder) Subscribe(ctx, stream any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Subscribe", reflect.TypeOf((*MockSourcer)(nil).Subscribe), ctx, stream)
 }
@@ -71,7 +71,7 @@ func (m *MockSourcer) Start(ctx context.Context) error {
 }
 
 // Start indicates an expected call of Start
-func (mr *MockSourcerMockRecorder) Start(ctx interface{}) *gomock.Call {
+func (mr *MockSourcerMockRecorder) Start(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockSourcer)(nil).Start), ctx)
 }

@@ -52,7 +52,7 @@ func WithMetrics(metrics metrics.MetricList) Option {
 }
 
 // WithObjectConfig converts Object to JSON storage config
-func WithObjectConfig(obj interface{}) Option {
+func WithObjectConfig(obj any) Option {
 	return func(cnf *Config) {
 		data, err := json.Marshal(obj)
 		if err != nil {

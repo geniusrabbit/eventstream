@@ -10,7 +10,7 @@ import (
 
 func TestReflection(t *testing.T) {
 	var tests = []struct {
-		ref   interface{}
+		ref   any
 		found bool
 	}{
 		{
@@ -42,9 +42,9 @@ func TestReflection(t *testing.T) {
 	}
 }
 
-func TestMapObjectIntoQueryParams(t *testing.T) {
+func TestConvertObjectIntoQueryParams(t *testing.T) {
 	var tests = []struct {
-		ref     interface{}
+		ref     any
 		values  []Value
 		fields  []string
 		inserts []string
@@ -70,7 +70,7 @@ func TestMapObjectIntoQueryParams(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		values, fields, inserts, err := MapObjectIntoQueryParams(test.ref)
+		values, fields, inserts, err := ConvertObjectIntoQueryParams(test.ref)
 		assert.NoError(t, err)
 		assert.ElementsMatch(t, test.values, values)
 		assert.ElementsMatch(t, test.fields, fields)

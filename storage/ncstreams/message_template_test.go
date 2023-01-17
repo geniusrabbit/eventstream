@@ -10,8 +10,8 @@ import (
 func TestNewMessageTemplate(t *testing.T) {
 	testMsg1 := eventstream.Message{"type": "error", "msg": "test"}
 	testMsg2 := eventstream.Message{"type": "notify", "msg": "test"}
-	targetMsg := map[string]interface{}{"category": "processed", "type": "error", "message": "test"}
-	tpl, err := newMessageTemplate(map[string]interface{}{
+	targetMsg := map[string]any{"category": "processed", "type": "error", "message": "test"}
+	tpl, err := newMessageTemplate(map[string]any{
 		"category": "processed",
 		"type":     "{{type}}",
 		"message":  "{{msg}}",

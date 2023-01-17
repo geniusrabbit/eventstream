@@ -53,7 +53,7 @@ func Open(connectURL string, options ...sqlstore.Option) (*Vertica, error) {
 }
 
 // Stream vertica processor
-func (st *Vertica) Stream(options ...interface{}) (strm eventstream.Streamer, err error) {
+func (st *Vertica) Stream(options ...any) (strm eventstream.Streamer, err error) {
 	var (
 		conf         stream.Config
 		storeOptions []sqlstore.Option

@@ -1,9 +1,9 @@
 version: '3.7'
 
 services:
-  tracer:
-    image: jaegertracing/all-in-one:latest
-    ports: ["16686:16686"]
+  # tracer:
+  #   image: jaegertracing/all-in-one:latest
+  #   ports: ["16686:16686"]
 
   clickhouse:
     image: yandex/clickhouse-server:latest
@@ -11,15 +11,18 @@ services:
   nats:
     image: nats
 
+  lsg:
+    image: geniusrabbit/eventstream-lsg:latest
+    command:
+      - --repeat=10
+      - --stream=nats://nats:4222/?topics=topic1
+      - --message={"srv":"info","msg":"foo","err":"boo","timestamp":"2023-01-17 19:47:03"}
+
   service:
-    image: golang:latest
-    command: .build/${LOCAL_TARGETPLATFORM}/eventstream --config=deploy/develop/config.hcl --profiler=:6060
+    image: geniusrabbit/eventstream:latest
     ports: ["6060:6060"]
-    working_dir: /project
-    env_file: ../../.env
-    depends_on: [nats,tracer,clickhouse]
-    volumes: [../../:/project]
+    depends_on: [nats,clickhouse,lsg]
     environment:
-      - CLICKHOUSE_STORE_CONNECT=clickhouse://clickhouse:9000/stat
+      - CLICKHOUSE_STORE_CONNECT=clickhouse://clickhouse:9000/default
       - NATS_STREAM_CONNECT=nats://nats:4222/?topics=topic1,topic2
       - NATS_STORE_CONNECT=nats://nats:4222/?topics=metrics

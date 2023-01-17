@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/demdxx/gocast"
+	"github.com/demdxx/gocast/v2"
 	ev "github.com/geniusrabbit/eventstream"
 )
 
@@ -26,8 +26,8 @@ var (
 	int64ArrayType = reflect.TypeOf([]int64{})
 )
 
-// MapObjectIntoQueryParams returns object which links object Fields and Data Fields
-func MapObjectIntoQueryParams(object interface{}) (values []Value, fields, inserts []string, err error) {
+// ConvertObjectIntoQueryParams returns object which links object Fields and Data Fields
+func ConvertObjectIntoQueryParams(object any) (values []Value, fields, inserts []string, err error) {
 	objectValue, err := reflectTargetStruct(reflect.ValueOf(object))
 	if err != nil {
 		return nil, nil, nil, err
@@ -79,7 +79,7 @@ func MapObjectIntoQueryParams(object interface{}) (values []Value, fields, inser
 }
 
 // MapIntoQueryParams returns object which links map fields
-func MapIntoQueryParams(object interface{}) (values []Value, fieldNames, inserts []string, err error) {
+func MapIntoQueryParams(object any) (values []Value, fieldNames, inserts []string, err error) {
 	objectValue, err := reflectTargetStruct(reflect.ValueOf(object))
 	if err != nil {
 		return nil, nil, nil, err
@@ -87,7 +87,7 @@ func MapIntoQueryParams(object interface{}) (values []Value, fieldNames, inserts
 	if objectValue.Kind() != reflect.Map {
 		return nil, nil, nil, errInvalidMapValue
 	}
-	data, err := gocast.ToStringMap(object, ``, false)
+	data, err := gocast.TryMap[string, string](object)
 	if err != nil {
 		return nil, nil, nil, err
 	}

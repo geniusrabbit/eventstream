@@ -13,22 +13,22 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/demdxx/gocast"
-	"github.com/myesui/uuid"
+	"github.com/demdxx/gocast/v2"
+	"github.com/google/uuid"
 )
 
 // Errors set
 var (
-	ErrUndefinedDataType       = errors.New("[eventstream::message] undefined data types")
-	ErrInvalidMessageFieldType = errors.New("[eventstream::message] invalid message field type")
+	ErrUndefinedDataType       = errors.New("undefined message data types")
+	ErrInvalidMessageFieldType = errors.New("invalid message field type")
 )
 
 type unmarshalel interface {
-	Unmarshal(data []byte, v interface{}) error
+	Unmarshal(data []byte, v any) error
 }
 
 // Message object
-type Message map[string]interface{}
+type Message map[string]any
 
 // MessageDecode from bytes
 func MessageDecode(data []byte, converter unmarshalel) (msg Message, err error) {
@@ -46,7 +46,7 @@ func (m Message) JSON() string {
 }
 
 // Item returns the value by key name or default
-func (m Message) Item(key string, def interface{}) interface{} {
+func (m Message) Item(key string, def any) any {
 	if v, ok := m[key]; ok && v != nil {
 		return v
 	}
@@ -59,22 +59,22 @@ func (m Message) String(key, def string) string {
 	case float64:
 		return strconv.FormatFloat(v, 'G', 6, 64)
 	}
-	return gocast.ToString(m.Item(key, def))
+	return gocast.Str(m.Item(key, def))
 }
 
 // ItemCast converts any key value into the field_type
-func (m Message) ItemCast(key string, t FieldType, length int, format string) (v interface{}) {
+func (m Message) ItemCast(key string, t FieldType, length int, format string) (v any) {
 	v = m.Item(key, nil)
 	switch t {
 	case FieldTypeString:
-		return gocast.ToString(v)
+		return gocast.Str(v)
 	case FieldTypeFixed:
 		var res []byte
 		switch vv := v.(type) {
 		case []byte:
 			res = bytesSize(vv, length)
 		default:
-			res = bytesSize([]byte(gocast.ToString(v)), length)
+			res = bytesSize([]byte(gocast.Str(v)), length)
 		}
 		if format == "escape" {
 			return escapeBytes(res, 0)
@@ -87,21 +87,21 @@ func (m Message) ItemCast(key string, t FieldType, length int, format string) (v
 		}
 		v = res
 	case FieldTypeInt:
-		return gocast.ToInt64(v)
+		return gocast.Number[int64](v)
 	case FieldTypeInt32:
-		return gocast.ToInt32(v)
+		return gocast.Number[int32](v)
 	case FieldTypeInt8:
-		return int8(gocast.ToInt(v))
+		return gocast.Number[int8](v)
 	case FieldTypeUint:
-		return gocast.ToUint64(v)
+		return gocast.Number[uint64](v)
 	case FieldTypeUint32:
-		return gocast.ToUint32(v)
+		return gocast.Number[uint32](v)
 	case FieldTypeUint8:
-		return uint8(gocast.ToUint(v))
+		return gocast.Number[uint8](v)
 	case FieldTypeFloat:
-		return gocast.ToFloat64(v)
+		return gocast.Number[float64](v)
 	case FieldTypeBoolean:
-		return gocast.ToBool(v)
+		return gocast.Bool(v)
 	case FieldTypeIP:
 		ip := valueToIP(v)
 		switch format {
@@ -127,6 +127,7 @@ func (m Message) ItemCast(key string, t FieldType, length int, format string) (v
 	case FieldTypeArrayInt32:
 		if v != nil {
 			var arr = []int32{}
+			//lint:ignore SA1019 deprecation
 			_ = gocast.ToSlice(arr, v, "")
 			v = arr
 		} else {
@@ -135,6 +136,7 @@ func (m Message) ItemCast(key string, t FieldType, length int, format string) (v
 	case FieldTypeArrayInt64:
 		if v != nil {
 			var arr = []int64{}
+			//lint:ignore SA1019 deprecation
 			_ = gocast.ToSlice(arr, v, "")
 			v = arr
 		} else {
@@ -144,12 +146,12 @@ func (m Message) ItemCast(key string, t FieldType, length int, format string) (v
 	return v
 }
 
-// Map returns the message as map[string]interface{}
-func (m Message) Map() map[string]interface{} {
-	return map[string]interface{}(m)
+// Map returns the message as map[string]any
+func (m Message) Map() map[string]any {
+	return map[string]any(m)
 }
 
-func valueToTime(v interface{}) (tm time.Time) {
+func valueToTime(v any) (tm time.Time) {
 	switch vl := v.(type) {
 	case nil:
 	case int64:
@@ -159,14 +161,14 @@ func valueToTime(v interface{}) (tm time.Time) {
 	case float64:
 		tm = time.Unix(int64(vl), 0)
 	case string:
-		tm, _ = parseTime(gocast.ToString(v))
+		tm, _ = parseTime(gocast.Str(v))
 	default:
-		tm, _ = parseTime(gocast.ToString(v))
+		tm, _ = parseTime(gocast.Str(v))
 	}
 	return tm
 }
 
-func valueUnixNanoToTime(v interface{}) (tm time.Time) {
+func valueUnixNanoToTime(v any) (tm time.Time) {
 	switch vl := v.(type) {
 	case nil:
 	case int64:
@@ -176,14 +178,14 @@ func valueUnixNanoToTime(v interface{}) (tm time.Time) {
 	case float64:
 		tm = time.Unix(0, int64(vl))
 	case string:
-		tm, _ = parseTime(gocast.ToString(v))
+		tm, _ = parseTime(gocast.Str(v))
 	default:
-		tm, _ = parseTime(gocast.ToString(v))
+		tm, _ = parseTime(gocast.Str(v))
 	}
 	return tm
 }
 
-func valueToIP(v interface{}) (ip net.IP) {
+func valueToIP(v any) (ip net.IP) {
 	switch vl := v.(type) {
 	case net.IP:
 		ip = vl
@@ -200,31 +202,31 @@ func valueToIP(v interface{}) (ip net.IP) {
 		ip = make(net.IP, 4)
 		binary.BigEndian.PutUint32(ip, uint32(vl))
 	default:
-		ip = net.ParseIP(gocast.ToString(v))
+		ip = net.ParseIP(gocast.Str(v))
 	}
 	return ip
 }
 
-func valueToUUIDBytes(v interface{}) (res []byte) {
+func valueToUUIDBytes(v any) (res []byte) {
 	switch vv := v.(type) {
 	case []byte:
 		if len(vv) > 16 {
-			if _uuid, _ := uuid.Parse(string(vv)); _uuid != nil {
-				res = _uuid.Bytes()
+			if _uuid, err := uuid.Parse(string(vv)); err == nil {
+				res = _uuid[:]
 			}
 		} else {
 			res = bytesSize(vv, 16)
 		}
 	case string:
-		if _uuid, _ := uuid.Parse(string(vv)); _uuid != nil {
-			res = _uuid.Bytes()
+		if _uuid, err := uuid.Parse(vv); err == nil {
+			res = _uuid[:]
 		}
 	default:
 		if v == nil {
 			res = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 		} else {
-			if _uuid, _ := uuid.Parse(gocast.ToString(v)); _uuid != nil {
-				res = _uuid.Bytes()
+			if _uuid, err := uuid.Parse(gocast.Str(v)); err == nil {
+				res = _uuid[:]
 			}
 		}
 	}

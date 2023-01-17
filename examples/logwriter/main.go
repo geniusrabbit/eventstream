@@ -65,7 +65,7 @@ func commandLogwriter(conf *config, logger *zap.Logger) {
 	fatalError(`source connect`, err)
 
 	// Open clickhouse storage connect
-	datastorage, err := clickhouse.Open(conf.StorageConnect, storage.WithDebug(conf.isDebug()))
+	datastorage, err := clickhouse.Open(ctx, conf.StorageConnect, storage.WithDebug(conf.isDebug()))
 	fatalError(`clickhouse storage connect`, err)
 
 	// Get new stream writer for the storage

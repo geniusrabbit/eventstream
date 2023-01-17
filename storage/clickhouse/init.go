@@ -10,8 +10,21 @@ import (
 	"github.com/geniusrabbit/eventstream/storage"
 )
 
+type extraConfig struct {
+	InitQuery []string `json:"init_query"`
+}
+
 func connector(ctx context.Context, conf *storage.Config) (eventstream.Storager, error) {
-	return Open(conf.Connect, storage.WithDebug(conf.Debug))
+	var (
+		extConf extraConfig
+		err     = conf.Decode(&extConf)
+	)
+	if err != nil {
+		return nil, err
+	}
+	return Open(ctx, conf.Connect,
+		WithInitQuery(extConf.InitQuery),
+		storage.WithDebug(conf.Debug))
 }
 
 func init() {

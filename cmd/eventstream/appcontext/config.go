@@ -22,9 +22,9 @@ var (
 	errInvalidSourceStream  = errors.New("[config] invalid stream config connect")
 )
 
-type configItem map[string]interface{}
+type configItem map[string]any
 
-func (it configItem) Decode(v interface{}) error {
+func (it configItem) Decode(v any) error {
 	raw, err := json.Marshal(it)
 	if err != nil {
 		return fmt.Errorf("[config] invalid item encoding: %s", err)

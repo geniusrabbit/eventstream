@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017, 2019
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019
+// @project geniusrabbit::eventstream 2017, 2019 - 2023
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019 - 2023
 //
 
 package wrapper
@@ -9,8 +9,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/Knetic/govaluate"
-	"github.com/demdxx/gocast"
+	"github.com/demdxx/gocast/v2"
+	"github.com/tonalfitness/govaluate/v3"
 
 	"github.com/geniusrabbit/eventstream/internal/message"
 	"github.com/geniusrabbit/eventstream/internal/metrics"
@@ -73,8 +73,8 @@ func (s *StreamWrapper) Check(ctx context.Context, msg message.Message) bool {
 		return false
 	}
 	if s.whereCondition != nil {
-		r, err := s.whereCondition.Evaluate(msg.Map())
-		return err == nil && gocast.ToBool(r)
+		expRes, err := s.whereCondition.Evaluate(msg.Map())
+		return err == nil && gocast.Bool(expRes)
 	}
 	return true
 }

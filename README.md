@@ -42,20 +42,28 @@ Supports two file formats YAML & HCL
 ```js
 stores {
   clickhouse_1 {
-    connect = "@env:CLICKHOUSE_STORE_CONNECT"
-    options { # Optional
-      buffer = 1000
-    }
+    connect = "{{@env:CLICKHOUSE_STORE_CONNECT}}"
+    buffer = 1000
+    init_query = [<<Q
+      CREATE TABLE IF NOT EXISTS stat.testlog (
+         timestamp        DateTime
+       , datemark         Date default toDate(timestamp)
+       , service          String
+       , msg              String
+       , error            String
+       , created_at       DateTime default now()
+      ) Engine=Memory COMMENT 'The test table';
+    Q]
   }
   kafka_1 {
-    connect = "@env:KAFKA_EVENTS_CONNECT"
+    connect = "{{@env:KAFKA_EVENTS_CONNECT}}"
   }
 }
 
 // Source could be any supported stream service like kafka, nats, etc...
 sources {
   nats_1 {
-    connect = "@env:NATS_SOURCE_CONNECT"
+    connect = "{{@env:NATS_SOURCE_CONNECT}}"
     format  = "json"
   }
 }
@@ -128,8 +136,19 @@ SERVER_PROFILE_MODE=net
 SERVER_PROFILE_LISTEN=:6060
 ```
 
+## Health check
+
+```sh
+curl "http://hostname:port/health-check"
+```
+
+```json
+{"status":"OK"}
+```
+
 ## TODO
 
+- [ ] Add processing custom error metrics
 - [ ] Add MySQL database storage
 - [ ] Add PostgreSQL database storage
 - [ ] Add MongoDB database storage
@@ -139,7 +158,7 @@ SERVER_PROFILE_LISTEN=:6060
 - [X] Add NATS stream writer support
 - [X] Add Redis stream source/storage support
 - [ ] Add RabbitMQ stream source/storage support
-- [ ] Add health check API
+- [X] Add health check API
 - [X] Add customizable prometheus metrics
 - [x] Add 'where' stream condition (http://github.com/Knetic/govaluate)
 - [X] Ack message only if success

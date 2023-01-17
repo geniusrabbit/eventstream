@@ -8,8 +8,8 @@ import (
 
 	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/source"
-	nc "github.com/geniusrabbit/notificationcenter"
-	"github.com/geniusrabbit/notificationcenter/natstream"
+	nc "github.com/geniusrabbit/notificationcenter/v2"
+	"github.com/geniusrabbit/notificationcenter/v2/natstream"
 )
 
 func natstreamNewSubscriber(ctx context.Context, url string) (nc.Subscriber, error) {

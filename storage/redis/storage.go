@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/demdxx/gocast"
+	"github.com/demdxx/gocast/v2"
 	"github.com/go-redis/redis/v8"
 
 	"github.com/geniusrabbit/eventstream"
@@ -44,7 +44,7 @@ func NewStorage(ctx context.Context, connectUrl string, options ...storage.Optio
 }
 
 // Stream vertica processor
-func (st *Storage) Stream(options ...interface{}) (eventstream.Streamer, error) {
+func (st *Storage) Stream(options ...any) (eventstream.Streamer, error) {
 	var (
 		err        error
 		conf       stream.Config
@@ -95,12 +95,12 @@ func connectRedis(ctx context.Context, connectURL string) (redis.UniversalClient
 		idleCheckFrequency, _ = time.ParseDuration(u.Query().Get("idle_check_frequency"))
 		cli                   = redis.NewUniversalClient(&redis.UniversalOptions{
 			Addrs:              strings.Split(u.Host, ","),
-			DB:                 gocast.ToInt(u.Path[1:]),
+			DB:                 gocast.Number[int](u.Path[1:]),
 			Username:           username,
 			Password:           password,
-			MaxRetries:         defInt(gocast.ToInt(u.Query().Get("retry")), 3),
-			PoolSize:           gocast.ToInt(u.Query().Get("pool_size")),
-			MinIdleConns:       gocast.ToInt(u.Query().Get("max_idle_conns")),
+			MaxRetries:         defInt(gocast.Number[int](u.Query().Get("retry")), 3),
+			PoolSize:           gocast.Number[int](u.Query().Get("pool_size")),
+			MinIdleConns:       gocast.Number[int](u.Query().Get("max_idle_conns")),
 			MaxConnAge:         maxConnAge,
 			PoolTimeout:        poolTimeout,
 			IdleTimeout:        idleTimeout,

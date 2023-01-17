@@ -2,10 +2,11 @@ package stream
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
+	"reflect"
 
 	"github.com/geniusrabbit/eventstream/internal/metrics"
+	"github.com/pkg/errors"
+	"go.uber.org/zap"
 )
 
 var (
@@ -25,12 +26,16 @@ type Config struct {
 }
 
 // Decode raw data to the target object
-func (c *Config) Decode(v interface{}) error {
+func (c *Config) Decode(v any) error {
 	if len(c.Raw) == 0 {
 		return nil
 	}
 	if err := json.Unmarshal(c.Raw, v); err != nil {
-		return fmt.Errorf("decode stream config: %s", err.Error())
+		zap.L().Debug(`decode stream config`,
+			zap.String(`json_raw`, string(c.Raw)),
+			zap.String(`target_type`, reflect.TypeOf(v).String()),
+			zap.Error(err))
+		return errors.Wrap(err, `invalid decode stream config`)
 	}
 	return nil
 }

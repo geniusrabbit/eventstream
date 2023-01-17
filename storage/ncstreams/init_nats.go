@@ -5,7 +5,6 @@
 //
 // @project geniusrabbit::eventstream 2019
 // @author Dmitry Ponomarev <demdxx@gmail.com> 2019
-//
 package ncstreams
 
 import (
@@ -13,8 +12,8 @@ import (
 
 	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/storage"
-	nc "github.com/geniusrabbit/notificationcenter"
-	"github.com/geniusrabbit/notificationcenter/nats"
+	nc "github.com/geniusrabbit/notificationcenter/v2"
+	"github.com/geniusrabbit/notificationcenter/v2/nats"
 )
 
 func natsNewPublisher(ctx context.Context, url string) (nc.Publisher, error) {

@@ -8,8 +8,8 @@ import (
 
 	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/source"
-	nc "github.com/geniusrabbit/notificationcenter"
-	"github.com/geniusrabbit/notificationcenter/kafka"
+	nc "github.com/geniusrabbit/notificationcenter/v2"
+	"github.com/geniusrabbit/notificationcenter/v2/kafka"
 )
 
 func kafkaNewSubscriber(ctx context.Context, url string) (nc.Subscriber, error) {

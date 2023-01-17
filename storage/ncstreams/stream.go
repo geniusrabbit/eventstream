@@ -13,21 +13,8 @@ import (
 
 	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/stream"
-	nc "github.com/geniusrabbit/notificationcenter"
+	nc "github.com/geniusrabbit/notificationcenter/v2"
 )
-
-var (
-	errInvalidMetricsItemConfig = errors.New("[metrics] invalid metrics item config")
-)
-
-type configItem struct {
-	Fields map[string]interface{} `json:"fields"`
-	Where  string                 `json:"where"`
-}
-
-type config struct {
-	Targets []configItem `json:"targets"`
-}
 
 type nstream struct {
 	debug     bool
@@ -50,7 +37,7 @@ func newStream(pub nc.Publisher, conf *stream.Config) (eventstream.Streamer, err
 		stream: pub,
 	}
 	for _, target := range preConfig.Targets {
-		var fields map[string]interface{}
+		var fields map[string]any
 		if target.Fields != nil && len(target.Fields) > 0 {
 			fields = target.Fields
 		}
@@ -96,7 +83,7 @@ func (s *nstream) Run(ctx context.Context) error {
 	return nil
 }
 
-func (s *nstream) prepareMessages(msg eventstream.Message) (result []interface{}) {
+func (s *nstream) prepareMessages(msg eventstream.Message) (result []any) {
 	for _, mt := range s.templates {
 		if msg := mt.prepare(msg); msg != nil {
 			result = append(result, msg)

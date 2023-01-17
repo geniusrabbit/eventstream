@@ -9,7 +9,7 @@ import (
 	"context"
 	"io"
 
-	nc "github.com/geniusrabbit/notificationcenter"
+	nc "github.com/geniusrabbit/notificationcenter/v2"
 
 	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/internal/metrics"
@@ -44,7 +44,7 @@ func Open(ctx context.Context, url string, pubFnk getPublisherFnk, options ...st
 }
 
 // Stream metrics processor
-func (m *PublishStorage) Stream(options ...interface{}) (streamObj eventstream.Streamer, err error) {
+func (m *PublishStorage) Stream(options ...any) (streamObj eventstream.Streamer, err error) {
 	var (
 		conf       stream.Config
 		metricExec metrics.Metricer

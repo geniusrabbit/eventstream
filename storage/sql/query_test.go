@@ -8,7 +8,7 @@ import (
 func TestRawQuery(t *testing.T) {
 	tests := []struct {
 		query  string
-		fields interface{}
+		fields any
 	}{
 		{
 			query:  `INSERT INTO my_table ({{fields}}) VALUES({{values}})`,
@@ -43,7 +43,7 @@ func TestRawQuery(t *testing.T) {
 		},
 		{
 			query: `INSERT INTO my_table ({{fields}}) VALUES({{values}})`,
-			fields: map[string]interface{}{
+			fields: map[string]any{
 				"service":   "srv",
 				"msg":       "msg",
 				"error":     "err",
@@ -52,7 +52,7 @@ func TestRawQuery(t *testing.T) {
 		},
 		{
 			query: `INSERT INTO my_table ({{fields}}) VALUES({{values}})`,
-			fields: []interface{}{map[string]interface{}{
+			fields: []any{map[string]any{
 				"service":   "srv",
 				"msg":       "msg",
 				"error":     "err",
@@ -72,7 +72,7 @@ func TestPatternQuery(t *testing.T) {
 	tests := []struct {
 		pattern string
 		target  string
-		fields  interface{}
+		fields  any
 	}{
 		{
 			pattern: `INSERT INTO {{target}} ({{fields}}) VALUES({{values}})`,
@@ -92,7 +92,7 @@ func TestPatternQuery(t *testing.T) {
 		{
 			pattern: `INSERT INTO {{target}} ({{fields}}) VALUES({{values}})`,
 			target:  "test_target",
-			fields: map[string]interface{}{
+			fields: map[string]any{
 				"service":   "srv",
 				"msg":       "msg",
 				"error":     "err",
@@ -102,7 +102,7 @@ func TestPatternQuery(t *testing.T) {
 		{
 			pattern: `INSERT INTO {{target}} ({{fields}}) VALUES({{values}})`,
 			target:  "test_target",
-			fields: []interface{}{map[string]interface{}{
+			fields: []any{map[string]any{
 				"service":   "srv",
 				"msg":       "msg",
 				"error":     "err",

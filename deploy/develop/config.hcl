@@ -1,28 +1,33 @@
  
 stores {
-  # CREATE TABLE stat.testlog (
-  #    timestamp        DateTime
-  #  , datemark         Date default toDate(timestamp)
-  #  , service          String
-  #  , msg              String
-  #  , error            String
-  #  , created_at       DateTime default now()
-  # ) Engine=MergeTree(datemark, (service), 8192);
 
   clickhouse_1 {
-    connect = "@env:CLICKHOUSE_STORE_CONNECT"
+    connect = "{{@env:CLICKHOUSE_STORE_CONNECT}}"
     buffer  = 1000
+    init_query = [
+      "CREATE DATABASE IF NOT EXISTS stat;",
+      <<Q
+        CREATE TABLE IF NOT EXISTS stat.testlog (
+          timestamp        DateTime
+        , datemark         Date default toDate(timestamp)
+        , service          String
+        , msg              String
+        , error            String
+        , created_at       DateTime default now()
+        ) Engine=Memory COMMENT 'The test table';
+      Q
+    ]
   }
 
   nats_store {
-    connect = "@env:NATS_STORE_CONNECT"
+    connect = "{{@env:NATS_STORE_CONNECT}}"
   }
 }
 
 // Source could be any supported stream service like kafka, nats, etc...
 sources {
   nats_1 {
-    connect = "@env:NATS_STREAM_CONNECT"
+    connect = "{{@env:NATS_STREAM_CONNECT}}"
     format  = "json"
   }
 }
@@ -38,7 +43,7 @@ streams {
     source  = "nats_1"
 
     sql_query = <<Q
-      INSERT INTO testlog (service, msg, error, timestamp)
+      INSERT INTO stat.testlog (service, msg, error, timestamp)
         VALUES({{srv}}, {{msg}}, {{err}}, toTimestamp({{timestamp:date}}))
     Q
 
@@ -49,7 +54,7 @@ streams {
     store  = "clickhouse_1"
     source = "nats_1"
 
-    target = "testlog"
+    target = "stat.testlog"
     # Optional if fields in log and in message the same
     fields = "service=srv,msg,error=err,timestamp=@toTimestamp({{timestamp:date}})"
   }
@@ -58,7 +63,7 @@ streams {
     store  = "clickhouse_1"
     source = "nats_1"
 
-    target = "testlog"
+    target = "stat.testlog"
     fields = [
       "service=srv",
       "msg",

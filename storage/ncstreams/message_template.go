@@ -3,14 +3,14 @@ package ncstreams
 import (
 	"strings"
 
-	"github.com/Knetic/govaluate"
-	"github.com/demdxx/gocast"
+	"github.com/demdxx/gocast/v2"
 	"github.com/geniusrabbit/eventstream"
+	"github.com/tonalfitness/govaluate/v3"
 )
 
 type messageTemplate struct {
 	// Fields additional data field -> value for target message
-	fields map[string]interface{}
+	fields map[string]any
 
 	// Mapping from one message name to other
 	mapping map[string]string
@@ -19,7 +19,7 @@ type messageTemplate struct {
 	condition *govaluate.EvaluableExpression
 }
 
-func newMessageTemplate(fields map[string]interface{}, where string) (tpl *messageTemplate, err error) {
+func newMessageTemplate(fields map[string]any, where string) (tpl *messageTemplate, err error) {
 	tpl = &messageTemplate{}
 	if where != `` {
 		if tpl.condition, err = govaluate.NewEvaluableExpression(where); err != nil {
@@ -29,10 +29,10 @@ func newMessageTemplate(fields map[string]interface{}, where string) (tpl *messa
 	if fields == nil {
 		return tpl, err
 	}
-	tpl.fields = map[string]interface{}{}
+	tpl.fields = map[string]any{}
 	tpl.mapping = map[string]string{}
 	for key, value := range fields {
-		s := gocast.ToString(value)
+		s := gocast.Str(value)
 		if strings.HasPrefix(s, `{{`) && strings.HasSuffix(s, `}}`) {
 			tpl.mapping[key] = s[2 : len(s)-2]
 		} else {
@@ -53,15 +53,15 @@ func (t *messageTemplate) check(msg eventstream.Message) bool {
 		return true
 	}
 	res, _ := t.condition.Evaluate(msg.Map())
-	return gocast.ToBool(res)
+	return gocast.Bool(res)
 }
 
-func (t *messageTemplate) prepare(msg eventstream.Message) map[string]interface{} {
+func (t *messageTemplate) prepare(msg eventstream.Message) map[string]any {
 	data := msg.Map()
 	if t.mapping == nil && t.fields == nil {
 		return data
 	}
-	newData := map[string]interface{}{}
+	newData := map[string]any{}
 	if t.mapping != nil {
 		for key, target := range t.mapping {
 			newData[key] = data[target]

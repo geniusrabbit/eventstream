@@ -71,7 +71,7 @@ func (m *MockStreamer) Put(ctx context.Context, msg eventstream.Message) error {
 }
 
 // Put indicates an expected call of Put
-func (mr *MockStreamerMockRecorder) Put(ctx, msg interface{}) *gomock.Call {
+func (mr *MockStreamerMockRecorder) Put(ctx, msg any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Put", reflect.TypeOf((*MockStreamer)(nil).Put), ctx, msg)
 }
@@ -85,7 +85,7 @@ func (m *MockStreamer) Check(ctx context.Context, msg eventstream.Message) bool 
 }
 
 // Check indicates an expected call of Check
-func (mr *MockStreamerMockRecorder) Check(ctx, msg interface{}) *gomock.Call {
+func (mr *MockStreamerMockRecorder) Check(ctx, msg any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Check", reflect.TypeOf((*MockStreamer)(nil).Check), ctx, msg)
 }
@@ -99,7 +99,7 @@ func (m *MockStreamer) Run(ctx context.Context) error {
 }
 
 // Run indicates an expected call of Run
-func (mr *MockStreamerMockRecorder) Run(ctx interface{}) *gomock.Call {
+func (mr *MockStreamerMockRecorder) Run(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockStreamer)(nil).Run), ctx)
 }

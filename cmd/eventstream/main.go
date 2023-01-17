@@ -75,6 +75,8 @@ func main() {
 	)
 	defer cancel()
 
+	ctx = zlogger.WithLogger(ctx, logger)
+
 	logger.Info("init applications")
 
 	// Register stores connections
@@ -160,7 +162,7 @@ func runProfile(conf *appcontext.ConfigType, logger *zap.Logger) {
 			http.Handle("/metrics", promhttp.Handler())
 			http.HandleFunc("/health-check", func(rw http.ResponseWriter, r *http.Request) {
 				rw.WriteHeader(http.StatusOK)
-				rw.Write([]byte(`{"status":"OK"}`))
+				_, _ = rw.Write([]byte(`{"status":"OK"}`))
 			})
 			if err := http.ListenAndServe(conf.Profile.Listen, nil); err != nil {
 				logger.Error("profile server error", zap.Error(err))

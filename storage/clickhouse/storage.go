@@ -6,18 +6,22 @@
 package clickhouse
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"net"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
 
 	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/internal/metrics"
 	"github.com/geniusrabbit/eventstream/internal/utils"
+	"github.com/geniusrabbit/eventstream/internal/zlogger"
 	"github.com/geniusrabbit/eventstream/storage"
 	sqlstore "github.com/geniusrabbit/eventstream/storage/sql"
 	"github.com/geniusrabbit/eventstream/stream"
@@ -32,14 +36,17 @@ type Clickhouse struct {
 	debug   bool
 	connect string
 	conn    *sql.DB
+
+	initQuery []string
 }
 
 // Open new clickhouse storage stream
-func Open(connect string, options ...interface{}) (*Clickhouse, error) {
+func Open(ctx context.Context, connect string, options ...any) (*Clickhouse, error) {
 	var (
 		urlObj, err = url.Parse(connect)
 		conn        *sql.DB
 		config      storage.Config
+		store       = Clickhouse{connect: connect}
 	)
 	if err != nil {
 		return nil, err
@@ -48,6 +55,8 @@ func Open(connect string, options ...interface{}) (*Clickhouse, error) {
 		switch o := opt.(type) {
 		case storage.Option:
 			o(&config)
+		case Option:
+			o(&store)
 		default:
 			return nil, errors.Wrapf(storage.ErrInvalidOption, `%+v`, opt)
 		}
@@ -55,15 +64,25 @@ func Open(connect string, options ...interface{}) (*Clickhouse, error) {
 	if conn, err = clickHouseConnect(urlObj, config.Debug); err != nil {
 		return nil, err
 	}
-	return &Clickhouse{
-		debug:   config.Debug,
-		connect: connect,
-		conn:    conn,
-	}, nil
+	store.debug = config.Debug
+	store.conn = conn
+	if len(store.initQuery) > 0 {
+		zlogger.FromContext(ctx).Debug("init query",
+			zap.String(`storage`, `clickhouse`),
+			zap.String(`connect`, connect),
+			zap.String(`init_query`, strings.Join(store.initQuery, "\n")),
+		)
+		for _, sqlQuery := range store.initQuery {
+			if _, err = conn.ExecContext(ctx, sqlQuery); err != nil {
+				return nil, err
+			}
+		}
+	}
+	return &store, nil
 }
 
 // Stream clickhouse processor
-func (c *Clickhouse) Stream(options ...interface{}) (strm eventstream.Streamer, err error) {
+func (c *Clickhouse) Stream(options ...any) (strm eventstream.Streamer, err error) {
 	var (
 		conf         stream.Config
 		storeOptions []sqlstore.Option

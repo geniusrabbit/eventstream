@@ -2,8 +2,9 @@ package source
 
 import (
 	"encoding/json"
-	"os"
 	"strings"
+
+	"github.com/geniusrabbit/eventstream/internal/utils"
 )
 
 // Config of the source connection
@@ -16,7 +17,7 @@ type Config struct {
 }
 
 // Decode raw data to the target object
-func (c *Config) Decode(v interface{}) error {
+func (c *Config) Decode(v any) error {
 	return json.Unmarshal(c.Raw, v)
 }
 
@@ -32,14 +33,10 @@ func (c *Config) UnmarshalJSON(data []byte) (err error) {
 		return err
 	}
 
-	c.Connect = confData.Connect
+	c.Connect = utils.PrepareValue(confData.Connect)
 	c.Driver = confData.Driver
 	c.Format = confData.Format
 	c.Raw = json.RawMessage(data)
-
-	if strings.HasPrefix(c.Connect, "@env:") {
-		c.Connect = os.Getenv(c.Connect[5:])
-	}
 
 	if c.Driver == `` {
 		if urlData := strings.Split(c.Connect, `://`); len(urlData) > 1 {

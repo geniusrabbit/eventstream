@@ -48,9 +48,9 @@ func (mr *MockStoragerMockRecorder) Close() *gomock.Call {
 }
 
 // Stream mocks base method
-func (m *MockStorager) Stream(opts ...interface{}) (eventstream.Streamer, error) {
+func (m *MockStorager) Stream(opts ...any) (eventstream.Streamer, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{}
+	varargs := []any{}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -61,7 +61,7 @@ func (m *MockStorager) Stream(opts ...interface{}) (eventstream.Streamer, error)
 }
 
 // Stream indicates an expected call of Stream
-func (mr *MockStoragerMockRecorder) Stream(opts ...interface{}) *gomock.Call {
+func (mr *MockStoragerMockRecorder) Stream(opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stream", reflect.TypeOf((*MockStorager)(nil).Stream), opts...)
 }

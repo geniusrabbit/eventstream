@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/demdxx/gocast"
+	"github.com/demdxx/gocast/v2"
 	"github.com/geniusrabbit/eventstream"
 )
 
@@ -79,7 +79,7 @@ type Query struct {
 }
 
 // NewQueryByRaw returns query object from raw SQL query
-func NewQueryByRaw(query string, fl interface{}) (queryBuilder *Query, err error) {
+func NewQueryByRaw(query string, fl any) (queryBuilder *Query, err error) {
 	if !isEmptyFields(fl) {
 		var (
 			values          []Value
@@ -105,15 +105,15 @@ func NewQueryByRaw(query string, fl interface{}) (queryBuilder *Query, err error
 }
 
 // NewQueryByPattern returns query object
-func NewQueryByPattern(pattern, target string, fl interface{}) (_ *Query, err error) {
+func NewQueryByPattern(pattern, target string, fieldDescription any) (_ *Query, err error) {
 	var (
 		fields, inserts []string
 		values          []Value
 	)
-	if fl == nil {
+	if fieldDescription == nil {
 		return nil, errInvalidQueryFieldsParam
 	}
-	if values, fields, inserts, err = PrepareFields(fl); nil != err {
+	if values, fields, inserts, err = PrepareFields(fieldDescription); nil != err {
 		return nil, err
 	}
 	return &Query{
@@ -132,7 +132,7 @@ func (q *Query) QueryString() string {
 }
 
 // ParamsBy by message
-func (q *Query) ParamsBy(msg eventstream.Message) (params []interface{}) {
+func (q *Query) ParamsBy(msg eventstream.Message) (params []any) {
 	for _, v := range q.values {
 		params = append(params, msg.ItemCast(v.Key, v.Type, v.Length, v.Format))
 	}
@@ -144,7 +144,7 @@ func (q *Query) StringParamsBy(msg eventstream.Message) (params []string) {
 	for _, v := range q.values {
 		params = append(
 			params,
-			gocast.ToString(msg.ItemCast(v.Key, v.Type, v.Length, v.Format)),
+			gocast.Str(msg.ItemCast(v.Key, v.Type, v.Length, v.Format)),
 		)
 	}
 	return params
@@ -167,8 +167,8 @@ func (q *Query) StringByMessage(msg eventstream.Message) string {
 }
 
 // Extract message by special fields and types
-func (q *Query) Extract(msg eventstream.Message) map[string]interface{} {
-	var resp = make(map[string]interface{})
+func (q *Query) Extract(msg eventstream.Message) map[string]any {
+	var resp = make(map[string]any)
 	for _, v := range q.values {
 		resp[v.TargetKey] = msg.ItemCast(v.Key, v.Type, v.Length, v.Format)
 	}
@@ -180,22 +180,22 @@ func (q *Query) Extract(msg eventstream.Message) map[string]interface{} {
 ///////////////////////////////////////////////////////////////////////////////
 
 // PrepareFields matching
-func PrepareFields(fls interface{}) (values []Value, fields, inserts []string, err error) {
+func PrepareFields(fls any) (values []Value, fields, inserts []string, err error) {
 	switch fs := fls.(type) {
 	case []string:
 		values, fields, inserts = PrepareFieldsByArray(fs)
-	case []interface{}:
+	case []any:
 		if len(fs) == 1 {
 			switch reflect.TypeOf(fs[0]).Kind() {
 			case reflect.Map:
 				values, fields, inserts, err = MapIntoQueryParams(fs[0])
 			case reflect.Struct, reflect.Ptr:
-				values, fields, inserts, err = MapObjectIntoQueryParams(fs[0])
+				values, fields, inserts, err = ConvertObjectIntoQueryParams(fs[0])
 			default:
-				values, fields, inserts = PrepareFieldsByArray(gocast.ToStringSlice(fs))
+				values, fields, inserts = PrepareFieldsByArray(gocast.Slice[string](fs))
 			}
 		} else {
-			values, fields, inserts = PrepareFieldsByArray(gocast.ToStringSlice(fs))
+			values, fields, inserts = PrepareFieldsByArray(gocast.Slice[string](fs))
 		}
 	case string:
 		values, fields, inserts = PrepareFieldsByString(fs)
@@ -204,7 +204,7 @@ func PrepareFields(fls interface{}) (values []Value, fields, inserts []string, e
 		case reflect.Map:
 			values, fields, inserts, err = MapIntoQueryParams(fs)
 		default:
-			values, fields, inserts, err = MapObjectIntoQueryParams(fs)
+			values, fields, inserts, err = ConvertObjectIntoQueryParams(fs)
 		}
 	}
 	if err == errInvalidValue || (err == nil && (len(inserts) < 1 || len(fields) > len(values))) {
@@ -274,11 +274,11 @@ func prepareOneFieldByString(field string) (values []Value, fieldValue, insert s
 	return values, fieldValue, insert
 }
 
-func isEmptyFields(fls interface{}) bool {
+func isEmptyFields(fls any) bool {
 	switch fs := fls.(type) {
 	case []string:
 		return len(fs) < 1
-	case []interface{}:
+	case []any:
 		return len(fs) < 1
 	case string:
 		return strings.TrimSpace(fs) == ""

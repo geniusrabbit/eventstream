@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
+
+	"github.com/geniusrabbit/eventstream/internal/utils"
 )
 
 var (
@@ -23,7 +24,7 @@ type StorageConfig struct {
 }
 
 // Decode raw data to the target object
-func (c *StorageConfig) Decode(v interface{}) error {
+func (c *StorageConfig) Decode(v any) error {
 	if err := json.Unmarshal(c.Raw, v); err != nil {
 		return fmt.Errorf("decode storage config: %s", err.Error())
 	}
@@ -45,14 +46,10 @@ func (c *StorageConfig) UnmarshalJSON(data []byte) (err error) {
 	if confData.Buffer <= 0 {
 		confData.Buffer = 1000
 	}
-	c.Connect = confData.Connect
+	c.Connect = utils.PrepareValue(confData.Connect)
 	c.Driver = confData.Driver
 	c.Buffer = confData.Buffer
 	c.Raw = json.RawMessage(data)
-
-	if strings.HasPrefix(c.Connect, "@env:") {
-		c.Connect = os.Getenv(c.Connect[5:])
-	}
 
 	if c.Driver == `` {
 		if urlData := strings.Split(c.Connect, `://`); len(urlData) > 1 {

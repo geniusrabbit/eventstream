@@ -7,5 +7,5 @@ package message
 
 // Formater processor
 type Formater interface {
-	Format(msg Message) (interface{}, error)
+	Format(msg Message) (any, error)
 }

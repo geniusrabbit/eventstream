@@ -1,11 +1,11 @@
 //
-// @project geniusrabbit::eventstream 2017 - 2019
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2019
+// @project geniusrabbit::eventstream 2017 - 2019, 2022
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2019, 2022
 //
 
 package message
 
-import "github.com/demdxx/gocast"
+import "github.com/demdxx/gocast/v2"
 
 var typeList = []string{
 	"string",
@@ -69,35 +69,35 @@ func (t FieldType) String() string {
 }
 
 // Cast value into the fieldType
-func (t FieldType) Cast(v interface{}) interface{} {
+func (t FieldType) Cast(v any) any {
 	switch t {
 	case FieldTypeString:
-		return gocast.ToString(v)
+		return gocast.Str(v)
 	case FieldTypeFixed:
 		switch vv := v.(type) {
 		case []byte:
 			v = vv
 		default:
-			v = []byte(gocast.ToString(v))
+			v = []byte(gocast.Str(v))
 		}
 	case FieldTypeUUID:
 		v = valueToUUIDBytes(v)
 	case FieldTypeInt:
-		return gocast.ToInt64(v)
+		return gocast.Number[int64](v)
 	case FieldTypeInt32:
-		return gocast.ToInt32(v)
+		return gocast.Number[int32](v)
 	case FieldTypeInt8:
-		return int8(gocast.ToInt(v))
+		return gocast.Number[int8](v)
 	case FieldTypeUint:
-		return gocast.ToUint64(v)
+		return gocast.Number[uint64](v)
 	case FieldTypeUint32:
-		return gocast.ToUint32(v)
+		return gocast.Number[uint32](v)
 	case FieldTypeUint8:
-		return uint8(gocast.ToUint(v))
+		return gocast.Number[uint8](v)
 	case FieldTypeFloat:
-		return gocast.ToFloat64(v)
+		return gocast.Number[float64](v)
 	case FieldTypeBoolean:
-		return gocast.ToBool(v)
+		return gocast.Bool(v)
 	case FieldTypeIP:
 		v = valueToIP(v)
 	case FieldTypeDate:
@@ -107,6 +107,7 @@ func (t FieldType) Cast(v interface{}) interface{} {
 	case FieldTypeArrayInt32:
 		if v != nil {
 			var arr = []int32{}
+			//lint:ignore SA1019 deprecation
 			_ = gocast.ToSlice(arr, v, "")
 			v = arr
 		} else {
@@ -115,6 +116,7 @@ func (t FieldType) Cast(v interface{}) interface{} {
 	case FieldTypeArrayInt64:
 		if v != nil {
 			var arr = []int64{}
+			//lint:ignore SA1019 deprecation
 			_ = gocast.ToSlice(arr, v, "")
 			v = arr
 		} else {

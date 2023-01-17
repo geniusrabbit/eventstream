@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017, 2019-2020
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019-2020
+// @project geniusrabbit::eventstream 2017, 2019-2023
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019-2023
 //
 
 package converter
@@ -20,15 +20,15 @@ var (
 
 // Converter interaface
 type Converter interface {
-	Marshal(v interface{}) ([]byte, error)
-	Unmarshal(data []byte, v interface{}) error
+	Marshal(v any) ([]byte, error)
+	Unmarshal(data []byte, v any) error
 }
 
 // Fnk decoder wrapper
 type Fnk struct {
 	name    string
-	encoder func(v interface{}) ([]byte, error)
-	decoder func(data []byte, v interface{}) error
+	encoder func(v any) ([]byte, error)
+	decoder func(data []byte, v any) error
 }
 
 func (f Fnk) String() string {
@@ -36,12 +36,12 @@ func (f Fnk) String() string {
 }
 
 // Marshal value to data
-func (f Fnk) Marshal(v interface{}) ([]byte, error) {
+func (f Fnk) Marshal(v any) ([]byte, error) {
 	return f.encoder(v)
 }
 
 // Unmarshal data to value
-func (f Fnk) Unmarshal(data []byte, v interface{}) error {
+func (f Fnk) Unmarshal(data []byte, v any) error {
 	return f.decoder(data, v)
 }
 
@@ -51,7 +51,7 @@ var (
 	BSON Converter = Fnk{name: "bson", encoder: bson.Marshal, decoder: bson.Unmarshal}
 	RAW  Converter = Fnk{
 		name: "raw",
-		encoder: func(v interface{}) ([]byte, error) {
+		encoder: func(v any) ([]byte, error) {
 			switch b := v.(type) {
 			case []byte:
 				return b, nil
@@ -60,9 +60,9 @@ var (
 			}
 			return nil, errors.Wrapf(errUnsupportedEncodeType, "[raw] %T", v)
 		},
-		decoder: func(data []byte, v interface{}) error {
+		decoder: func(data []byte, v any) error {
 			switch pt := v.(type) {
-			case *interface{}:
+			case *any:
 				*pt = data
 			case *[]byte:
 				*pt = data

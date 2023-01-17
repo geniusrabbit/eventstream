@@ -3,7 +3,7 @@ package eventstream
 import "github.com/geniusrabbit/eventstream/internal/message"
 
 type unmarshalel interface {
-	Unmarshal(data []byte, v interface{}) error
+	Unmarshal(data []byte, v any) error
 }
 
 type (

@@ -8,11 +8,11 @@ import (
 )
 
 type config struct {
-	SQLQuery     string      `json:"sql_query"`
-	Target       string      `json:"target"`
-	BufferSize   uint        `json:"buffer_size"`
-	WriteTimeout uint        `json:"write_timeout"`
-	Fields       interface{} `json:"fields"`
+	SQLQuery     string `json:"sql_query"`
+	Target       string `json:"target"`
+	BufferSize   uint   `json:"buffer_size"`
+	WriteTimeout uint   `json:"write_timeout"`
+	Fields       any    `json:"fields"`
 }
 
 // New stream for SQL type integrations
