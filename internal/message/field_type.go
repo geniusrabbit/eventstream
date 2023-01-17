@@ -16,9 +16,11 @@ var typeList = []string{
 	"int",
 	"int8",
 	"int32",
+	"int64",
 	"uint",
 	"uint8",
 	"uint32",
+	"uint64",
 	"float",
 	"bool",
 	"ip",
@@ -36,9 +38,11 @@ const (
 	FieldTypeInt
 	FieldTypeInt8
 	FieldTypeInt32
+	FieldTypeInt64
 	FieldTypeUint
 	FieldTypeUint8
 	FieldTypeUint32
+	FieldTypeUint64
 	FieldTypeFloat
 	FieldTypeBoolean
 	FieldTypeIP
@@ -84,18 +88,18 @@ func (t FieldType) Cast(v any) any {
 		}
 	case FieldTypeUUID:
 		v = valueToUUIDBytes(v)
-	case FieldTypeInt:
-		return gocast.Number[int64](v)
 	case FieldTypeInt8:
 		return gocast.Number[int8](v)
 	case FieldTypeInt32:
 		return gocast.Number[int32](v)
-	case FieldTypeUint:
-		return gocast.Number[uint64](v)
+	case FieldTypeInt64, FieldTypeInt:
+		return gocast.Number[int64](v)
 	case FieldTypeUint8:
 		return gocast.Number[uint8](v)
 	case FieldTypeUint32:
 		return gocast.Number[uint32](v)
+	case FieldTypeUint64, FieldTypeUint:
+		return gocast.Number[uint64](v)
 	case FieldTypeFloat:
 		return gocast.Number[float64](v)
 	case FieldTypeBoolean:
