@@ -6,6 +6,10 @@
 package message
 
 import (
+	"net"
+	"strings"
+	"time"
+
 	"github.com/demdxx/gocast/v2"
 )
 
@@ -114,6 +118,53 @@ func (t FieldType) Cast(v any) any {
 		v = gocast.Cast[[]int32](v)
 	case FieldTypeArrayInt64:
 		v = gocast.Cast[[]int64](v)
+	}
+	return v
+}
+
+// CastExt with additional conditions
+func (t FieldType) CastExt(v any, length int, format string) any {
+	newVal := t.Cast(v)
+	if newVal == nil {
+		return newVal
+	}
+	return __castExt(newVal, t, length, format)
+}
+
+// __castExt process the result of Cast function only
+func __castExt(v any, t FieldType, length int, format string) any {
+	switch t {
+	case FieldTypeString:
+		if length > 0 {
+			s := v.(string)
+			if length < len(s) {
+				return s[:length]
+			} else if length != len(s) {
+				return s + strings.Repeat(" ", length-len(s))
+			}
+		}
+	case FieldTypeFixed:
+		res := bytesSize(v.([]byte), length)
+		if format == "escape" {
+			return escapeBytes(res, 0)
+		}
+		v = res
+	case FieldTypeUUID:
+		if format == "escape" {
+			return escapeBytes(v.([]byte), 0)
+		}
+	case FieldTypeIP:
+		ip := v.(net.IP)
+		switch format {
+		case "binarystring":
+			v = ip2EscapeString(ip)
+		case "fix":
+			v = bytesSize(ip, 16)
+		}
+	case FieldTypeDate, FieldTypeUnixnano:
+		if format != "" {
+			return v.(time.Time).Format(format)
+		}
 	}
 	return v
 }

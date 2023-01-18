@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017 - 2020
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2020
+// @project geniusrabbit::eventstream 2017 - 2023
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2023
 //
 
 // TODO: Store all messages if not sended yet
@@ -195,9 +195,13 @@ func (s *StreamSQL) writeBuffer(flush bool) (msg message.Message, err error) {
 			if s.debug {
 				s.logger.Debug(`write-message`, zap.Any(`message`, msg))
 			}
-			if _, err = stmt.Exec(s.query.ParamsBy(msg)...); err != nil {
-				stop = true
+			listParams := s.query.ParamsBy(msg)
+			for _, params := range listParams {
+				if _, err = stmt.Exec(params...); err != nil {
+					stop = true
+				}
 			}
+			listParams.release()
 		default:
 			stop = true
 		}

@@ -14,7 +14,8 @@ type extraConfig struct {
 	InitQuery []string `json:"init_query"`
 }
 
-func connector(ctx context.Context, conf *storage.Config) (eventstream.Storager, error) {
+// Connector of the driver
+func Connector(ctx context.Context, conf *storage.Config) (eventstream.Storager, error) {
 	var (
 		extConf extraConfig
 		err     = conf.Decode(&extConf)
@@ -25,8 +26,4 @@ func connector(ctx context.Context, conf *storage.Config) (eventstream.Storager,
 	return Open(ctx, conf.Connect,
 		WithInitQuery(extConf.InitQuery),
 		storage.WithDebug(conf.Debug))
-}
-
-func init() {
-	storage.RegisterConnector("clickhouse", connector)
 }

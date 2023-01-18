@@ -41,18 +41,19 @@ type profilerConfig struct {
 type ConfigType struct {
 	mx sync.RWMutex
 
-	Config      string `json:"-" cli:"config"`
-	ServiceName string `json:"service_name" yaml:"service_name" toml:"service_name" env:"SERVICE_NAME" default:"eventstream"`
+	ConfigFile    string `json:"-" cli:"config"`
+	ConfigVersion string `json:"version" yaml:"version" toml:"version"`
+	ServiceName   string `json:"service_name" yaml:"service_name" toml:"service_name" env:"SERVICE_NAME" default:"eventstream"`
 
 	LogAddr    string `json:"log_addr" yaml:"log_addr" toml:"log_addr" default:"" env:"LOG_ADDR"`
 	LogLevel   string `json:"log_level" yaml:"log_level" toml:"log_level" default:"debug" env:"LOG_LEVEL"`
 	LogEncoder string `json:"log_encoder" yaml:"log_encoder" toml:"server" env:"LOG_ENCODER"`
 
-	Profile profilerConfig `yaml:"profile" json:"profile"`
+	Profile profilerConfig `json:"profile" yaml:"profile" toml:"profile"`
 
-	Stores  map[string]configItem `yaml:"stores" json:"stores"`
-	Sources map[string]configItem `yaml:"sources" json:"sources"`
-	Streams map[string]configItem `yaml:"streams" json:"streams"`
+	Stores  map[string]configItem `json:"stores"  yaml:"stores"  toml:"stores"`
+	Sources map[string]configItem `json:"sources" yaml:"sources" toml:"sources"`
+	Streams map[string]configItem `json:"streams" yaml:"streams" toml:"streams"`
 
 	Jaeger struct {
 		AgentHost string `env:"JAEGER_AGENT_HOST"`
@@ -66,7 +67,7 @@ func (cfg *ConfigType) String() string {
 
 // ConfigFilepath name
 func (cfg *ConfigType) ConfigFilepath() string {
-	return cfg.Config
+	return cfg.ConfigFile
 }
 
 // Load eventstore config

@@ -16,7 +16,7 @@ services:
     command:
       - --repeat=10
       - --stream=nats://nats:4222/?topics=topic1
-      - --message={"srv":"info","msg":"foo","err":"boo","timestamp":"2023-01-17 19:47:03"}
+      - --message={"srv":"info","msg":"foo","err":"boo","timestamp":"2023-01-17 19:47:03","iterator":[1,2,3],"type":"iterator"}
 
   service:
     image: geniusrabbit/eventstream:latest

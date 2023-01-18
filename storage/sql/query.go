@@ -1,12 +1,11 @@
 //
-// @project geniusrabbit::eventstream 2017, 2019
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019
+// @project geniusrabbit::eventstream 2017, 2019 - 2023
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019 - 2023
 //
 
 package sql
 
 import (
-	"bytes"
 	"errors"
 	"reflect"
 	"regexp"
@@ -23,7 +22,6 @@ var (
 )
 
 var (
-	errInvalidQueryFieldsParam = errors.New(`[stream::query] invalid fields build param`)
 	errInvalidQueryFieldsValue = errors.New(`[stream::query] invalid fields build value`)
 )
 
@@ -74,55 +72,42 @@ func valueFromArray(target string, a []string) Value {
 
 // Query extractor
 type Query struct {
-	query  string
-	values []Value
+	query     string
+	iterateBy string
+	values    []Value
 }
 
-// NewQueryByRaw returns query object from raw SQL query
-func NewQueryByRaw(query string, fl any) (queryBuilder *Query, err error) {
-	if !isEmptyFields(fl) {
-		var (
-			values          []Value
-			fields, inserts []string
-		)
-		if values, fields, inserts, err = PrepareFields(fl); err != nil {
-			return nil, err
-		}
-		queryBuilder = &Query{
-			query: strings.NewReplacer(
-				"{{fields}}", strings.Join(fields, ", "),
-				"{{values}}", strings.Join(inserts, ", "),
-			).Replace(query),
-			values: values,
-		}
-	} else if args := paramsSearch.FindAllStringSubmatch(query, -1); len(args) > 0 {
-		queryBuilder = &Query{query: paramsSearch.ReplaceAllString(query, "?")}
-		for _, a := range args {
-			queryBuilder.values = append(queryBuilder.values, valueFromArray(a[1], a[1:]))
-		}
-	}
-	return queryBuilder, err
-}
-
-// NewQueryByPattern returns query object
-func NewQueryByPattern(pattern, target string, fieldDescription any) (_ *Query, err error) {
+// NewQuery returns query object from SQL query
+func NewQuery(query string, opts ...QueryOption) (*Query, error) {
 	var (
-		fields, inserts []string
+		err             error
+		queryConfig     QueryConfig
 		values          []Value
+		fields, inserts []string
 	)
-	if fieldDescription == nil {
-		return nil, errInvalidQueryFieldsParam
+	for _, opt := range opts {
+		opt(&queryConfig)
 	}
-	if values, fields, inserts, err = PrepareFields(fieldDescription); nil != err {
+	query = strings.ReplaceAll(query, "{{target}}", queryConfig.Target)
+
+	if isEmptyFields(queryConfig.FieldObject) {
+		if args := paramsSearch.FindAllStringSubmatch(query, -1); len(args) > 0 {
+			query = paramsSearch.ReplaceAllString(query, "?")
+			for _, arg := range args {
+				values = append(values, valueFromArray(arg[1], arg[1:]))
+			}
+		}
+	} else if values, fields, inserts, err = PrepareFields(queryConfig.FieldObject); err != nil {
 		return nil, err
 	}
+
 	return &Query{
 		query: strings.NewReplacer(
-			"{{target}}", target,
 			"{{fields}}", strings.Join(fields, ", "),
 			"{{values}}", strings.Join(inserts, ", "),
-		).Replace(pattern),
-		values: values,
+		).Replace(query),
+		iterateBy: queryConfig.IterateBy,
+		values:    values,
 	}, nil
 }
 
@@ -132,45 +117,57 @@ func (q *Query) QueryString() string {
 }
 
 // ParamsBy by message
-func (q *Query) ParamsBy(msg eventstream.Message) (params []any) {
-	for _, v := range q.values {
-		params = append(params, msg.ItemCast(v.Key, v.Type, v.Length, v.Format))
-	}
-	return params
-}
-
-// StringParamsBy by message
-func (q *Query) StringParamsBy(msg eventstream.Message) (params []string) {
-	for _, v := range q.values {
-		params = append(
-			params,
-			gocast.Str(msg.ItemCast(v.Key, v.Type, v.Length, v.Format)),
-		)
-	}
-	return params
-}
-
-// StringByMessage prepare
-func (q *Query) StringByMessage(msg eventstream.Message) string {
+func (q *Query) ParamsBy(msg eventstream.Message) paramsResult {
 	var (
-		params = q.StringParamsBy(msg)
-		items  = strings.Split(q.query, "?")
-		result bytes.Buffer
+		iterated      = q.iterateBy != ``
+		iteratorSlice = gocast.Cast[[]any](msg.Item(q.iterateBy, nil))
+		countSlice    = tMax(len(iteratorSlice), 1)
+		params        = acquireResultParams()
 	)
-	for i, v := range items {
-		result.WriteString(v)
-		if i < len(params)-1 {
-			result.WriteString(params[i])
+	for i := 0; i < countSlice; i++ {
+		subParams := make([]any, 0, len(q.values))
+		for _, v := range q.values {
+			var val any
+			if iterated && strings.HasPrefix(v.Key, "$iter") {
+				subItem := iteratorSlice
+				if strings.HasPrefix(v.Key, "$iter.") {
+					subItem = gocast.Cast[[]any](msg.Item(v.Key[6:], nil))
+				}
+				val = v.Type.CastExt(arrValue(i, subItem), v.Length, v.Format)
+			} else {
+				val = msg.ItemCast(v.Key, v.Type, v.Length, v.Format)
+			}
+			subParams = append(subParams, val)
 		}
+		params = append(params, subParams)
 	}
-	return result.String()
+	return params
 }
 
 // Extract message by special fields and types
-func (q *Query) Extract(msg eventstream.Message) map[string]any {
-	var resp = make(map[string]any)
-	for _, v := range q.values {
-		resp[v.TargetKey] = msg.ItemCast(v.Key, v.Type, v.Length, v.Format)
+func (q *Query) Extract(msg eventstream.Message) []map[string]any {
+	var (
+		iterated      = q.iterateBy != ``
+		iteratorSlice = gocast.Cast[[]any](msg.Item(q.iterateBy, nil))
+		countSlice    = tMax(len(iteratorSlice), 1)
+		resp          = make([]map[string]any, 0, countSlice)
+	)
+	for i := 0; i < countSlice; i++ {
+		subResp := make(map[string]any, len(q.values))
+		for _, v := range q.values {
+			var val any
+			if iterated && strings.HasPrefix(v.Key, "$iter") {
+				subItem := iteratorSlice
+				if strings.HasPrefix(v.Key, "$iter.") {
+					subItem = gocast.Cast[[]any](msg.Item(v.Key[6:], nil))
+				}
+				val = v.Type.CastExt(arrValue(i, subItem), v.Length, v.Format)
+			} else {
+				val = msg.ItemCast(v.Key, v.Type, v.Length, v.Format)
+			}
+			subResp[v.TargetKey] = val
+		}
+		resp = append(resp, subResp)
 	}
 	return resp
 }
@@ -242,7 +239,8 @@ func PrepareFieldsByString(fls string) (values []Value, fields, inserts []string
 
 func prepareOneFieldByString(field string) (values []Value, fieldValue, insert string) {
 	insert = "?"
-	if strings.ContainsAny(field, "=") {
+	switch {
+	case strings.ContainsAny(field, "="):
 		if field := strings.SplitN(field, "=", 2); field[1][0] == '@' {
 			fieldValue = field[0]
 			insert = field[1][1:]
@@ -261,15 +259,13 @@ func prepareOneFieldByString(field string) (values []Value, fieldValue, insert s
 				values = append(values, valueFromArray(field[0], match[0][1:]))
 			}
 		}
-	} else {
-		if !strings.ContainsAny(field, ":|") {
-			fieldValue = field
-			values = append(values, Value{Key: field, TargetKey: field})
-		} else {
-			match := paramParser.FindAllStringSubmatch(field, -1)
-			fieldValue = match[0][1]
-			values = append(values, valueFromArray(match[0][1], match[0][1:]))
-		}
+	case !strings.ContainsAny(field, ":|"):
+		fieldValue = field
+		values = append(values, Value{Key: field, TargetKey: field})
+	default:
+		match := paramParser.FindAllStringSubmatch(field, -1)
+		fieldValue = match[0][1]
+		values = append(values, valueFromArray(match[0][1], match[0][1:]))
 	}
 	return values, fieldValue, insert
 }
@@ -277,13 +273,27 @@ func prepareOneFieldByString(field string) (values []Value, fieldValue, insert s
 func isEmptyFields(fls any) bool {
 	switch fs := fls.(type) {
 	case []string:
-		return len(fs) < 1
+		return len(fs) == 0
 	case []any:
-		return len(fs) < 1
+		return len(fs) == 0
 	case string:
 		return strings.TrimSpace(fs) == ""
 	case nil:
 		return true
 	}
-	return false
+	return gocast.IsEmpty(fls)
+}
+
+func tMax[T gocast.Numeric](a, b T) T {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func arrValue[T any](idx int, arr []T) any {
+	if idx < len(arr) {
+		return arr[idx]
+	}
+	return nil
 }

@@ -93,19 +93,10 @@ func WithQueryObject(query *Query) Option {
 	}
 }
 
-// WithQueryRawFields setup query object by fields parameters
-func WithQueryRawFields(query string, fields any) Option {
+// WithQuery setup query object
+func WithQuery(query string, qOpts ...QueryOption) Option {
 	return func(opts *Options) error {
-		queryBuilder, err := NewQueryByRaw(query, fields)
-		opts.QueryBuilder = queryBuilder
-		return err
-	}
-}
-
-// WithQueryByPattern setup query object by query pattern
-func WithQueryByPattern(pattern, target string, fields any) Option {
-	return func(opts *Options) error {
-		queryBuilder, err := NewQueryByPattern(pattern, target, fields)
+		queryBuilder, err := NewQuery(query, qOpts...)
 		opts.QueryBuilder = queryBuilder
 		return err
 	}

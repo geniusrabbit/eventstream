@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -91,7 +92,13 @@ func MapIntoQueryParams(object any) (values []Value, fieldNames, inserts []strin
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	orderedData := make([][2]string, 0, len(data))
 	for target, value := range data {
+		orderedData = append(orderedData, [2]string{target, value})
+	}
+	sort.Slice(orderedData, func(i, j int) bool { return orderedData[i][0] < orderedData[j][0] })
+	for _, item := range orderedData {
+		target, value := item[0], item[1]
 		fieldValues, fieldValue, insertValue := prepareOneFieldByString(target + `=` + value)
 		if len(fieldValues) != 0 {
 			values = append(values, fieldValues...)

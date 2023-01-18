@@ -4,13 +4,12 @@ go 1.18
 
 require (
 	github.com/ClickHouse/clickhouse-go v1.5.4
-	github.com/demdxx/gocast/v2 v2.3.1
+	github.com/demdxx/gocast/v2 v2.4.0
 	github.com/demdxx/goconfig v1.0.0
 	github.com/geniusrabbit/notificationcenter/v2 v2.1.2
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
-	github.com/lib/pq v1.10.7
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/profile v1.7.0
 	github.com/prometheus/client_golang v1.14.0
@@ -19,7 +18,6 @@ require (
 	go.elastic.co/ecszap v1.0.1
 	go.uber.org/zap v1.24.0
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22
-	gopkg.in/stretchr/testify.v1 v1.2.2
 )
 
 require (

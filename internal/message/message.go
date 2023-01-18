@@ -8,10 +8,7 @@ package message
 import (
 	"encoding/json"
 	"errors"
-	"net"
 	"strconv"
-	"strings"
-	"time"
 
 	"github.com/demdxx/gocast/v2"
 )
@@ -68,43 +65,6 @@ func (m Message) Map() map[string]any {
 }
 
 // ItemCast converts any key value into the field_type
-func (m Message) ItemCast(key string, t FieldType, length int, format string) any {
-	newVal := t.Cast(m.Item(key, nil))
-	if newVal == nil {
-		return newVal
-	}
-	switch t {
-	case FieldTypeString:
-		if length > 0 {
-			s := newVal.(string)
-			if length < len(s) {
-				return s[:length]
-			} else if length != len(s) {
-				return s + strings.Repeat(" ", length-len(s))
-			}
-		}
-	case FieldTypeFixed:
-		res := bytesSize(newVal.([]byte), length)
-		if format == "escape" {
-			return escapeBytes(res, 0)
-		}
-		newVal = res
-	case FieldTypeUUID:
-		if format == "escape" {
-			return escapeBytes(newVal.([]byte), 0)
-		}
-	case FieldTypeIP:
-		ip := newVal.(net.IP)
-		switch format {
-		case "binarystring":
-			newVal = ip2EscapeString(ip)
-		case "fix":
-			newVal = bytesSize(ip, 16)
-		}
-	case FieldTypeDate, FieldTypeUnixnano:
-		if format != "" {
-			return newVal.(time.Time).Format(format)
-		}
-	}
-	return newVal
+func (m Message) ItemCast(key string, fieldType FieldType, length int, format string) any {
+	return fieldType.CastExt(m.Item(key, nil), length, format)
 }

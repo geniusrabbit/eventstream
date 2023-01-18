@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017 - 2021
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2021
+// @project geniusrabbit::eventstream 2017 - 2023
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2023
 //
 
 package main
@@ -12,22 +12,16 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 
-	_ "github.com/ClickHouse/clickhouse-go"
-	_ "github.com/lib/pq"
 	"github.com/pkg/profile"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 
 	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/cmd/eventstream/appcontext"
+	_ "github.com/geniusrabbit/eventstream/internal/driversinit"
 	"github.com/geniusrabbit/eventstream/internal/zlogger"
 	"github.com/geniusrabbit/eventstream/source"
-	_ "github.com/geniusrabbit/eventstream/source/ncstreams"
 	"github.com/geniusrabbit/eventstream/storage"
-	_ "github.com/geniusrabbit/eventstream/storage/clickhouse"
-	_ "github.com/geniusrabbit/eventstream/storage/ncstreams"
-	_ "github.com/geniusrabbit/eventstream/storage/redis"
-	_ "github.com/geniusrabbit/eventstream/storage/vertica"
 	"github.com/geniusrabbit/eventstream/stream"
 )
 
@@ -38,7 +32,18 @@ var (
 	buildDate    string
 )
 
+const bannerString = `
+███████ ██    ██ ███████ ███    ██ ████████ ███████ ████████ ██████  ███████  █████  ███    ███
+██      ██    ██ ██      ████   ██    ██    ██         ██    ██   ██ ██      ██   ██ ████  ████
+█████   ██    ██ █████   ██ ██  ██    ██    ███████    ██    ██████  █████   ███████ ██ ████ ██
+██       ██  ██  ██      ██  ██ ██    ██         ██    ██    ██   ██ ██      ██   ██ ██  ██  ██
+███████   ████   ███████ ██   ████    ██    ███████    ██    ██   ██ ███████ ██   ██ ██      ██
+
+`
+
 func init() {
+	fmt.Println(bannerString + buildVersion)
+
 	// Load config
 	config := &appcontext.Config
 	err := config.Load()

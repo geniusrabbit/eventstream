@@ -1,6 +1,8 @@
- 
-stores {
+# Version of the config
+version = "1"
+description = "Example of the logs writing"
 
+stores {
   clickhouse_1 {
     connect = "{{@env:CLICKHOUSE_STORE_CONNECT}}"
     buffer  = 1000
@@ -13,6 +15,7 @@ stores {
         , service          String
         , msg              String
         , error            String
+        , ext              String
         , created_at       DateTime default now()
         ) Engine=Memory COMMENT 'The test table';
       Q
@@ -70,6 +73,24 @@ streams {
       "error=err:string",
       "timestamp=@toTimestamp('{{timestamp:date|2006-01-02 15:04:05}}')",
     ]
+  }
+
+  log_5 {
+    store  = "clickhouse_1"
+    source = "nats_1"
+
+    target = "stat.testlog"
+    iterate_by = "iterator"
+    fields = [
+      "service=srv",
+      "msg",
+      "error=err:string",
+      "ext=$iter.iterator:string",
+      "timestamp=@toTimestamp('{{timestamp:date|2006-01-02 15:04:05}}')",
+    ]
+    where   = <<ST
+      type=="iterator"
+    ST
   }
 
   nats_1 {

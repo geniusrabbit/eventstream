@@ -6,18 +6,24 @@
 package vertica
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"net"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/internal/metrics"
 	"github.com/geniusrabbit/eventstream/internal/utils"
+	"github.com/geniusrabbit/eventstream/internal/zlogger"
+	"github.com/geniusrabbit/eventstream/storage"
 	sqlstore "github.com/geniusrabbit/eventstream/storage/sql"
 	"github.com/geniusrabbit/eventstream/stream"
+	"github.com/pkg/errors"
+	"go.uber.org/zap"
 )
 
 const (
@@ -26,30 +32,60 @@ const (
 
 // Vertica storage object
 type Vertica struct {
-	debug   bool
-	connect string
-	conn    *sql.DB
+	debug     bool
+	connect   string
+	initQuery []string
+	conn      *sql.DB
 }
 
 // Open new vertica storage
-func Open(connectURL string, options ...sqlstore.Option) (*Vertica, error) {
+func Open(ctx context.Context, connectURL string, options ...any) (*Vertica, error) {
 	var (
 		conn        *sql.DB
-		opts        sqlstore.Options
 		urlObj, err = url.Parse(connectURL)
+		config      storage.Config
+		store       = Vertica{connect: connectURL}
 	)
 	if err != nil {
 		return nil, err
 	}
-	for _, o := range options {
-		if err = o(&opts); err != nil {
+	for _, opt := range options {
+		switch o := opt.(type) {
+		case storage.Option:
+			o(&config)
+		case Option:
+			o(&store)
+		default:
+			return nil, errors.Wrapf(storage.ErrInvalidOption, `%+v`, opt)
+		}
+	}
+	if conn, err = verticaConnect(urlObj, config.Debug); err != nil {
+		return nil, err
+	}
+
+	store.debug = config.Debug
+	store.conn = conn
+	if len(store.initQuery) > 0 {
+		zlogger.FromContext(ctx).Debug("init query",
+			zap.String(`storage`, `clickhouse`),
+			zap.String(`connect`, connectURL),
+			zap.String(`init_query`, strings.Join(store.initQuery, "\n")),
+		)
+		tx, err := conn.BeginTx(ctx, nil)
+		if err != nil {
+			return nil, err
+		}
+		for _, sqlQuery := range store.initQuery {
+			if _, err = tx.ExecContext(ctx, sqlQuery); err != nil {
+				_ = tx.Rollback()
+				return nil, err
+			}
+		}
+		if err = tx.Commit(); err != nil {
 			return nil, err
 		}
 	}
-	if conn, err = verticaConnect(urlObj, opts.Debug); err != nil {
-		return nil, err
-	}
-	return &Vertica{conn: conn, connect: connectURL, debug: opts.Debug}, nil
+	return &store, nil
 }
 
 // Stream vertica processor

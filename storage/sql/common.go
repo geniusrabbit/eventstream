@@ -12,6 +12,7 @@ type config struct {
 	Target       string `json:"target"`
 	BufferSize   uint   `json:"buffer_size"`
 	WriteTimeout uint   `json:"write_timeout"`
+	IterateBy    string `json:"iterate_by"`
 	Fields       any    `json:"fields"`
 }
 
@@ -22,9 +23,14 @@ func New(connector Connector, pattern string, conf *stream.Config, options ...Op
 		return nil, err
 	}
 	if config.SQLQuery != `` {
-		options = append(options, WithQueryRawFields(config.SQLQuery, config.Fields))
+		options = append(options, WithQuery(config.SQLQuery,
+			QWithIterateBy(config.IterateBy),
+			QWithMessageTmpl(config.Fields)))
 	} else if config.Fields != nil {
-		options = append(options, WithQueryByPattern(pattern, config.Target, config.Fields))
+		options = append(options, WithQuery(pattern,
+			QWithIterateBy(config.IterateBy),
+			QWithTarget(config.Target),
+			QWithMessageTmpl(config.Fields)))
 	}
 	return NewStreamSQL(
 		conf.Name,

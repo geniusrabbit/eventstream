@@ -24,9 +24,3 @@ func natsNewPublisher(ctx context.Context, url string) (nc.Publisher, error) {
 func OpenNATS(ctx context.Context, url string, options ...storage.Option) (eventstream.Storager, error) {
 	return Open(ctx, url, natsNewPublisher, options...)
 }
-
-func init() {
-	storage.RegisterConnector("nats", func(ctx context.Context, conf *storage.Config) (eventstream.Storager, error) {
-		return OpenNATS(ctx, conf.Connect, storage.WithDebug(conf.Debug))
-	})
-}

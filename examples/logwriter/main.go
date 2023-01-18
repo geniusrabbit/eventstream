@@ -5,14 +5,14 @@ import (
 	"log"
 	"time"
 
-	_ "github.com/ClickHouse/clickhouse-go"
 	"go.uber.org/zap"
 
+	_ "github.com/geniusrabbit/eventstream/internal/driversinit"
 	"github.com/geniusrabbit/eventstream/internal/zlogger"
 	"github.com/geniusrabbit/eventstream/source"
-	_ "github.com/geniusrabbit/eventstream/source/ncstreams"
 	"github.com/geniusrabbit/eventstream/storage"
 	"github.com/geniusrabbit/eventstream/storage/clickhouse"
+	"github.com/geniusrabbit/eventstream/storage/sql"
 )
 
 var (
@@ -69,7 +69,10 @@ func commandLogwriter(conf *config, logger *zap.Logger) {
 	fatalError(`clickhouse storage connect`, err)
 
 	// Get new stream writer for the storage
-	stream, err := datastorage.Stream(clickhouse.WithQueryByTarget(`logs.common`, &logMessage{}))
+	stream, err := datastorage.Stream(clickhouse.WithQuery(
+		sql.QWithTarget(`logs.common`),
+		sql.QWithMessageTmpl(&logMessage{}),
+	))
 	fatalError(`get new writer stream`, err)
 
 	// Subscribe stream writer of the clickhouse

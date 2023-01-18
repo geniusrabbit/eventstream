@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017 - 2020
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2020
+// @project geniusrabbit::eventstream 2017 - 2023
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2023
 //
 
 package clickhouse
@@ -72,10 +72,18 @@ func Open(ctx context.Context, connect string, options ...any) (*Clickhouse, err
 			zap.String(`connect`, connect),
 			zap.String(`init_query`, strings.Join(store.initQuery, "\n")),
 		)
+		tx, err := conn.BeginTx(ctx, nil)
+		if err != nil {
+			return nil, err
+		}
 		for _, sqlQuery := range store.initQuery {
-			if _, err = conn.ExecContext(ctx, sqlQuery); err != nil {
+			if _, err = tx.ExecContext(ctx, sqlQuery); err != nil {
+				_ = tx.Rollback()
 				return nil, err
 			}
+		}
+		if err = tx.Commit(); err != nil {
+			return nil, err
 		}
 	}
 	return &store, nil

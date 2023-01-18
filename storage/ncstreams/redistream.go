@@ -20,9 +20,3 @@ func redisNewPublisher(ctx context.Context, url string) (nc.Publisher, error) {
 func OpenRedis(ctx context.Context, url string, options ...storage.Option) (eventstream.Storager, error) {
 	return Open(ctx, url, redisNewPublisher, options...)
 }
-
-func init() {
-	storage.RegisterConnector("redistream", func(ctx context.Context, conf *storage.Config) (eventstream.Storager, error) {
-		return OpenRedis(ctx, conf.Connect, storage.WithDebug(conf.Debug))
-	})
-}
