@@ -1,7 +1,7 @@
 # Eventstream message pipeline service
 
 ![License](https://img.shields.io/github/license/geniusrabbit/eventstream)
-[![Docker Pulls](https://img.shields.io/docker/pulls/geniusrabbit/eventstream.svg?maxAge=604800)](https://hub.docker.com/r/docker/geniusrabbit/eventstream)
+[![Docker Pulls](https://img.shields.io/docker/pulls/geniusrabbit/eventstream.svg?maxAge=604800)](https://hub.docker.com/r/geniusrabbit/eventstream)
 [![Go Report Card](https://goreportcard.com/badge/github.com/geniusrabbit/eventstream)](https://goreportcard.com/report/github.com/geniusrabbit/eventstream)
 [![Coverage Status](https://coveralls.io/repos/github/geniusrabbit/eventstream/badge.svg?branch=master)](https://coveralls.io/github/geniusrabbit/eventstream?branch=master)
 [![Testing Status](https://github.com/geniusrabbit/eventstream/workflows/Tests/badge.svg)](https://github.com/geniusrabbit/eventstream/actions?workflow=Tests)
