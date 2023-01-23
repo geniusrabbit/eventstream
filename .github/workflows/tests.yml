@@ -1,3 +1,5 @@
+name: Test
+
 on:
   push:
     tags:
@@ -10,9 +12,13 @@ on:
       - master
       - main
 
-name: run tests
+concurrency:
+  group: ci-tests-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
     - name: Install Go
@@ -29,6 +35,7 @@ jobs:
         args: --fix
 
   test:
+    if: github.event.pull_request.draft == false
     needs: lint
     strategy:
       matrix:
@@ -47,6 +54,7 @@ jobs:
       run: go test -v -covermode=count
 
   coverage:
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     needs: test
     strategy:
@@ -68,6 +76,7 @@ jobs:
 
   # notifies that all test jobs are finished.
   finish:
+    if: github.event.pull_request.draft == false
     needs: coverage
     runs-on: ubuntu-latest
     steps:

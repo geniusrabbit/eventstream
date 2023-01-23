@@ -13,12 +13,19 @@ ifeq (${BUILD_GOARCH},arm)
 	LOCAL_TARGETPLATFORM=${BUILD_GOOS}/${BUILD_GOARCH}/v${BUILD_GOARM}
 endif
 
-COMMIT_NUMBER ?= $(shell git log -1 --pretty=format:%h)
-TAG_VALUE ?= $(shell git describe --exact-match --tags ${COMMIT_NUMBER})
+COMMIT_NUMBER ?= $(or ${DEPLOY_COMMIT_NUMBER},)
+ifeq (${COMMIT_NUMBER},)
+	COMMIT_NUMBER = $(shell git log -1 --pretty=format:%h)
+endif
 
+TAG_VALUE ?= $(or ${DEPLOY_TAG_VALUE},)
+ifeq (${TAG_VALUE},)
+	TAG_VALUE = $(shell git describe --exact-match --tags `git log -n1 --pretty='%h'`)
+endif
 ifeq (${TAG_VALUE},)
 	TAG_VALUE = commit-${COMMIT_NUMBER}
 endif
+
 
 PROJECT_NAME ?= eventstream
 
@@ -27,10 +34,9 @@ export GO111MODULE := on
 # https://golang.org/doc/go1.12#tls_1_3
 export GODEBUG := tls13=0
 
-OS_LIST = linux darwin
-ARCH_LIST = amd64 arm64 arm
-
-APP_TAGS = all
+OS_LIST   ?= $(or ${DEPLOY_OS_LIST},linux darwin)
+ARCH_LIST ?= $(or ${DEPLOY_ARCH_LIST},amd64 arm64 arm)
+APP_TAGS  ?= $(or ${APP_BUILD_TAGS},all)
 
 CONTAINER_IMAGE ?= geniusrabbit/eventstream
 

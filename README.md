@@ -1,14 +1,13 @@
 # Eventstream message pipeline service
 
-[![Build Status](https://github.com/geniusrabbit/eventstream/workflows/run%20tests/badge.svg)](https://github.com/geniusrabbit/eventstream/actions?workflow=run%20tests)
+![License](https://img.shields.io/github/license/geniusrabbit/eventstream)
+[![Docker Pulls](https://img.shields.io/docker/pulls/geniusrabbit/eventstream.svg?maxAge=604800)](https://hub.docker.com/r/docker/geniusrabbit/eventstream)
 [![Go Report Card](https://goreportcard.com/badge/github.com/geniusrabbit/eventstream)](https://goreportcard.com/report/github.com/geniusrabbit/eventstream)
-[![GoDoc](https://godoc.org/github.com/geniusrabbit/eventstream?status.svg)](https://godoc.org/github.com/geniusrabbit/eventstream)
-[![Coverage Status](https://coveralls.io/repos/github/geniusrabbit/eventstream/badge.svg)](https://coveralls.io/github/geniusrabbit/eventstream)
+[![Coverage Status](https://coveralls.io/repos/github/geniusrabbit/eventstream/badge.svg?branch=master)](https://coveralls.io/github/geniusrabbit/eventstream?branch=master)
+[![Testing Status](https://github.com/geniusrabbit/eventstream/workflows/Tests/badge.svg)](https://github.com/geniusrabbit/eventstream/actions?workflow=Tests)
+[![Publish Docker Status](https://github.com/geniusrabbit/eventstream/workflows/Publish/badge.svg)](https://github.com/geniusrabbit/eventstream/actions?workflow=Publish)
 
 Eventstream pipeline for storing and re-sending events inside the system.
-
-> License Apache 2.0
-> Copyright 2017 GeniusRabbit Dmitry Ponomarev <demdxx@gmail.com>
 
 ```sh
 go get -v -u github.com/geniusrabbit/eventstream/cmd/eventstream
@@ -17,7 +16,7 @@ go get -v -u github.com/geniusrabbit/eventstream/cmd/eventstream
 ## Run eventstream service in docker
 
 ```sh
-docker run -d -it -v ./custom.config.hcl:/config.hcl \
+docker run -d -it --rm -v ./custom.config.hcl:/config.hcl \
   geniusrabbit/eventstream
 ```
 
