@@ -52,7 +52,7 @@ func (t *messageTemplate) check(msg eventstream.Message) bool {
 	if t.condition == nil {
 		return true
 	}
-	res, _ := t.condition.Evaluate(msg.Map())
+	res, _ := t.condition.Eval(govaluate.MapParameters(msg.Map()))
 	return gocast.Bool(res)
 }
 

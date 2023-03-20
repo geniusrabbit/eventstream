@@ -24,13 +24,13 @@ jobs:
     - name: Install Go
       uses: actions/setup-go@v3
       with:
-        go-version: 1.18.x
+        go-version: 1.20.x
     - name: Checkout code
       uses: actions/checkout@v3
     - name: Run linters
       uses: golangci/golangci-lint-action@v3
       with:
-        version: v1.48.0
+        version: v1.52.0
         skip-cache: true
         args: --fix
 
@@ -39,7 +39,7 @@ jobs:
     needs: lint
     strategy:
       matrix:
-        go-version: [1.18.x, 1.19.x]
+        go-version: [1.20.x]
         platform: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.platform }}
     steps:
@@ -60,7 +60,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go-version: [1.18.x, 1.19.x]
+        go-version: [1.20.x]
     steps:
       - uses: actions/setup-go@v3
         with:
