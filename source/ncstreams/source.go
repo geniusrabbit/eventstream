@@ -54,16 +54,18 @@ func Open(ctx context.Context, url string, subFnk getSubscriberFnk, options ...O
 }
 
 // Subscribe new stream object
-func (s *sourceSubscriber) Subscribe(ctx context.Context, stream eventstream.Streamer) error {
-	if stream == nil {
+func (s *sourceSubscriber) Subscribe(ctx context.Context, streams ...eventstream.Streamer) error {
+	if len(streams) == 0 {
 		return errInvalidStreamObject
 	}
-	for _, st := range s.streams {
-		if st.ID() == stream.ID() {
-			return errors.Wrap(errStreamAlreadyRegistered, st.ID())
+	for _, stream := range streams {
+		for _, st := range s.streams {
+			if st.ID() == stream.ID() {
+				return errors.Wrap(errStreamAlreadyRegistered, st.ID())
+			}
 		}
 	}
-	s.streams = append(s.streams, stream)
+	s.streams = append(s.streams, streams...)
 	return nil
 }
 

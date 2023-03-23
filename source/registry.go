@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017, 2020
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2020
+// @project geniusrabbit::eventstream 2017, 2020 - 2023
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2020 - 2023
 //
 
 package source
@@ -53,11 +53,11 @@ func (r *registry) Register(ctx context.Context, name string, options ...Option)
 }
 
 // Subscribe some handler interface to processing the stream with `name`
-func (r *registry) Subscribe(ctx context.Context, name string, stream eventstream.Streamer) error {
+func (r *registry) Subscribe(ctx context.Context, name string, streams ...eventstream.Streamer) error {
 	r.mx.RLock()
 	defer r.mx.RUnlock()
 	if src := r.sources[name]; src != nil {
-		return src.Subscribe(ctx, stream)
+		return src.Subscribe(ctx, streams...)
 	}
 	return nil
 }

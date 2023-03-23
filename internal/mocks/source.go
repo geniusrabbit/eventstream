@@ -49,17 +49,22 @@ func (mr *MockSourcerMockRecorder) Close() *gomock.Call {
 }
 
 // Subscribe mocks base method
-func (m *MockSourcer) Subscribe(ctx context.Context, stream eventstream.Streamer) error {
+func (m *MockSourcer) Subscribe(ctx context.Context, streams ...eventstream.Streamer) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Subscribe", ctx, stream)
+	varargs := []interface{}{ctx}
+	for _, a := range streams {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Subscribe", varargs...)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Subscribe indicates an expected call of Subscribe
-func (mr *MockSourcerMockRecorder) Subscribe(ctx, stream any) *gomock.Call {
+func (mr *MockSourcerMockRecorder) Subscribe(ctx interface{}, streams ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Subscribe", reflect.TypeOf((*MockSourcer)(nil).Subscribe), ctx, stream)
+	varargs := append([]interface{}{ctx}, streams...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Subscribe", reflect.TypeOf((*MockSourcer)(nil).Subscribe), varargs...)
 }
 
 // Start mocks base method
@@ -71,7 +76,7 @@ func (m *MockSourcer) Start(ctx context.Context) error {
 }
 
 // Start indicates an expected call of Start
-func (mr *MockSourcerMockRecorder) Start(ctx any) *gomock.Call {
+func (mr *MockSourcerMockRecorder) Start(ctx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockSourcer)(nil).Start), ctx)
 }

@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017, 2020
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2020
+// @project geniusrabbit::eventstream 2017, 2020 - 2023
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2020 - 2023
 //
 
 package source
@@ -31,8 +31,8 @@ func Register(ctx context.Context, name string, options ...Option) error {
 
 // Subscribe some handler interface to processing the stream with `name`,
 // in the global registry
-func Subscribe(ctx context.Context, name string, stream eventstream.Streamer) error {
-	return _registry.Subscribe(ctx, name, stream)
+func Subscribe(ctx context.Context, name string, streams ...eventstream.Streamer) error {
+	return _registry.Subscribe(ctx, name, streams...)
 }
 
 // Source returns the source object registered with the `name`, in the global registry
