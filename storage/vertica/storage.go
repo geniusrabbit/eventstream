@@ -113,7 +113,11 @@ func (st *Vertica) Stream(options ...any) (strm eventstream.Streamer, err error)
 	if strm, err = sqlstore.New(st, queryPattern, &conf, storeOptions...); err != nil {
 		return nil, err
 	}
-	return eventstream.NewStreamWrapper(strm, conf.Where, metricExec)
+	cond, err := conf.Condition()
+	if err != nil {
+		return nil, err
+	}
+	return eventstream.NewStreamWrapper(strm, cond, metricExec), nil
 }
 
 // Connection to clickhouse DB

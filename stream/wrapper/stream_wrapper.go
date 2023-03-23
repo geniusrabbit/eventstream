@@ -7,11 +7,8 @@ package wrapper
 
 import (
 	"context"
-	"strings"
 
-	"github.com/demdxx/gocast/v2"
-	"github.com/tonalfitness/govaluate/v3"
-
+	"github.com/geniusrabbit/eventstream/internal/condition"
 	"github.com/geniusrabbit/eventstream/internal/message"
 	"github.com/geniusrabbit/eventstream/internal/metrics"
 	"github.com/geniusrabbit/eventstream/stream"
@@ -24,31 +21,22 @@ type StreamWrapper struct {
 	stream stream.Streamer
 
 	// WhereCondition of stream
-	whereCondition *govaluate.EvaluableExpression
+	whereCondition condition.Condition
 
 	// Metrics executor
 	metrics metrics.Metricer
 }
 
 // NewStreamWrapper with support condition
-func NewStreamWrapper(stream stream.Streamer, where string, metrics metrics.Metricer) (_ stream.Streamer, err error) {
-	var whereObj *govaluate.EvaluableExpression
-
-	if len(strings.TrimSpace(where)) > 0 {
-		if whereObj, err = govaluate.NewEvaluableExpression(where); err != nil {
-			return nil, err
-		}
-	}
-
+func NewStreamWrapper(stream stream.Streamer, whereObj condition.Condition, metrics metrics.Metricer) stream.Streamer {
 	if whereObj == nil && metrics == nil {
-		return stream, nil
+		return stream
 	}
-
 	return &StreamWrapper{
 		stream:         stream,
 		whereCondition: whereObj,
 		metrics:        metrics,
-	}, nil
+	}
 }
 
 // ID returns unical stream identificator
@@ -73,8 +61,7 @@ func (s *StreamWrapper) Check(ctx context.Context, msg message.Message) bool {
 		return false
 	}
 	if s.whereCondition != nil {
-		expRes, err := s.whereCondition.Evaluate(msg.Map())
-		return err == nil && gocast.Bool(expRes)
+		return s.whereCondition.Check(ctx, msg)
 	}
 	return true
 }

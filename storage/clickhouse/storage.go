@@ -114,7 +114,11 @@ func (c *Clickhouse) Stream(options ...any) (strm eventstream.Streamer, err erro
 	if strm, err = sqlstore.New(c, queryPattern, &conf, storeOptions...); err != nil {
 		return nil, err
 	}
-	return eventstream.NewStreamWrapper(strm, conf.Where, metricExec)
+	cond, err := conf.Condition()
+	if err != nil {
+		return nil, err
+	}
+	return eventstream.NewStreamWrapper(strm, cond, metricExec), nil
 }
 
 // Connection to clickhouse DB

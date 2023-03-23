@@ -67,13 +67,18 @@ func (st *Storage) Stream(options ...any) (eventstream.Streamer, error) {
 	if metricExec, err = conf.Metrics.Metric(); err != nil {
 		return nil, err
 	}
-	return eventstream.NewStreamWrapper(&Stream{
+	strm := &Stream{
 		cli:        st.cli,
 		id:         conf.Name,
 		expiration: strmConf.Expiration,
 		incremetor: strmConf.Incrementor,
 		key:        patternkey.PatternKeyFromTemplate(strmConf.Key),
-	}, conf.Where, metricExec)
+	}
+	cond, err := conf.Condition()
+	if err != nil {
+		return nil, err
+	}
+	return eventstream.NewStreamWrapper(strm, cond, metricExec), nil
 }
 
 // Close vertica connection

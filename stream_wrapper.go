@@ -6,11 +6,12 @@
 package eventstream
 
 import (
+	"github.com/geniusrabbit/eventstream/internal/condition"
 	"github.com/geniusrabbit/eventstream/internal/metrics"
 	"github.com/geniusrabbit/eventstream/stream/wrapper"
 )
 
 // NewStreamWrapper with support condition
-func NewStreamWrapper(stream Streamer, where string, metrics metrics.Metricer) (_ Streamer, err error) {
+func NewStreamWrapper(stream Streamer, where condition.Condition, metrics metrics.Metricer) Streamer {
 	return wrapper.NewStreamWrapper(stream, where, metrics)
 }

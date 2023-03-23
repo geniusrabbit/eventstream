@@ -44,7 +44,7 @@ func Open(ctx context.Context, url string, pubFnk getPublisherFnk, options ...st
 }
 
 // Stream metrics processor
-func (m *PublishStorage) Stream(options ...any) (streamObj eventstream.Streamer, err error) {
+func (m *PublishStorage) Stream(options ...any) (strm eventstream.Streamer, err error) {
 	var (
 		conf       stream.Config
 		metricExec metrics.Metricer
@@ -62,10 +62,14 @@ func (m *PublishStorage) Stream(options ...any) (streamObj eventstream.Streamer,
 	if metricExec, err = conf.Metrics.Metric(); err != nil {
 		return nil, err
 	}
-	if streamObj, err = newStream(m.publisher, &conf); err != nil {
+	if strm, err = newStream(m.publisher, &conf); err != nil {
 		return nil, err
 	}
-	return eventstream.NewStreamWrapper(streamObj, conf.Where, metricExec)
+	cond, err := conf.Condition()
+	if err != nil {
+		return nil, err
+	}
+	return eventstream.NewStreamWrapper(strm, cond, metricExec), nil
 }
 
 // Close vertica connection

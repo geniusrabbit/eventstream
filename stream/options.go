@@ -3,6 +3,7 @@ package stream
 import (
 	"encoding/json"
 
+	"github.com/geniusrabbit/eventstream/internal/condition"
 	"github.com/geniusrabbit/eventstream/internal/metrics"
 )
 
@@ -34,6 +35,13 @@ func WithDebug(debug bool) Option {
 func WithWhere(where string) Option {
 	return func(cnf *Config) {
 		cnf.Where = where
+	}
+}
+
+// WithCondition condition
+func WithCondition(cond condition.Condition) Option {
+	return func(cnf *Config) {
+		cnf.WhereCond = cond
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"reflect"
 
+	"github.com/geniusrabbit/eventstream/internal/condition"
 	"github.com/geniusrabbit/eventstream/internal/metrics"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
@@ -16,13 +17,25 @@ var (
 
 // Config of the stream
 type Config struct {
-	Name    string
-	Debug   bool
-	Store   string
-	Source  string
-	Where   string
-	Metrics metrics.MetricList
-	Raw     json.RawMessage
+	Name      string
+	Debug     bool
+	Store     string
+	Source    string
+	Metrics   metrics.MetricList
+	Raw       json.RawMessage
+	Where     string
+	WhereCond condition.Condition
+}
+
+// Condition of the stream
+func (c *Config) Condition() (condition.Condition, error) {
+	if c.WhereCond != nil {
+		return c.WhereCond, nil
+	}
+	if c.Where != "" {
+		return condition.NewExpression(c.Where)
+	}
+	return nil, nil
 }
 
 // Decode raw data to the target object
