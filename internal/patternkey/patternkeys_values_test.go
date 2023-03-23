@@ -10,7 +10,7 @@ import (
 func TestTagValues(t *testing.T) {
 	tagVals := PatternKeysFrom("{{name}}_{{id}}", "os_{{os}}")
 	assert.NotNil(t, tagVals)
-	res := tagVals.Prepare(message.Message{
+	res := tagVals.Prepare(message.MapMessage{
 		"name": "testname",
 		"id":   1,
 		"os":   "mac",

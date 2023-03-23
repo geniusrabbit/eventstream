@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017, 2020
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2020
+// @project geniusrabbit::eventstream 2017, 2020 - 2023
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2020 - 2023
 //
 
 package ncstreams
@@ -8,12 +8,12 @@ package ncstreams
 import (
 	"context"
 
+	nc "github.com/geniusrabbit/notificationcenter/v2"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
 	"github.com/geniusrabbit/eventstream"
-	"github.com/geniusrabbit/eventstream/converter"
-	nc "github.com/geniusrabbit/notificationcenter/v2"
+	"github.com/geniusrabbit/eventstream/utils/converter"
 )
 
 var (

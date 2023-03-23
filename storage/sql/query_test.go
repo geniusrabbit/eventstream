@@ -10,7 +10,7 @@ import (
 
 func TestParamExtractionsQuery(t *testing.T) {
 	var (
-		msg1 = eventstream.Message{
+		msg1 = eventstream.MapMessage{
 			"srv":       "info",
 			"msg":       "test",
 			"err":       "err",

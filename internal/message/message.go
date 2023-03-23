@@ -1,70 +1,40 @@
-//
-// @project geniusrabbit::eventstream 2017, 2019-2020
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019-2020
-//
-
 package message
 
 import (
-	"encoding/json"
-	"errors"
-	"strconv"
-
-	"github.com/demdxx/gocast/v2"
+	"github.com/pkg/errors"
 )
 
 // Errors set
 var (
 	ErrUndefinedDataType       = errors.New("undefined message data types")
 	ErrInvalidMessageFieldType = errors.New("invalid message field type")
+	ErrFieldNotFound           = errors.New("field not found")
 )
 
 type unmarshalel interface {
 	Unmarshal(data []byte, v any) error
 }
 
-// Message object
-type Message map[string]any
-
-// MessageDecode from bytes
-func MessageDecode(data []byte, converter unmarshalel) (msg Message, err error) {
-	err = converter.Unmarshal(data, &msg)
-	return msg, err
+// Message interface
+// TODO: refactor this interface
+type Message interface {
+	Get(name string) (any, error)
+	Item(key string, def any) any
+	ItemCast(key string, fieldType FieldType, length int, format string) any
+	Str(key, def string) string
+	JSON() string
+	Map() map[string]any
 }
 
-// JSON data string
-func (m Message) JSON() string {
-	if m == nil {
-		return "null"
-	}
-	data, _ := json.Marshal(m)
-	return string(data)
-}
+type dummyMessage struct{}
 
-// Item returns the value by key name or default
-func (m Message) Item(key string, def any) any {
-	if v, ok := m[key]; ok && v != nil {
-		return v
-	}
-	return def
-}
-
-// String item value
-func (m Message) String(key, def string) string {
-	switch v := m.Item(key, def).(type) {
-	case float64:
-		return strconv.FormatFloat(v, 'G', 6, 64)
-	default:
-		return gocast.Str(v)
-	}
-}
-
-// Map returns the message as map[string]any
-func (m Message) Map() map[string]any {
-	return map[string]any(m)
-}
-
-// ItemCast converts any key value into the field_type
-func (m Message) ItemCast(key string, fieldType FieldType, length int, format string) any {
+func (m *dummyMessage) Get(name string) (any, error) { return nil, errors.Wrap(ErrFieldNotFound, name) }
+func (m *dummyMessage) Item(key string, def any) any { return def }
+func (m *dummyMessage) ItemCast(key string, fieldType FieldType, length int, format string) any {
 	return fieldType.CastExt(m.Item(key, nil), length, format)
 }
+func (m *dummyMessage) Str(key, def string) string { return def }
+func (m *dummyMessage) JSON() string               { return "null" }
+func (m *dummyMessage) Map() map[string]any        { return nil }
+
+var EmptyMessage Message = (*dummyMessage)(nil)

@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"reflect"
 
-	"github.com/geniusrabbit/eventstream/internal/condition"
 	"github.com/geniusrabbit/eventstream/internal/metrics"
+	"github.com/geniusrabbit/eventstream/utils/condition"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )

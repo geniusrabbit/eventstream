@@ -6,9 +6,9 @@
 package eventstream
 
 import (
-	"github.com/geniusrabbit/eventstream/internal/condition"
 	"github.com/geniusrabbit/eventstream/internal/metrics"
 	"github.com/geniusrabbit/eventstream/stream/wrapper"
+	"github.com/geniusrabbit/eventstream/utils/condition"
 )
 
 // NewStreamWrapper with support condition

@@ -3,7 +3,7 @@ package ncstreams
 import (
 	"go.uber.org/zap"
 
-	"github.com/geniusrabbit/eventstream/converter"
+	"github.com/geniusrabbit/eventstream/utils/converter"
 )
 
 // Options contains options of the source

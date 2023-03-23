@@ -118,6 +118,9 @@ func (q *Query) QueryString() string {
 
 // ParamsBy by message
 func (q *Query) ParamsBy(msg eventstream.Message) paramsResult {
+	if msg == nil {
+		msg = eventstream.EmptyMessage
+	}
 	var (
 		iterated      = q.iterateBy != ``
 		iteratorSlice = gocast.Cast[[]any](msg.Item(q.iterateBy, nil))
@@ -146,6 +149,9 @@ func (q *Query) ParamsBy(msg eventstream.Message) paramsResult {
 
 // Extract message by special fields and types
 func (q *Query) Extract(msg eventstream.Message) []map[string]any {
+	if msg == nil {
+		msg = eventstream.EmptyMessage
+	}
 	var (
 		iterated      = q.iterateBy != ``
 		iteratorSlice = gocast.Cast[[]any](msg.Item(q.iterateBy, nil))

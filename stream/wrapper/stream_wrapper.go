@@ -8,10 +8,10 @@ package wrapper
 import (
 	"context"
 
-	"github.com/geniusrabbit/eventstream/internal/condition"
 	"github.com/geniusrabbit/eventstream/internal/message"
 	"github.com/geniusrabbit/eventstream/internal/metrics"
 	"github.com/geniusrabbit/eventstream/stream"
+	"github.com/geniusrabbit/eventstream/utils/condition"
 )
 
 // StreamWrapper extends any stream interface with conditional

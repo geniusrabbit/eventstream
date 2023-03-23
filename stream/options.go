@@ -3,8 +3,8 @@ package stream
 import (
 	"encoding/json"
 
-	"github.com/geniusrabbit/eventstream/internal/condition"
 	"github.com/geniusrabbit/eventstream/internal/metrics"
+	"github.com/geniusrabbit/eventstream/utils/condition"
 )
 
 // Option of the stream

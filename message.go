@@ -6,10 +6,13 @@ type unmarshalel interface {
 	Unmarshal(data []byte, v any) error
 }
 
+var EmptyMessage = message.EmptyMessage
+
 type (
-	Formater  = message.Formater
-	FieldType = message.FieldType
-	Message   = message.Message
+	Formater   = message.Formater
+	FieldType  = message.FieldType
+	Message    = message.Message
+	MapMessage = message.MapMessage
 )
 
 // Field scalar types enum
@@ -39,5 +42,5 @@ func TypeByString(t string) FieldType {
 
 // MessageDecode from bytes
 func MessageDecode(data []byte, converter unmarshalel) (msg Message, err error) {
-	return message.MessageDecode(data, converter)
+	return message.MapMessageDecode(data, converter)
 }

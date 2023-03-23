@@ -9,7 +9,7 @@ import (
 
 func TestMessageItemCast(t *testing.T) {
 	now := time.Now()
-	msg := Message{
+	msg := MapMessage{
 		"id":        int64(1),
 		"date":      now.Format("2006/01/02 15:04:05"),
 		"timestamp": now.UnixNano(),

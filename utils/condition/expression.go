@@ -31,6 +31,6 @@ func (e *Expression) Check(ctx context.Context, msg message.Message) bool {
 	if e.whereCondition == nil {
 		return true
 	}
-	res, err := e.whereCondition.Eval(govaluate.MapParameters(msg.Map()))
+	res, err := e.whereCondition.Eval(msg)
 	return err == nil && gocast.Bool(res)
 }

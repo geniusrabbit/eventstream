@@ -22,8 +22,8 @@ func TestCondition(t *testing.T) {
 
 	for _, cond := range conds {
 		t.Run(fmt.Sprintf("%T", cond), func(t *testing.T) {
-			assert.True(t, cond.Check(ctx, message.Message{"a": 1}))
-			assert.False(t, cond.Check(ctx, message.Message{"a": 2}))
+			assert.True(t, cond.Check(ctx, message.MapMessage{"a": 1}))
+			assert.False(t, cond.Check(ctx, message.MapMessage{"a": 2}))
 		})
 	}
 }

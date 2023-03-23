@@ -29,7 +29,7 @@ func PatternKeyFromTemplate(template string) *PatternKey {
 func (key *PatternKey) Prepare(msg message.Message) string {
 	val := key.value
 	for _, vr := range key.vars {
-		val = strings.ReplaceAll(val, "{{"+vr+"}}", msg.String(vr, ""))
+		val = strings.ReplaceAll(val, "{{"+vr+"}}", msg.Str(vr, ""))
 	}
 	return val
 }
