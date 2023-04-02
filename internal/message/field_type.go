@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/demdxx/gocast/v2"
+	"github.com/google/uuid"
 )
 
 var typeList = []string{
@@ -91,7 +92,17 @@ func (t FieldType) Cast(v any) any {
 			v = []byte(gocast.Str(v))
 		}
 	case FieldTypeUUID:
-		v = valueToUUIDBytes(v)
+		switch vv := v.(type) {
+		case uuid.UUID:
+			return vv
+		case string:
+			if uu, err := uuid.Parse(vv); err == nil {
+				return uu
+			}
+			return uuid.Nil
+		default:
+			return uuid.Nil
+		}
 	case FieldTypeInt8:
 		return gocast.Number[int8](v)
 	case FieldTypeInt32:

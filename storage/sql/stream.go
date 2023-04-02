@@ -106,8 +106,12 @@ func (s *StreamSQL) Run(ctx context.Context) error {
 
 	for _, ok := <-ch; ok; {
 		if lastMsg, err := s.writeBuffer(false); err != nil {
+			var msgJSON string
+			if lastMsg != nil {
+				msgJSON = lastMsg.JSON()
+			}
 			s.logger.Error(`write-buffer`,
-				zap.String(`last_message`, lastMsg.JSON()),
+				zap.String(`last_message`, msgJSON),
 				zap.Error(err))
 		}
 		time.Sleep(time.Millisecond * 50)
@@ -208,7 +212,8 @@ func (s *StreamSQL) writeBuffer(flush bool) (msg message.Message, err error) {
 	}
 
 	if err == nil {
-		_, _ = stmt.Exec()
+		// INFO: deactivated because of the bug in the driver of the ClickHouse 2.0
+		// _, _ = stmt.Exec()
 		err = tx.Commit()
 	} else {
 		_ = tx.Rollback()

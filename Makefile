@@ -1,6 +1,4 @@
 SHELL := /bin/bash -o pipefail
-UNAME_OS := $(shell uname -s)
-UNAME_ARCH := $(shell uname -m)
 
 BUILD_GOOS ?= $(or ${DOCKER_DEFAULT_GOOS},linux)
 BUILD_GOARCH ?= $(or ${DOCKER_DEFAULT_GOARCH},amd64)

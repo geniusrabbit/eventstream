@@ -1,6 +1,6 @@
 //
-// @project geniusrabbit::eventstream 2017
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017
+// @project geniusrabbit::eventstream 2017, 2023
+// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2023
 //
 
 package message
@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/demdxx/gocast/v2"
-	"github.com/google/uuid"
 )
 
 var (
@@ -38,7 +37,7 @@ var (
 // ParseTime from string
 func parseTime(tm string) (t time.Time, err error) {
 	for _, f := range timeFormats {
-		if t, err = time.Parse(f, tm); nil == err {
+		if t, err = time.Parse(f, tm); err == nil {
 			break
 		}
 	}
@@ -143,30 +142,4 @@ func valueToIP(v any) (ip net.IP) {
 		ip = net.ParseIP(gocast.Str(v))
 	}
 	return ip
-}
-
-func valueToUUIDBytes(v any) (res []byte) {
-	switch vv := v.(type) {
-	case []byte:
-		if len(vv) > 16 {
-			if _uuid, err := uuid.Parse(string(vv)); err == nil {
-				res = _uuid[:]
-			}
-		} else {
-			res = bytesSize(vv, 16)
-		}
-	case string:
-		if _uuid, err := uuid.Parse(vv); err == nil {
-			res = _uuid[:]
-		}
-	default:
-		if v == nil {
-			res = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-		} else {
-			if _uuid, err := uuid.Parse(gocast.Str(v)); err == nil {
-				res = _uuid[:]
-			}
-		}
-	}
-	return res
 }

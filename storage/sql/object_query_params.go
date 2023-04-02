@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/demdxx/gocast/v2"
+	"github.com/google/uuid"
+
 	ev "github.com/geniusrabbit/eventstream"
 )
 
@@ -23,6 +25,7 @@ var (
 var (
 	ipType         = reflect.TypeOf(net.IP{})
 	timeType       = reflect.TypeOf(time.Time{})
+	uuidType       = reflect.TypeOf(uuid.UUID{})
 	int32ArrayType = reflect.TypeOf([]int32{})
 	int64ArrayType = reflect.TypeOf([]int64{})
 )
@@ -179,6 +182,8 @@ func typeByValue(tp reflect.Type, fieldType, size string) ev.FieldType {
 				return ev.FieldTypeUnixnano
 			}
 			return ev.FieldTypeDate
+		case uuidType:
+			return ev.FieldTypeUUID
 		case int32ArrayType:
 			return ev.FieldTypeArrayInt32
 		case int64ArrayType:

@@ -8,19 +8,13 @@ package clickhouse
 import (
 	"context"
 	"database/sql"
-	"fmt"
-	"net"
-	"net/url"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
 	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/internal/metrics"
-	"github.com/geniusrabbit/eventstream/internal/utils"
 	"github.com/geniusrabbit/eventstream/internal/zlogger"
 	"github.com/geniusrabbit/eventstream/storage"
 	sqlstore "github.com/geniusrabbit/eventstream/storage/sql"
@@ -43,14 +37,11 @@ type Clickhouse struct {
 // Open new clickhouse storage stream
 func Open(ctx context.Context, connect string, options ...any) (*Clickhouse, error) {
 	var (
-		urlObj, err = url.Parse(connect)
-		conn        *sql.DB
-		config      storage.Config
-		store       = Clickhouse{connect: connect}
+		err    error
+		conn   *sql.DB
+		config storage.Config
+		store  = Clickhouse{connect: connect}
 	)
-	if err != nil {
-		return nil, err
-	}
 	for _, opt := range options {
 		switch o := opt.(type) {
 		case storage.Option:
@@ -61,7 +52,7 @@ func Open(ctx context.Context, connect string, options ...any) (*Clickhouse, err
 			return nil, errors.Wrapf(storage.ErrInvalidOption, `%+v`, opt)
 		}
 	}
-	if conn, err = clickHouseConnect(urlObj, config.Debug); err != nil {
+	if conn, err = sql.Open("clickhouse", connect); err != nil {
 		return nil, err
 	}
 	store.debug = config.Debug
@@ -132,8 +123,7 @@ func (c *Clickhouse) Connection() (_ *sql.DB, err error) {
 		}
 	}
 	if c.conn == nil {
-		urlObj, _ := url.Parse(c.connect)
-		c.conn, err = clickHouseConnect(urlObj, c.debug)
+		c.conn, err = sql.Open("clickhouse", c.connect)
 	}
 	return c.conn, err
 }
@@ -141,33 +131,4 @@ func (c *Clickhouse) Connection() (_ *sql.DB, err error) {
 // Close clickhouse connection
 func (c *Clickhouse) Close() error {
 	return c.conn.Close()
-}
-
-// clickHouseConnect source
-// URL example tcp://login:pass@hostname:port/name?sslmode=disable&idle=10&maxcon=30
-func clickHouseConnect(u *url.URL, debug bool) (*sql.DB, error) {
-	var (
-		query         = u.Query()
-		idle          = utils.StringOrDefault(query.Get("idle"), "30")
-		maxcon        = utils.StringOrDefault(query.Get("maxcon"), "0")
-		lifetime      = utils.StringOrDefault(query.Get("lifetime"), "0")
-		host, port, _ = net.SplitHostPort(u.Host)
-		dataSource    = fmt.Sprintf("tcp://%s:%s?database=%s", host, utils.StringOrDefault(port, "9000"), u.Path[1:])
-	)
-
-	// Open connection
-	conn, err := sql.Open("clickhouse", dataSource)
-	if err != nil {
-		return nil, err
-	}
-	if count, _ := strconv.Atoi(idle); count >= 0 {
-		conn.SetMaxIdleConns(count)
-	}
-	if count, _ := strconv.Atoi(maxcon); count >= 0 {
-		conn.SetMaxOpenConns(count)
-	}
-	if lifetime, _ := strconv.Atoi(lifetime); lifetime >= 0 {
-		conn.SetConnMaxLifetime(time.Duration(lifetime) * time.Second)
-	}
-	return conn, nil
 }

@@ -131,6 +131,24 @@ func TestParamExtractionsQuery(t *testing.T) {
 				countTarget: 2,
 				msg:         msg1,
 			},
+			// Object query
+			{
+				query:       `INSERT INTO {{target}} ({{fields}}) VALUES({{values}})`,
+				queryTarget: `INSERT INTO my_table (service, msg, error, timestamp) VALUES(?, ?, ?, ?)`,
+				target:      "my_table",
+				fields: struct {
+					Service   string    `field:"srv" target:"service"`
+					Message   string    `field:"msg"`
+					Error     string    `field:"err" target:"error"`
+					Timestamp time.Time `field:"timestamp" format:"2006-01-02"`
+				}{
+					Service:   "test",
+					Message:   "msg",
+					Error:     "error",
+					Timestamp: time.Now(),
+				},
+				msg: msg1,
+			},
 		}
 	)
 	for _, test := range tests {
