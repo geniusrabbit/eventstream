@@ -61,10 +61,10 @@ func escapeBytes(data []byte, size int) string {
 		if size > 0 && i > size {
 			break
 		}
-		buff.WriteString(fmt.Sprintf("\\%03o", b))
+		_, _ = buff.WriteString(fmt.Sprintf("\\%03o", b))
 	}
 	for i := len(data); i < size; i++ {
-		buff.WriteString(fmt.Sprintf("\\%03o", byte(0)))
+		_, _ = buff.WriteString(fmt.Sprintf("\\%03o", byte(0)))
 	}
 	return buff.String()
 }
