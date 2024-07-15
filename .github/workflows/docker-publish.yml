@@ -12,7 +12,7 @@ env:
   REGISTRY: docker.io
   # github.repository as <account>/<repo>
   IMAGE_NAME: ${{ github.repository }}
-  DEPLOY_OS_LIST: linux
+  DEPLOY_OS_LIST: linux darwin
   BUILD_GOAMD64_LIST: 1 2 3 4
   DEPLOY_ARCH_LIST: amd64 arm64 arm
   BUILD_GOARM_LIST: 6 7
