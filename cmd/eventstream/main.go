@@ -26,7 +26,6 @@ import (
 )
 
 var (
-	appVersion   string
 	buildCommit  string
 	buildVersion string
 	buildDate    string
@@ -61,7 +60,6 @@ func init() {
 	loggerObj, err := zlogger.New(config.ServiceName, config.LogEncoder,
 		config.LogLevel, config.LogAddr, zap.Fields(
 			zap.String("commit", buildCommit),
-			zap.String("version", appVersion),
 			zap.String("build_version", buildVersion),
 			zap.String("build_date", buildDate),
 		))
