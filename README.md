@@ -111,6 +111,7 @@ Metrics helps analyze some events during processing and monitor streams state.
 Every stream can process metrics with the keyword `metrics`.
 
 Example:
+
 ```js
 metrics = [
   {
@@ -151,7 +152,8 @@ curl "http://hostname:port/health-check"
 - [ ] Add MySQL database storage
 - [ ] Add PostgreSQL database storage
 - [ ] Add MongoDB database storage
-- [ ] Add Redis database storage
+- [X] Add HTTP/Ping driver storage
+- [X] Add Redis database storage
 - [X] Prepare evetstream as Framework extension
 - [X] Add Kafka stream writer support
 - [X] Add NATS stream writer support
@@ -159,7 +161,7 @@ curl "http://hostname:port/health-check"
 - [ ] Add RabbitMQ stream source/storage support
 - [X] Add health check API
 - [X] Add customizable prometheus metrics
-- [x] Add 'where' stream condition (http://github.com/Knetic/govaluate)
+- [x] Add 'where' stream condition (<http://github.com/Knetic/govaluate>)
 - [X] Ack message only if success
 - [X] Buffering all data until be stored
 - [X] Add support HCL config

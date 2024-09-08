@@ -3,7 +3,14 @@ version = "1"
 description = "Example of the logs writing"
 
 stores {
+  ping {
+    driver  = "ping"
+    connect = "http://localhost:3306"
+    method  = "GET"
+  }
+
   clickhouse_1 {
+    driver  = "clickhouse"
     connect = "{{@env:CLICKHOUSE_STORE_CONNECT}}"
     buffer  = 1000
     init_query = [
@@ -23,6 +30,7 @@ stores {
   }
 
   nats_store {
+    driver  = "nats"
     connect = "{{@env:NATS_STORE_CONNECT}}"
   }
 }
@@ -30,13 +38,10 @@ stores {
 // Source could be any supported stream service like kafka, nats, etc...
 sources {
   nats_1 {
+    driver  = "nats"
     connect = "{{@env:NATS_STREAM_CONNECT}}"
     format  = "json"
   }
-}
-
-variable "service_info" {
-  default = "info"
 }
 
 // Streams it's pipelines which have source and destination store

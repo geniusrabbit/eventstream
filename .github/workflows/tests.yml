@@ -12,6 +12,9 @@ on:
       - master
       - main
 
+env:
+  GO_VERSION: 1.23.x
+
 concurrency:
   group: ci-tests-${{ github.ref }}
   cancel-in-progress: true
@@ -31,15 +34,15 @@ jobs:
 
     steps:
     - name: Install Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v5
       with:
-        go-version: 1.22.x
+        go-version: ${{ env.GO_VERSION }}
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Run linters
-      uses: golangci/golangci-lint-action@v3
+      uses: golangci/golangci-lint-action@v6
       with:
-        version: v1.59.1
+        version: latest
         skip-cache: true
         args: --fix
 
@@ -48,17 +51,16 @@ jobs:
     needs: lint
     strategy:
       matrix:
-        go-version: [1.22.x]
         platform: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.platform }}
     steps:
     - name: Install Go
       if: success()
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v5
       with:
-        go-version: ${{ matrix.go-version }}
+        go-version: ${{ env.GO_VERSION }}
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Run tests
       run: go test -v -covermode=count
 
@@ -68,19 +70,17 @@ jobs:
     needs: test
     strategy:
       fail-fast: false
-      matrix:
-        go-version: [1.22.x]
     steps:
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v5
         with:
-          go-version: ${{ matrix.go-version }}
-      - uses: actions/checkout@v3
+          go-version: ${{ env.GO_VERSION }}
+      - uses: actions/checkout@v4
       - run: go test -v -coverprofile=profile.cov ./...
       - name: Send coverage
         uses: shogo82148/actions-goveralls@v1
         with:
           path-to-profile: profile.cov
-          flag-name: Go-${{ matrix.go-version }}
+          flag-name: Go-${{ env.GO_VERSION }}
           parallel: true
 
   # notifies that all test jobs are finished.

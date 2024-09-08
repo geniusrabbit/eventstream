@@ -1,25 +1,28 @@
 # syntax=docker/dockerfile:1.2
-FROM --platform=$BUILDPLATFORM alpine:latest AS basic
+FROM --platform=linux/amd64 golang:latest AS builder
 
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
 
 # Create appuser.
 ENV USER=appuser
-ENV UID=10001 
-
-RUN apk --update --no-cache add tzdata curl && rm -rf /var/cache/apk/*
-RUN cp "$(which curl)" /tmp/curl
+ENV UID=10001
 
 # See https://stackoverflow.com/a/55757473/12429735RUN 
-RUN adduser \    
-    --disabled-password \    
-    --gecos "" \    
-    --home "/nonexistent" \    
-    --shell "/sbin/nologin" \    
-    --no-create-home \    
-    --uid "${UID}" \    
+RUN adduser \
+    --disabled-password \
+    --gecos "" \
+    --home "/nonexistent" \
+    --shell "/sbin/nologin" \
+    --no-create-home \
+    --uid "${UID}" \
     "${USER}"
+
+# RUN apk update && apk upgrade && apk add --no-cache ca-certificates
+RUN apt-get update && apt-get install -y ca-certificates && apt-get clean
+RUN update-ca-certificates
+
+RUN cp /usr/local/go/lib/time/zoneinfo.zip /var/zoneinfo.zip
 
 ############################
 FROM --platform=$TARGETPLATFORM scratch
@@ -32,14 +35,13 @@ ARG TARGETPLATFORM
 ARG BUILDPLATFORM
 
 ENV LOG_LEVEL=info
-ENV ZONEINFO=/usr/share/zoneinfo/
 
 # Import the user and group files from the builder.
-COPY --from=basic /tmp/curl /curl
-COPY --from=basic /etc/passwd /etc/passwd
-COPY --from=basic /etc/group /etc/group
-COPY --from=basic /usr/share/zoneinfo/ /usr/share/zoneinfo/
-ADD ./deploy/production/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
+COPY --from=builder /etc/passwd /etc/passwd
+COPY --from=builder /etc/group /etc/group
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /var/zoneinfo.zip /usr/local/go/lib/time/
+
 ADD .build/${TARGETPLATFORM}/eventstream /eventstream
 
 # Use an unprivileged user.
