@@ -51,6 +51,9 @@ func PatternKeysFrom(values ...string) *PatterKeys {
 
 // Prepare values by message
 func (tags *PatterKeys) Prepare(msg message.Message) []string {
+	if tags == nil || len(tags.keys) == 0 {
+		return nil
+	}
 	vals := make([]string, 0, len(tags.keys))
 	for _, tag := range tags.keys {
 		vals = append(vals, tag.Prepare(msg))
