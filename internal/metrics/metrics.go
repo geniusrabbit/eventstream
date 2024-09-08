@@ -51,7 +51,7 @@ type Metric struct {
 
 // Labels list of tags
 func (m *Metric) Labels() []string {
-	if m.Tags == nil || len(m.Tags) == 0 || m.Tags[0] == nil || len(m.Tags[0]) == 0 {
+	if len(m.Tags) == 0 || len(m.Tags[0]) == 0 {
 		return nil
 	}
 	labels := make([]string, 0, len(m.Tags[0]))
@@ -62,7 +62,7 @@ func (m *Metric) Labels() []string {
 }
 
 func (m *Metric) tagValues() *patternkey.PatterKeys {
-	if m.Tags == nil || len(m.Tags) == 0 || m.Tags[0] == nil || len(m.Tags[0]) == 0 {
+	if len(m.Tags) == 0 || len(m.Tags[0]) == 0 {
 		return nil
 	}
 	vals := make([]string, 0, len(m.Tags[0]))

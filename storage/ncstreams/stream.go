@@ -38,7 +38,7 @@ func newStream(pub nc.Publisher, conf *stream.Config) (eventstream.Streamer, err
 	}
 	for _, target := range preConfig.Targets {
 		var fields map[string]any
-		if target.Fields != nil && len(target.Fields) > 0 {
+		if len(target.Fields) > 0 {
 			fields = target.Fields
 		}
 		template, err := newMessageTemplate(fields, target.Where)
