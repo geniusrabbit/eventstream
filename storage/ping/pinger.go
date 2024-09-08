@@ -43,8 +43,9 @@ func (p *pinger) Stream(options ...any) (stream.Streamer, error) {
 		return nil, err
 	}
 	strm := &pingStream{
-		url:    patternkey.PatternKeyFromTemplate(gocast.Or(strmConf.URL, p.URL)),
-		method: gocast.Or(strmConf.Method, p.Method),
+		url:         patternkey.PatternKeyFromTemplate(gocast.Or(strmConf.URL, p.URL)),
+		method:      gocast.Or(strmConf.Method, p.Method),
+		contentType: gocast.Or(strmConf.ContentType, "application/json"),
 	}
 	cond, err := conf.Condition()
 	if err != nil {
