@@ -2,14 +2,16 @@ package ping
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"strings"
+
+	"go.uber.org/zap"
 
 	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/internal/message"
 	"github.com/geniusrabbit/eventstream/internal/patternkey"
 	"github.com/geniusrabbit/eventstream/internal/zlogger"
-	"go.uber.org/zap"
 )
 
 type pingStreamConfig struct {
@@ -39,25 +41,34 @@ func (p *pingStream) ID() string { return p.id }
 
 // Put implements stream.Streamer.
 func (p *pingStream) Put(ctx context.Context, msg message.Message) error {
-	nUrl := p.url.Prepare(msg)
+	var (
+		err      error
+		resp     *http.Response
+		respData []byte
+		nUrl     = p.url.Prepare(msg)
+	)
 	if strings.HasPrefix(nUrl, "//") {
 		nUrl = "http:" + nUrl
 	}
 	if p.method == http.MethodGet {
-		_, err := p.httpClient.Get(nUrl)
-		return err
+		_, err = p.httpClient.Get(nUrl)
+	} else {
+		resp, err = p.httpClient.Post(nUrl, p.contentType, strings.NewReader(msg.JSON()))
 	}
-	resp, err := p.httpClient.Post(nUrl, p.contentType, strings.NewReader(msg.JSON()))
-	if err == nil {
+	if resp != nil && resp.Body != nil && err == nil {
+		respData, _ = io.ReadAll(resp.Body)
 		_ = resp.Body.Close()
+	}
+	if err == nil {
 		zlogger.FromContext(ctx).Info("ping",
-			zap.String("method", p.method),
 			zap.String("url", nUrl),
-			zap.Int("status", resp.StatusCode))
+			zap.String("method", p.method),
+			zap.Int("status", resp.StatusCode),
+			zap.String("response", string(respData)))
 	} else {
 		zlogger.FromContext(ctx).Error("ping",
-			zap.String("method", p.method),
 			zap.String("url", nUrl),
+			zap.String("method", p.method),
 			zap.Error(err))
 	}
 	return err

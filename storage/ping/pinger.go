@@ -1,6 +1,8 @@
 package ping
 
 import (
+	"net/http"
+
 	"github.com/demdxx/gocast/v2"
 	"github.com/geniusrabbit/eventstream"
 	"github.com/geniusrabbit/eventstream/internal/metrics"
@@ -42,10 +44,15 @@ func (p *pinger) Stream(options ...any) (stream.Streamer, error) {
 	if metricExec, err = conf.Metrics.Metric(); err != nil {
 		return nil, err
 	}
+	// Disable insecure skip verify
+	httpTransport := http.DefaultTransport.(*http.Transport)
+	httpTransport.TLSClientConfig.InsecureSkipVerify = false
+	// Init stream instance
 	strm := &pingStream{
 		url:         patternkey.PatternKeyFromTemplate(gocast.Or(strmConf.URL, p.URL)),
 		method:      gocast.Or(strmConf.Method, p.Method),
 		contentType: gocast.Or(strmConf.ContentType, "application/json"),
+		httpClient:  http.Client{Transport: httpTransport},
 	}
 	cond, err := conf.Condition()
 	if err != nil {
