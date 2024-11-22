@@ -1,6 +1,7 @@
 package ping
 
 import (
+	"crypto/tls"
 	"net/http"
 
 	"github.com/demdxx/gocast/v2"
@@ -45,8 +46,12 @@ func (p *pinger) Stream(options ...any) (stream.Streamer, error) {
 		return nil, err
 	}
 	// Disable insecure skip verify
-	httpTransport := http.DefaultTransport.(*http.Transport)
-	httpTransport.TLSClientConfig.InsecureSkipVerify = false
+	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
+	if httpTransport.TLSClientConfig == nil {
+		httpTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	} else {
+		httpTransport.TLSClientConfig.InsecureSkipVerify = true
+	}
 	// Init stream instance
 	strm := &pingStream{
 		url:         patternkey.PatternKeyFromTemplate(gocast.Or(strmConf.URL, p.URL)),
