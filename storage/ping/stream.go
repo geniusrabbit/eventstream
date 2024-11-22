@@ -51,7 +51,7 @@ func (p *pingStream) Put(ctx context.Context, msg message.Message) error {
 		nUrl = "http:" + nUrl
 	}
 	if p.method == http.MethodGet {
-		_, err = p.httpClient.Get(nUrl)
+		resp, err = p.httpClient.Get(nUrl)
 	} else {
 		resp, err = p.httpClient.Post(nUrl, p.contentType, strings.NewReader(msg.JSON()))
 	}
