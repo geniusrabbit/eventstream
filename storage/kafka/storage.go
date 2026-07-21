@@ -4,10 +4,11 @@ package kafka
 import (
 	"context"
 
-	"github.com/geniusrabbit/eventstream"
-	"github.com/geniusrabbit/eventstream/storage"
 	nc "github.com/geniusrabbit/notificationcenter/v2"
 	nckafka "github.com/geniusrabbit/notificationcenter/v2/kafka"
+
+	"github.com/geniusrabbit/eventstream"
+	"github.com/geniusrabbit/eventstream/storage"
 )
 
 func newPublisher(ctx context.Context, url string) (nc.Publisher, error) {

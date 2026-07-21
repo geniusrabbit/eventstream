@@ -17,7 +17,7 @@ generate-code: ## Generate mocks for the project
 
 .PHONY: lint
 lint: ## Run linter
-	golangci-lint run -v ./...
+	golangci-lint run -v --build-tags="$(APP_TAGS)" ./...
 
 .PHONY: test
 test: ## Run package test

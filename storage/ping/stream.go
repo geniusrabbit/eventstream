@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/geniusrabbit/blaze-api/pkg/context/ctxlogger"
 	"go.uber.org/zap"
 
-	"github.com/geniusrabbit/blaze-api/pkg/context/ctxlogger"
 	"github.com/geniusrabbit/eventstream/internal/patternkey"
 	"github.com/geniusrabbit/eventstream/pkg/message"
 	"github.com/geniusrabbit/eventstream/stream"

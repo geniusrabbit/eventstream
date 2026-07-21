@@ -4,10 +4,11 @@ package nats
 import (
 	"context"
 
-	"github.com/geniusrabbit/eventstream"
-	"github.com/geniusrabbit/eventstream/storage"
 	nc "github.com/geniusrabbit/notificationcenter/v2"
 	ncnats "github.com/geniusrabbit/notificationcenter/v2/nats"
+
+	"github.com/geniusrabbit/eventstream"
+	"github.com/geniusrabbit/eventstream/storage"
 )
 
 func newPublisher(ctx context.Context, url string) (nc.Publisher, error) {

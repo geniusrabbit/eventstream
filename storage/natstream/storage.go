@@ -4,10 +4,11 @@ package natstream
 import (
 	"context"
 
-	"github.com/geniusrabbit/eventstream"
-	"github.com/geniusrabbit/eventstream/storage"
 	nc "github.com/geniusrabbit/notificationcenter/v2"
 	ncnatstream "github.com/geniusrabbit/notificationcenter/v2/natstream"
+
+	"github.com/geniusrabbit/eventstream"
+	"github.com/geniusrabbit/eventstream/storage"
 )
 
 func newPublisher(ctx context.Context, url string) (nc.Publisher, error) {
