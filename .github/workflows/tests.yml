@@ -13,7 +13,8 @@ on:
       - main
 
 env:
-  GO_VERSION: 1.23.x
+  GO_VERSION: 1.25.x
+  APP_BUILD_TAGS: all
 
 concurrency:
   group: ci-tests-${{ github.ref }}
@@ -44,7 +45,7 @@ jobs:
       with:
         version: latest
         skip-cache: true
-        args: --fix
+        args: --fix --build-tags=all
 
   test:
     if: github.event.pull_request.draft == false
@@ -62,7 +63,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     - name: Run tests
-      run: go test -v -covermode=count
+      run: go test -tags ${{ env.APP_BUILD_TAGS }} -v -covermode=count ./...
 
   coverage:
     if: github.event.pull_request.draft == false
@@ -75,7 +76,7 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
       - uses: actions/checkout@v4
-      - run: go test -v -coverprofile=profile.cov ./...
+      - run: go test -tags ${{ env.APP_BUILD_TAGS }} -v -coverprofile=profile.cov ./...
       - name: Send coverage
         uses: shogo82148/actions-goveralls@v1
         with:

@@ -1,10 +1,3 @@
-//
-// @project geniusrabbit::eventstream 2017 - 2023
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2023
-//
-
-// TODO: Store all messages if not sended yet
-
 package sql
 
 import (
@@ -17,7 +10,8 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/geniusrabbit/eventstream"
-	"github.com/geniusrabbit/eventstream/internal/message"
+	"github.com/geniusrabbit/eventstream/pkg/message"
+	"github.com/geniusrabbit/eventstream/stream"
 )
 
 var (
@@ -58,7 +52,7 @@ type StreamSQL struct {
 }
 
 // NewStreamSQL creates streamer object for SQL based stream integration
-func NewStreamSQL(id string, connector Connector, options ...Option) (eventstream.Streamer, error) {
+func NewStreamSQL(connector Connector, options ...Option) (stream.Streamer, error) {
 	var opts Options
 	for _, opt := range options {
 		if err := opt(&opts); err != nil {
@@ -68,6 +62,7 @@ func NewStreamSQL(id string, connector Connector, options ...Option) (eventstrea
 	if opts.QueryBuilder == nil {
 		return nil, errInvalidQueryObject
 	}
+	id := opts.ID
 	return &StreamSQL{
 		debug:         opts.Debug,
 		id:            id,
@@ -76,7 +71,7 @@ func NewStreamSQL(id string, connector Connector, options ...Option) (eventstrea
 		flushInterval: opts.getFlushInterval(),
 		buffer:        make(chan eventstream.Message, opts.getBlockSize()*2),
 		query:         opts.QueryBuilder,
-		logger:        opts.getLogger(),
+		logger:        opts.getLogger().With(zap.String(`stream_id`, id)),
 	}, nil
 }
 

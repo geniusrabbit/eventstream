@@ -1,21 +1,16 @@
-//
-// @project geniusrabbit::eventstream 2017, 2019 - 2023
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019 - 2023
-//
-
+// Package wrapper provides Streamer decorators (conditions, metrics).
 package wrapper
 
 import (
 	"context"
 
-	"github.com/geniusrabbit/eventstream/internal/message"
 	"github.com/geniusrabbit/eventstream/internal/metrics"
+	"github.com/geniusrabbit/eventstream/pkg/condition"
+	"github.com/geniusrabbit/eventstream/pkg/message"
 	"github.com/geniusrabbit/eventstream/stream"
-	"github.com/geniusrabbit/eventstream/utils/condition"
 )
 
-// StreamWrapper extends any stream interface with conditional
-// check support to any message
+// StreamWrapper extends a Streamer with optional where-conditions and metrics.
 type StreamWrapper struct {
 	// Stream pricessor
 	stream stream.Streamer
@@ -54,10 +49,7 @@ func (s *StreamWrapper) Put(ctx context.Context, msg message.Message) error {
 
 // Check if the message meets the conditions
 func (s *StreamWrapper) Check(ctx context.Context, msg message.Message) bool {
-	if s.stream == nil {
-		return true
-	}
-	if !s.stream.Check(ctx, msg) {
+	if s.stream != nil && !s.stream.Check(ctx, msg) {
 		return false
 	}
 	if s.whereCondition != nil {

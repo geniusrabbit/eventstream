@@ -1,0 +1,67 @@
+version: "1"
+description: Example of the logs writing
+
+stores:
+  ping:
+    driver: ping
+    connect: "http://localhost:3306"
+    method: GET
+
+  clickhouse_1:
+    driver: clickhouse
+    connect: "{{@env:CLICKHOUSE_STORE_CONNECT}}"
+    buffer: 1000
+    init_query:
+      - "CREATE DATABASE IF NOT EXISTS stat;"
+      - |
+        CREATE TABLE IF NOT EXISTS stat.testlog (
+          timestamp        DateTime
+        , datemark         Date default toDate(timestamp)
+        , service          String
+        , msg              String
+        , error            String
+        , ext              String
+        , created_at       DateTime default now()
+        ) Engine=Memory COMMENT 'The test table';
+
+  nats_store:
+    driver: nats
+    connect: "{{@env:NATS_STORE_CONNECT}}"
+
+sources:
+  nats_1:
+    driver: nats
+    connect: "{{@env:NATS_STREAM_CONNECT}}"
+    format: json
+
+streams:
+  log_3:
+    store: clickhouse_1
+    source: nats_1
+    target: stat.testlog
+    fields: "service=srv,msg,error=err,timestamp=@toTimestamp({{timestamp:date}})"
+
+  log_4:
+    store: clickhouse_1
+    source: nats_1
+    target: stat.testlog
+    fields:
+      - "service=srv"
+      - "msg"
+      - "error=err:string"
+      - "timestamp=@toTimestamp('{{timestamp:date|2006-01-02 15:04:05}}')"
+
+  nats_1:
+    store: nats_store
+    source: nats_1
+    targets:
+      - fields:
+          type: message
+          service: "{{service}}"
+          message: "{{msg}}"
+        where: "!error"
+      - fields:
+          type: error
+          service: "{{service}}"
+          error: "{{msg}}"
+        where: "error"

@@ -1,8 +1,5 @@
-//
-// @project geniusrabbit::eventstream 2017, 2019 - 2023
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019 - 2023
-//
-
+// Package sql implements a buffered SQL insert stream and query templates
+// used by database storages (ClickHouse, Vertica, …).
 package sql
 
 import (
@@ -29,7 +26,7 @@ var (
 type Value struct {
 	Key       string // Field key in the object
 	TargetKey string // Target Key in the database
-	Type      eventstream.FieldType
+	Type      FieldType
 	Length    int
 	Format    string
 }
@@ -55,7 +52,7 @@ func valueFromArray(target string, a []string) Value {
 		return Value{
 			Key:       a[0],
 			TargetKey: target,
-			Type:      eventstream.TypeByString(typeName),
+			Type:      TypeByString(typeName),
 			Length:    int(length),
 			Format:    a[2],
 		}
@@ -63,7 +60,7 @@ func valueFromArray(target string, a []string) Value {
 		return Value{
 			Key:       a[0],
 			TargetKey: target,
-			Type:      eventstream.TypeByString(typeName),
+			Type:      TypeByString(typeName),
 			Length:    int(length),
 		}
 	}
@@ -138,7 +135,7 @@ func (q *Query) ParamsBy(msg eventstream.Message) paramsResult {
 				}
 				val = v.Type.CastExt(arrValue(i, subItem), v.Length, v.Format)
 			} else {
-				val = msg.ItemCast(v.Key, v.Type, v.Length, v.Format)
+				val = v.Type.CastExt(msg.Item(v.Key, nil), v.Length, v.Format)
 			}
 			subParams = append(subParams, val)
 		}
@@ -169,7 +166,7 @@ func (q *Query) Extract(msg eventstream.Message) []map[string]any {
 				}
 				val = v.Type.CastExt(arrValue(i, subItem), v.Length, v.Format)
 			} else {
-				val = msg.ItemCast(v.Key, v.Type, v.Length, v.Format)
+				val = v.Type.CastExt(msg.Item(v.Key, nil), v.Length, v.Format)
 			}
 			subResp[v.TargetKey] = val
 		}
@@ -192,7 +189,7 @@ func PrepareFields(fls any) (values []Value, fields, inserts []string, err error
 			switch reflect.TypeOf(fs[0]).Kind() {
 			case reflect.Map:
 				values, fields, inserts, err = MapIntoQueryParams(fs[0])
-			case reflect.Struct, reflect.Ptr:
+			case reflect.Struct, reflect.Pointer:
 				values, fields, inserts, err = ConvertObjectIntoQueryParams(fs[0])
 			default:
 				values, fields, inserts = PrepareFieldsByArray(gocast.Slice[string](fs))
@@ -253,7 +250,7 @@ func prepareOneFieldByString(field string) (values []Value, fieldValue, insert s
 			if match := paramsSearch.FindAllStringSubmatch(insert, -1); len(match) > 0 {
 				for _, v := range match {
 					values = append(values, valueFromArray(v[1], v[1:]))
-					insert = strings.Replace(insert, v[0], "?", -1)
+					insert = strings.ReplaceAll(insert, v[0], "?")
 				}
 			}
 		} else {

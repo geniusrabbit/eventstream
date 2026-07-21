@@ -7,6 +7,13 @@ import (
 // Option of the clickhouse storage
 type Option func(store *Clickhouse)
 
+// WithDebug enables storage debug mode
+func WithDebug(debug bool) Option {
+	return func(store *Clickhouse) {
+		store.debug = debug
+	}
+}
+
 // WithQuery SQL storage option
 func WithQuery(opts ...sqlstore.QueryOption) sqlstore.Option {
 	return sqlstore.WithQuery(queryPattern, opts...)

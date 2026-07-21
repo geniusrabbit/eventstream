@@ -11,8 +11,6 @@ import (
 
 	"github.com/demdxx/gocast/v2"
 	"github.com/google/uuid"
-
-	ev "github.com/geniusrabbit/eventstream"
 )
 
 var (
@@ -23,11 +21,11 @@ var (
 )
 
 var (
-	ipType         = reflect.TypeOf(net.IP{})
-	timeType       = reflect.TypeOf(time.Time{})
-	uuidType       = reflect.TypeOf(uuid.UUID{})
-	int32ArrayType = reflect.TypeOf([]int32{})
-	int64ArrayType = reflect.TypeOf([]int64{})
+	ipType         = reflect.TypeFor[net.IP]()
+	timeType       = reflect.TypeFor[time.Time]()
+	uuidType       = reflect.TypeFor[uuid.UUID]()
+	int32ArrayType = reflect.TypeFor[[]int32]()
+	int64ArrayType = reflect.TypeFor[[]int64]()
 )
 
 // ConvertObjectIntoQueryParams returns object which links object Fields and Data Fields
@@ -62,7 +60,7 @@ func ConvertObjectIntoQueryParams(object any) (values []Value, fields, inserts [
 						v[2] = typeByValue(field.Type, fltype, size).String()
 					}
 					values = append(values, valueFromArray(v[1], v[1:]))
-					insert = strings.Replace(insert, v[0], "?", -1)
+					insert = strings.ReplaceAll(insert, v[0], "?")
 				}
 			}
 			inserts = append(inserts, insert)
@@ -124,7 +122,7 @@ func reflectTargetStruct(val reflect.Value) (reflect.Value, error) {
 		switch val.Kind() {
 		case reflect.Struct:
 			return val, nil
-		case reflect.Interface, reflect.Ptr:
+		case reflect.Interface, reflect.Pointer:
 			val = val.Elem()
 		case reflect.Map:
 			return val, nil
@@ -143,52 +141,52 @@ func metaByTags(field reflect.StructField, def string, tags ...string) string {
 	return def
 }
 
-func typeByValue(tp reflect.Type, fieldType, size string) ev.FieldType {
+func typeByValue(tp reflect.Type, fieldType, size string) FieldType {
 	switch tp.Kind() {
 	case reflect.String:
 		switch {
 		case fieldType == "fixed" && size != "":
-			return ev.FieldTypeFixed
+			return FieldTypeFixed
 		case fieldType == "uuid":
-			return ev.FieldTypeUUID
+			return FieldTypeUUID
 		default:
-			return ev.FieldTypeString
+			return FieldTypeString
 		}
 	case reflect.Int, reflect.Int64:
 		if fieldType == "unixnano" {
-			return ev.FieldTypeUnixnano
+			return FieldTypeUnixnano
 		}
-		return ev.FieldTypeInt
+		return FieldTypeInt
 	case reflect.Int32:
-		return ev.FieldTypeInt32
+		return FieldTypeInt32
 	case reflect.Int8:
-		return ev.FieldTypeInt8
+		return FieldTypeInt8
 	case reflect.Uint, reflect.Uint64:
-		return ev.FieldTypeUint
+		return FieldTypeUint
 	case reflect.Uint32:
-		return ev.FieldTypeUint32
+		return FieldTypeUint32
 	case reflect.Uint8:
-		return ev.FieldTypeUint8
+		return FieldTypeUint8
 	case reflect.Float32, reflect.Float64:
-		return ev.FieldTypeFloat
+		return FieldTypeFloat
 	case reflect.Bool:
-		return ev.FieldTypeBoolean
+		return FieldTypeBoolean
 	default:
 		switch tp {
 		case ipType:
-			return ev.FieldTypeIP
+			return FieldTypeIP
 		case timeType:
 			if fieldType == "unixnano" {
-				return ev.FieldTypeUnixnano
+				return FieldTypeUnixnano
 			}
-			return ev.FieldTypeDate
+			return FieldTypeDate
 		case uuidType:
-			return ev.FieldTypeUUID
+			return FieldTypeUUID
 		case int32ArrayType:
-			return ev.FieldTypeArrayInt32
+			return FieldTypeArrayInt32
 		case int64ArrayType:
-			return ev.FieldTypeArrayInt64
+			return FieldTypeArrayInt64
 		}
 	}
-	return ev.FieldTypeString
+	return FieldTypeString
 }

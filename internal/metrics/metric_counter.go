@@ -3,8 +3,8 @@ package metrics
 import (
 	"context"
 
-	"github.com/geniusrabbit/eventstream/internal/message"
 	"github.com/geniusrabbit/eventstream/internal/patternkey"
+	"github.com/geniusrabbit/eventstream/pkg/message"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )

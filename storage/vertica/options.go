@@ -4,8 +4,15 @@ import (
 	sqlstore "github.com/geniusrabbit/eventstream/storage/sql"
 )
 
-// Option of the clickhouse storage
+// Option of the vertica storage
 type Option func(store *Vertica)
+
+// WithDebug enables storage debug mode
+func WithDebug(debug bool) Option {
+	return func(store *Vertica) {
+		store.debug = debug
+	}
+}
 
 // WithQuery SQL storage option
 func WithQuery(opts ...sqlstore.QueryOption) sqlstore.Option {

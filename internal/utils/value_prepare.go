@@ -1,3 +1,4 @@
+// Package utils contains small helpers for config value expansion.
 package utils
 
 import (

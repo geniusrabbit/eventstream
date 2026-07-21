@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/demdxx/goconfig"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -12,8 +13,9 @@ func init() {
 }
 
 func TestLoad(t *testing.T) {
-	assert.NoError(t, Config.Load())
-	assert.True(t, len(Config.String()) > 2)
-	assert.Error(t, Config.Validate())
-	assert.True(t, Config.IsDebug())
+	var conf ConfigType
+	assert.NoError(t, goconfig.Load(&conf))
+	assert.True(t, len(conf.String()) > 2)
+	assert.Equal(t, "eventstream", conf.ServiceName)
+	assert.True(t, conf.IsDebug())
 }

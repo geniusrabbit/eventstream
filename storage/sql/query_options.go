@@ -17,6 +17,11 @@ func QWithMessageTmpl(fields any) QueryOption {
 	}
 }
 
+// QWithMessageTmplOf is a generic helper equivalent to QWithMessageTmpl(new(T)).
+func QWithMessageTmplOf[T any]() QueryOption {
+	return QWithMessageTmpl(new(T))
+}
+
 // QWithTarget data collection
 func QWithTarget(target string) QueryOption {
 	return func(qc *QueryConfig) {

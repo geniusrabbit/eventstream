@@ -1,20 +1,11 @@
-//
-// @project geniusrabbit::eventstream 2017, 2019-2023
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019-2023
-//
-
 package eventstream
 
 import (
 	"io"
 )
 
-// StorageConfig of the storage
-// type StorageConfig = storage.Config
-
-// Storager describe method of interaction with storage.
-// Storage creates new stream interfaces to process
-// data from sources.
+// Storager opens Streamer sinks that write processed events
+// to a concrete backend (SQL, queue, HTTP, …).
 //
 //go:generate mockgen -source $GOFILE -package mocks -destination internal/mocks/storage.go
 type Storager interface {

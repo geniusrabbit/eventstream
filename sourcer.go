@@ -1,8 +1,3 @@
-//
-// @project geniusrabbit::eventstream 2017, 2019-2020
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019-2020
-//
-
 package eventstream
 
 import (
@@ -10,10 +5,8 @@ import (
 	"io"
 )
 
-// Sourcer describes the input stream interface.
-// The source accepts messages from some queue popeline
-// like Kafka, NATS, RabbitMQ and etc and send this data
-// one by one into the stream processor.
+// Sourcer ingests messages from a queue (Kafka, NATS, Redis streams, …)
+// and fans them out to subscribed streamers.
 //
 //go:generate mockgen -source $GOFILE -package mocks -destination internal/mocks/source.go
 type Sourcer interface {

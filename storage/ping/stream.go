@@ -8,17 +8,11 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/geniusrabbit/eventstream"
-	"github.com/geniusrabbit/eventstream/internal/message"
+	"github.com/geniusrabbit/blaze-api/pkg/context/ctxlogger"
 	"github.com/geniusrabbit/eventstream/internal/patternkey"
-	"github.com/geniusrabbit/eventstream/internal/zlogger"
+	"github.com/geniusrabbit/eventstream/pkg/message"
+	"github.com/geniusrabbit/eventstream/stream"
 )
-
-type pingStreamConfig struct {
-	URL         string `json:"url"`
-	Method      string `json:"method"`
-	ContentType string `json:"content_type"`
-}
 
 type pingStream struct {
 	id string
@@ -45,29 +39,29 @@ func (p *pingStream) Put(ctx context.Context, msg message.Message) error {
 		err      error
 		resp     *http.Response
 		respData []byte
-		nUrl     = p.url.Prepare(msg)
+		nURL     = p.url.Prepare(msg)
 	)
-	if strings.HasPrefix(nUrl, "//") {
-		nUrl = "http:" + nUrl
+	if strings.HasPrefix(nURL, "//") {
+		nURL = "http:" + nURL
 	}
 	if p.method == http.MethodGet {
-		resp, err = p.httpClient.Get(nUrl)
+		resp, err = p.httpClient.Get(nURL)
 	} else {
-		resp, err = p.httpClient.Post(nUrl, p.contentType, strings.NewReader(msg.JSON()))
+		resp, err = p.httpClient.Post(nURL, p.contentType, strings.NewReader(msg.JSON()))
 	}
 	if resp != nil && resp.Body != nil && err == nil {
 		respData, _ = io.ReadAll(resp.Body)
 		_ = resp.Body.Close()
 	}
 	if err == nil {
-		zlogger.FromContext(ctx).Info("ping",
-			zap.String("url", nUrl),
+		ctxlogger.Get(ctx).Info("ping",
+			zap.String("url", nURL),
 			zap.String("method", p.method),
 			zap.Int("status", resp.StatusCode),
 			zap.String("response", string(respData)))
 	} else {
-		zlogger.FromContext(ctx).Error("ping",
-			zap.String("url", nUrl),
+		ctxlogger.Get(ctx).Error("ping",
+			zap.String("url", nURL),
 			zap.String("method", p.method),
 			zap.Error(err))
 	}
@@ -77,4 +71,4 @@ func (p *pingStream) Put(ctx context.Context, msg message.Message) error {
 // Run implements stream.Streamer.
 func (p *pingStream) Run(ctx context.Context) error { return nil }
 
-var _ eventstream.Streamer = (*pingStream)(nil)
+var _ stream.Streamer = (*pingStream)(nil)

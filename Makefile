@@ -21,7 +21,7 @@ lint: ## Run linter
 
 .PHONY: test
 test: ## Run package test
-	go test -race ./...
+	go test -race -tags "$(APP_TAGS)" ./...
 
 .PHONY: fmt
 fmt: ## Run formatting code
@@ -39,8 +39,8 @@ build: ## Build application
 	@$(call do_build,"cmd/eventstream/main.go",eventstream)
 
 .PHONY: build-docker-dev
-build-docker-dev: build
-	echo "Build develop docker image"
+build-docker-dev: build ## Build develop docker image
+	@echo "Build develop docker image"
 	DOCKER_BUILDKIT=${DOCKER_BUILDKIT} docker build -t ${DOCKER_CONTAINER_IMAGE}:latest -f deploy/develop/Dockerfile .
 
 .PHONY: build-lsg
@@ -49,9 +49,12 @@ build-lsg: ## Build logstreamgen application
 	@$(call do_build,"examples/logstreamgen/main.go",logstreamgen)
 
 .PHONY: build-docker-lsg-dev
-build-docker-lsg-dev: build-lsg
-	echo "Build develop docker LSG image"
+build-docker-lsg-dev: build-lsg ## Build develop docker LSG image
+	@echo "Build develop docker LSG image"
 	DOCKER_BUILDKIT=${DOCKER_BUILDKIT} docker build -t ${DOCKER_CONTAINER_IMAGE}-lsg:latest -f deploy/develop/logstreamgen.Dockerfile .
+
+.PHONY: build-dev
+build-dev: build-docker-lsg-dev build-docker-dev ## Build develop docker images (service + LSG)
 
 .PHONY: build-docker
 build-docker: build ## Build production docker image and push to the hub.docker.com
@@ -62,19 +65,19 @@ build-docker: build ## Build production docker image and push to the hub.docker.
 
 .PHONY: run
 run: ## Run development environment services
-	docker-compose -p ${PROJECT_NAME} -f deploy/develop/docker-compose.yml run --rm --service-ports service
+	${DOCKER_COMPOSE} run --rm --service-ports service
 
 .PHONY: ch
 ch: ## Run clickhouse client
-	docker exec -it $(PROJECT_NAME)-clickhouse-1 clickhouse-client
+	${DOCKER_COMPOSE} exec clickhouse clickhouse-client
 
 .PHONY: stop
 stop: ## Stop development environment services
-	docker-compose -p ${PROJECT_NAME} -f deploy/develop/docker-compose.yml stop
+	${DOCKER_COMPOSE} stop
 
 .PHONY: destroy
-destroy: stop ## Destroy development environment services
-	docker-compose -p ${PROJECT_NAME} -f deploy/develop/docker-compose.yml down
+destroy: ## Destroy development environment services
+	${DOCKER_COMPOSE} down -v
 
 .PHONY: help
 help:

@@ -47,4 +47,4 @@ ADD .build/${TARGETPLATFORM}/eventstream /eventstream
 # Use an unprivileged user.
 USER appuser:appuser
 
-ENTRYPOINT ["/eventstream", "--config=/config.hcl"]
+ENTRYPOINT ["/eventstream", "server", "--config=/config.hcl"]

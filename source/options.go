@@ -1,68 +1,34 @@
 package source
 
 import (
-	"encoding/json"
-	"net/url"
+	"go.uber.org/zap"
+
+	"github.com/geniusrabbit/eventstream/pkg/converter"
 )
 
-// Option of the connection
-type Option func(cnf *Config)
-
-// WithConfig custom
-func WithConfig(conf *Config) Option {
-	return func(cnf *Config) {
-		*cnf = *conf
-	}
+// Options configures a shared source subscriber.
+type Options struct {
+	// Format is the payload decoder (json, bson, raw).
+	Format converter.Converter
 }
 
-// WithDebug mode
-func WithDebug(debug bool) Option {
-	return func(cnf *Config) {
-		cnf.Debug = debug
+func (opts *Options) getFormat() converter.Converter {
+	if opts.Format != nil {
+		return opts.Format
 	}
+	return converter.ByName(`raw`)
 }
 
-// WithConnect to the source
-func WithConnect(driver, connect string) Option {
-	return func(cnf *Config) {
-		cnf.Driver = driver
-		cnf.Connect = connect
-	}
+func (opts *Options) getLogger() *zap.Logger {
+	return zap.L()
 }
 
-// WithConnectURL to the source
-func WithConnectURL(connect string) Option {
-	return func(cnf *Config) {
-		url, err := url.Parse(connect)
-		if err != nil {
-			panic(err)
-		}
-		cnf.Driver = url.Scheme
-		cnf.Connect = connect
-	}
-}
+// Option mutates Options.
+type Option func(opts *Options)
 
-// WithFormat of the messages
+// WithFormat selects a named payload converter for the source.
 func WithFormat(format string) Option {
-	return func(cnf *Config) {
-		cnf.Format = format
-	}
-}
-
-// WithRawConfig storage config
-func WithRawConfig(raw json.RawMessage) Option {
-	return func(cnf *Config) {
-		cnf.Raw = raw
-	}
-}
-
-// WithObjectConfig converts Object to JSON storage config
-func WithObjectConfig(obj any) Option {
-	return func(cnf *Config) {
-		data, err := json.Marshal(obj)
-		if err != nil {
-			panic(err)
-		}
-		cnf.Raw = json.RawMessage(data)
+	return func(opts *Options) {
+		opts.Format = converter.ByName(format)
 	}
 }

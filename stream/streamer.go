@@ -1,19 +1,15 @@
-//
-// @project geniusrabbit::eventstream 2017, 2020
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2020
-//
-
+// Package stream defines the Streamer sink interface used by sources
+// and the pipeline Engine.
 package stream
 
 import (
 	"context"
 	"io"
 
-	"github.com/geniusrabbit/eventstream/internal/message"
+	"github.com/geniusrabbit/eventstream/pkg/message"
 )
 
-// Streamer interface of data processing describes
-// basic methods of data pipeline
+// Streamer is a named sink that accepts, filters and processes messages.
 type Streamer interface {
 	// Close extension
 	io.Closer

@@ -4,14 +4,14 @@ import (
 	"context"
 	"testing"
 
-	"github.com/geniusrabbit/eventstream/storage/sql"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestOpenError(t *testing.T) {
-	storage, err := Open(context.Background(), `error`,
-		WithQuery(sql.QWithTarget(`test`)))
-	if !assert.Error(t, err) {
+func TestOpenCreatesHandle(t *testing.T) {
+	// database/sql Open is lazy; DSN validity is checked on Ping/use.
+	storage, err := Open(context.Background(), `clickhouse://localhost:9000/default`)
+	assert.NoError(t, err)
+	if assert.NotNil(t, storage) {
 		assert.NoError(t, storage.Close())
 	}
 }

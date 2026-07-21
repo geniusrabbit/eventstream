@@ -1,19 +1,35 @@
+// Package ping provides an HTTP “ping” Storager that POSTs messages to a URL.
 package ping
 
 import (
+	"context"
 	"crypto/tls"
 	"net/http"
 
 	"github.com/demdxx/gocast/v2"
+	"github.com/pkg/errors"
+
 	"github.com/geniusrabbit/eventstream"
-	"github.com/geniusrabbit/eventstream/internal/metrics"
 	"github.com/geniusrabbit/eventstream/internal/patternkey"
+	"github.com/geniusrabbit/eventstream/storage"
 	"github.com/geniusrabbit/eventstream/stream"
 )
 
 type pinger struct {
 	URL    string
 	Method string
+}
+
+// Open creates a ping storage.
+func Open(_ context.Context, connect string, options ...Option) (eventstream.Storager, error) {
+	p := &pinger{
+		URL:    connect,
+		Method: "GET",
+	}
+	for _, opt := range options {
+		opt(p)
+	}
+	return p, nil
 }
 
 // Close implements eventstream.Storager.
@@ -23,47 +39,28 @@ func (p *pinger) Close() error {
 
 // Stream implements eventstream.Storager.
 func (p *pinger) Stream(options ...any) (stream.Streamer, error) {
-	var (
-		err        error
-		conf       stream.Config
-		strmConf   pingStreamConfig
-		metricExec metrics.Metricer
-	)
+	var conf streamOptions
 	for _, opt := range options {
 		switch o := opt.(type) {
-		case stream.Option:
+		case StreamOption:
 			o(&conf)
-		case *stream.Config:
-			conf = *o
 		default:
-			stream.WithObjectConfig(o)(&conf)
+			return nil, errors.Wrapf(storage.ErrInvalidOption, `ping stream: %T`, opt)
 		}
 	}
-	if err = conf.Decode(&strmConf); err != nil {
-		return nil, err
-	}
-	if metricExec, err = conf.Metrics.Metric(); err != nil {
-		return nil, err
-	}
-	// Disable insecure skip verify
 	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
 	if httpTransport.TLSClientConfig == nil {
 		httpTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	} else {
 		httpTransport.TLSClientConfig.InsecureSkipVerify = true
 	}
-	// Init stream instance
-	strm := &pingStream{
-		url:         patternkey.PatternKeyFromTemplate(gocast.Or(strmConf.URL, p.URL)),
-		method:      gocast.Or(strmConf.Method, p.Method),
-		contentType: gocast.Or(strmConf.ContentType, "application/json"),
+	return &pingStream{
+		id:          conf.id,
+		url:         patternkey.PatternKeyFromTemplate(gocast.Or(conf.url, p.URL)),
+		method:      gocast.Or(conf.method, p.Method),
+		contentType: gocast.Or(conf.contentType, "application/json"),
 		httpClient:  http.Client{Transport: httpTransport},
-	}
-	cond, err := conf.Condition()
-	if err != nil {
-		return nil, err
-	}
-	return eventstream.NewStreamWrapper(strm, cond, metricExec), nil
+	}, nil
 }
 
 var _ eventstream.Storager = (*pinger)(nil)

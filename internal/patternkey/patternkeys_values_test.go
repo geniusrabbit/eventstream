@@ -3,7 +3,7 @@ package patternkey
 import (
 	"testing"
 
-	"github.com/geniusrabbit/eventstream/internal/message"
+	"github.com/geniusrabbit/eventstream/pkg/message"
 	"github.com/stretchr/testify/assert"
 )
 

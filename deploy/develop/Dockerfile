@@ -6,7 +6,7 @@ EXPOSE 6060
 
 LABEL maintainer="Dmitry Ponomarev"
 LABEL service.name=eventstream.develop
-LABEL service.check.http=http://{{address}}/health-check
+LABEL service.check.http=http://{{address}}/healthcheck
 LABEL service.check.interval=5s
 LABEL service.check.timeout=2s
 LABEL service.public=false
@@ -18,4 +18,4 @@ COPY deploy/develop/config.hcl /config.hcl
 COPY .build/${TARGETPLATFORM}/eventstream /eventstream
 
 ENTRYPOINT [ "/eventstream" ]
-CMD ["--config=/config.hcl"]
+CMD ["server", "--config=/config.hcl"]

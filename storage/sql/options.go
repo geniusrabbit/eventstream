@@ -13,6 +13,9 @@ const (
 
 // Options of the SQL stream
 type Options struct {
+	// ID of the stream
+	ID string
+
 	// Debug mode of the stream
 	Debug bool
 
@@ -52,6 +55,14 @@ func (opts *Options) getLogger() *zap.Logger {
 
 // Option type of the stream
 type Option func(opts *Options) error
+
+// WithID sets the stream identifier
+func WithID(id string) Option {
+	return func(opts *Options) error {
+		opts.ID = id
+		return nil
+	}
+}
 
 // WithDebug setup the debug mode ON/OFF
 func WithDebug(debug bool) Option {

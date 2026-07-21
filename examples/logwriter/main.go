@@ -3,14 +3,16 @@ package main
 import (
 	"context"
 	"log"
+	"os"
+	"os/signal"
 	"time"
 
+	"github.com/geniusrabbit/blaze-api/pkg/zlogger"
 	"go.uber.org/zap"
 
-	_ "github.com/geniusrabbit/eventstream/internal/driversinit"
-	"github.com/geniusrabbit/eventstream/internal/zlogger"
-	"github.com/geniusrabbit/eventstream/source"
-	"github.com/geniusrabbit/eventstream/storage"
+	"github.com/geniusrabbit/eventstream"
+	"github.com/geniusrabbit/eventstream/pkg/pipeline"
+	"github.com/geniusrabbit/eventstream/source/nats"
 	"github.com/geniusrabbit/eventstream/storage/clickhouse"
 	"github.com/geniusrabbit/eventstream/storage/sql"
 )
@@ -21,68 +23,73 @@ var (
 )
 
 type config struct {
-	LogLevel       string `env:"LOGGER_LEVEL"`
-	LogAddr        string `env:"LOG_ADDR"`
-	LogEncoder     string `env:"LOG_ENCODER"`
-	SourceConnect  string `env:"SOURCE_CONNECT"`
-	StorageConnect string `env:"STORAGE_CONNECT"`
+	LogLevel       string
+	LogAddr        string
+	LogEncoder     string
+	SourceConnect  string
+	StorageConnect string
 }
 
-func (cnf *config) isDebug() bool {
-	return cnf.LogLevel == `debug`
+func loadConfig() config {
+	return config{
+		LogLevel:       envOr("LOGGER_LEVEL", "debug"),
+		LogAddr:        os.Getenv("LOG_ADDR"),
+		LogEncoder:     os.Getenv("LOG_ENCODER"),
+		SourceConnect:  os.Getenv("SOURCE_CONNECT"),
+		StorageConnect: os.Getenv("STORAGE_CONNECT"),
+	}
+}
+
+func envOr(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
 }
 
 type logMessage struct {
-	Time    time.Time `field:"time"`
-	UUID    string    `field:"uuid" type:"uuid"`
-	Type    string    `field:"type"`
-	Message string    `field:"message"`
-	UserID  uint64    `field:"user_id"`
-	Data    string    `field:"data"`
+	Time    time.Time `field:"time" json:"time"`
+	UUID    string    `field:"uuid" type:"uuid" json:"uuid"`
+	Type    string    `field:"type" json:"type"`
+	Message string    `field:"message" json:"message"`
+	UserID  uint64    `field:"user_id" json:"user_id"`
+	Data    string    `field:"data" json:"data"`
 }
 
 func main() {
-	var conf config
+	conf := loadConfig()
 
-	// Init new logger object
 	logger, err := zlogger.New("example", conf.LogEncoder, conf.LogLevel, conf.LogAddr, zap.Fields(
 		zap.String("commit", commit),
 		zap.String("version", appVersion),
 	))
 	fatalError("init logger", err)
+	zap.ReplaceGlobals(logger)
 
-	commandLogwriter(&conf, logger)
-}
-
-func commandLogwriter(conf *config, logger *zap.Logger) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	logger.Info(`RUN`)
+	engine, err := pipeline.New(ctx,
+		pipeline.WithLogger(logger),
+		pipeline.WithDebug(conf.LogLevel == "debug"),
+		pipeline.SourceFunc("global", func(ctx context.Context) (eventstream.Sourcer, error) {
+			return nats.Open(ctx, conf.SourceConnect)
+		}),
+		pipeline.StorageFunc("clickhouse", func(ctx context.Context) (eventstream.Storager, error) {
+			return clickhouse.Open(ctx, conf.StorageConnect)
+		}),
+		pipeline.Stream("logs",
+			pipeline.WithSources("global"),
+			pipeline.WithStorage("clickhouse", clickhouse.WithQuery(
+				sql.QWithTarget(`logs.common`),
+				sql.QWithMessageTmplOf[logMessage](),
+			)),
+		),
+	)
+	fatalError("pipeline", err)
 
-	// Open source connection
-	err := source.Register(ctx, "global", source.WithConnectURL(conf.SourceConnect))
-	fatalError(`source connect`, err)
-
-	// Open clickhouse storage connect
-	datastorage, err := clickhouse.Open(ctx, conf.StorageConnect, storage.WithDebug(conf.isDebug()))
-	fatalError(`clickhouse storage connect`, err)
-
-	// Get new stream writer for the storage
-	stream, err := datastorage.Stream(clickhouse.WithQuery(
-		sql.QWithTarget(`logs.common`),
-		sql.QWithMessageTmpl(&logMessage{}),
-	))
-	fatalError(`get new writer stream`, err)
-
-	// Subscribe stream writer of the clickhouse
-	err = source.Subscribe(ctx, "global", stream)
-	fatalError(`subscribe storage target`, err)
-
-	err = source.Listen(ctx)
-	fatalError(`start source`, err)
-
-	<-ctx.Done()
+	logger.Info("RUN")
+	fatalError("run", engine.Run(ctx))
 }
 
 func fatalError(block string, err error) {

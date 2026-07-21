@@ -1,8 +1,4 @@
-//
-// @project geniusrabbit::eventstream 2017, 2019-2020
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017, 2019-2020
-//
-
+// Package vertica provides a Vertica Storager backed by storage/sql streams.
 package vertica
 
 import (
@@ -15,22 +11,21 @@ import (
 	"strings"
 	"time"
 
-	"github.com/geniusrabbit/eventstream"
-	"github.com/geniusrabbit/eventstream/internal/metrics"
+	"github.com/pkg/errors"
+	"go.uber.org/zap"
+
+	"github.com/geniusrabbit/blaze-api/pkg/context/ctxlogger"
 	"github.com/geniusrabbit/eventstream/internal/utils"
-	"github.com/geniusrabbit/eventstream/internal/zlogger"
 	"github.com/geniusrabbit/eventstream/storage"
 	sqlstore "github.com/geniusrabbit/eventstream/storage/sql"
 	"github.com/geniusrabbit/eventstream/stream"
-	"github.com/pkg/errors"
-	"go.uber.org/zap"
 )
 
 const (
 	queryPattern = `COPY {{target}} ({{fields}}) FROM STDIN DELIMITER '\t' NULL 'null'`
 )
 
-// Vertica storage object
+// Vertica is a Vertica connection that opens SQL COPY streams.
 type Vertica struct {
 	debug     bool
 	connect   string
@@ -39,35 +34,26 @@ type Vertica struct {
 }
 
 // Open new vertica storage
-func Open(ctx context.Context, connectURL string, options ...any) (*Vertica, error) {
+func Open(ctx context.Context, connectURL string, options ...Option) (*Vertica, error) {
 	var (
 		conn        *sql.DB
 		urlObj, err = url.Parse(connectURL)
-		config      storage.Config
 		store       = Vertica{connect: connectURL}
 	)
 	if err != nil {
 		return nil, err
 	}
 	for _, opt := range options {
-		switch o := opt.(type) {
-		case storage.Option:
-			o(&config)
-		case Option:
-			o(&store)
-		default:
-			return nil, errors.Wrapf(storage.ErrInvalidOption, `%+v`, opt)
-		}
+		opt(&store)
 	}
-	if conn, err = verticaConnect(urlObj, config.Debug); err != nil {
+	if conn, err = verticaConnect(urlObj, store.debug); err != nil {
 		return nil, err
 	}
 
-	store.debug = config.Debug
 	store.conn = conn
 	if len(store.initQuery) > 0 {
-		zlogger.FromContext(ctx).Debug("init query",
-			zap.String(`storage`, `clickhouse`),
+		ctxlogger.Get(ctx).Debug("init query",
+			zap.String(`storage`, `vertica`),
 			zap.String(`connect`, connectURL),
 			zap.String(`init_query`, strings.Join(store.initQuery, "\n")),
 		)
@@ -89,43 +75,28 @@ func Open(ctx context.Context, connectURL string, options ...any) (*Vertica, err
 }
 
 // Stream vertica processor
-func (st *Vertica) Stream(options ...any) (strm eventstream.Streamer, err error) {
-	var (
-		conf         stream.Config
-		storeOptions []sqlstore.Option
-		metricExec   metrics.Metricer
-	)
+func (st *Vertica) Stream(options ...any) (stream.Streamer, error) {
+	storeOptions := []sqlstore.Option{sqlstore.WithDebug(st.debug)}
 	for _, opt := range options {
 		switch o := opt.(type) {
-		case stream.Option:
-			o(&conf)
 		case sqlstore.Option:
 			storeOptions = append(storeOptions, o)
-		case *stream.Config:
-			conf = *o
 		default:
-			stream.WithObjectConfig(o)(&conf)
+			return nil, errors.Wrapf(storage.ErrInvalidOption, `vertica stream: %T`, opt)
 		}
 	}
-	if metricExec, err = conf.Metrics.Metric(); err != nil {
-		return nil, err
+	if len(storeOptions) == 1 {
+		return nil, fmt.Errorf("vertica: stream requires sql options (query)")
 	}
-	if strm, err = sqlstore.New(st, queryPattern, &conf, storeOptions...); err != nil {
-		return nil, err
-	}
-	cond, err := conf.Condition()
-	if err != nil {
-		return nil, err
-	}
-	return eventstream.NewStreamWrapper(strm, cond, metricExec), nil
+	return sqlstore.NewStreamSQL(st, storeOptions...)
 }
 
-// Connection to clickhouse DB
+// Connection to vertica DB
 func (st *Vertica) Connection() (_ *sql.DB, err error) {
 	// Check current connection
 	if st.conn != nil {
 		if err = st.conn.Ping(); err != nil {
-			st.conn.Close()
+			_ = st.conn.Close()
 			err = nil
 			st.conn = nil
 		}
@@ -143,8 +114,8 @@ func (st *Vertica) Close() error {
 	return st.conn.Close()
 }
 
-// verticaConnect source
-// @param u URL vert://login:password@hostname:5433/name?sslmode=disable&idle=10&maxcon=30
+// verticaConnect opens a Vertica database handle.
+// URL example: vert://login:password@hostname:5433/name?sslmode=disable&idle=10&maxcon=30
 func verticaConnect(u *url.URL, debug bool) (*sql.DB, error) {
 	var (
 		query          = u.Query()

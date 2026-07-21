@@ -1,18 +1,26 @@
-version: '3.7'
-
 services:
-  # tracer:
-  #   image: jaegertracing/all-in-one:latest
-  #   ports: ["16686:16686"]
-
   clickhouse:
-    image: yandex/clickhouse-server:latest
+    image: clickhouse/clickhouse-server:24.8
+    environment:
+      # Allow network access for default user without password (dev only).
+      - CLICKHOUSE_SKIP_USER_SETUP=1
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8123/ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
 
   nats:
-    image: nats
+    image: nats:2
 
   lsg:
     image: geniusrabbit/eventstream-lsg:latest
+    depends_on: [nats]
     command:
       - --repeat=10
       - --stream=nats://nats:4222/?topics=topic1
@@ -21,7 +29,13 @@ services:
   service:
     image: geniusrabbit/eventstream:latest
     ports: ["6060:6060"]
-    depends_on: [nats,clickhouse,lsg]
+    depends_on:
+      nats:
+        condition: service_started
+      clickhouse:
+        condition: service_healthy
+      lsg:
+        condition: service_started
     environment:
       - CLICKHOUSE_STORE_CONNECT=clickhouse://clickhouse:9000/default
       - NATS_STREAM_CONNECT=nats://nats:4222/?topics=topic1,topic2

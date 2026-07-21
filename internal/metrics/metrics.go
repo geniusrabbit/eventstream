@@ -1,3 +1,4 @@
+// Package metrics builds stream metric executors (counters, …).
 package metrics
 
 import (
@@ -5,8 +6,8 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/geniusrabbit/eventstream/internal/message"
 	"github.com/geniusrabbit/eventstream/internal/patternkey"
+	"github.com/geniusrabbit/eventstream/pkg/message"
 )
 
 // ErrUnsupportedMetricType value

@@ -1,87 +1,60 @@
+// Package redis provides a Redis key/value Storager (SET with optional pattern keys).
 package redis
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"strings"
 	"time"
 
 	"github.com/demdxx/gocast/v2"
 	"github.com/go-redis/redis/v8"
+	"github.com/pkg/errors"
 
-	"github.com/geniusrabbit/eventstream"
-	"github.com/geniusrabbit/eventstream/internal/metrics"
 	"github.com/geniusrabbit/eventstream/internal/patternkey"
 	"github.com/geniusrabbit/eventstream/storage"
 	"github.com/geniusrabbit/eventstream/stream"
 )
 
-type redisStreamConfig struct {
-	Key         string        `json:"key"`
-	Expiration  time.Duration `json:"expiration"`
-	Incrementor bool          `json:"incrementor"`
-}
-
-// Storage for the redis
+// Storage is a Redis connection that opens key/value write streams.
 type Storage struct {
 	cli redis.UniversalClient
 }
 
-// NewStorage from connection URL
-func NewStorage(ctx context.Context, connectUrl string, options ...storage.Option) (*Storage, error) {
-	var (
-		err  error
-		cli  redis.UniversalClient
-		conf storage.Config
-	)
-	for _, o := range options {
-		o(&conf)
-	}
-	if cli, err = connectRedis(ctx, connectUrl); err != nil {
+// NewStorage connects to Redis using the given connection URL.
+func NewStorage(ctx context.Context, connectURL string) (*Storage, error) {
+	cli, err := connectRedis(ctx, connectURL)
+	if err != nil {
 		return nil, err
 	}
 	return &Storage{cli: cli}, nil
 }
 
-// Stream vertica processor
-func (st *Storage) Stream(options ...any) (eventstream.Streamer, error) {
-	var (
-		err        error
-		conf       stream.Config
-		strmConf   redisStreamConfig
-		metricExec metrics.Metricer
-	)
+// Stream redis processor
+func (st *Storage) Stream(options ...any) (stream.Streamer, error) {
+	var conf streamOptions
 	for _, opt := range options {
 		switch o := opt.(type) {
-		case stream.Option:
+		case StreamOption:
 			o(&conf)
-		case *stream.Config:
-			conf = *o
 		default:
-			stream.WithObjectConfig(o)(&conf)
+			return nil, errors.Wrapf(storage.ErrInvalidOption, `redis stream: %T`, opt)
 		}
 	}
-	if err = conf.Decode(&strmConf); err != nil {
-		return nil, err
+	if conf.key == "" {
+		return nil, fmt.Errorf("redis: stream key is required")
 	}
-	if metricExec, err = conf.Metrics.Metric(); err != nil {
-		return nil, err
-	}
-	strm := &Stream{
+	return &Stream{
 		cli:        st.cli,
-		id:         conf.Name,
-		expiration: strmConf.Expiration,
-		incremetor: strmConf.Incrementor,
-		key:        patternkey.PatternKeyFromTemplate(strmConf.Key),
-	}
-	cond, err := conf.Condition()
-	if err != nil {
-		return nil, err
-	}
-	return eventstream.NewStreamWrapper(strm, cond, metricExec), nil
+		id:         conf.id,
+		expiration: conf.expiration,
+		incremetor: conf.incrementor,
+		key:        patternkey.PatternKeyFromTemplate(conf.key),
+	}, nil
 }
 
-// Close vertica connection
+// Close redis connection
 func (st *Storage) Close() error {
 	return st.cli.Close()
 }

@@ -7,8 +7,8 @@ import (
 
 	"github.com/go-redis/redis/v8"
 
-	"github.com/geniusrabbit/eventstream/internal/message"
 	"github.com/geniusrabbit/eventstream/internal/patternkey"
+	"github.com/geniusrabbit/eventstream/pkg/message"
 )
 
 // Stream for the redis key value

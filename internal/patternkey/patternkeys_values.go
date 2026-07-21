@@ -1,10 +1,11 @@
+// Package patternkey expands {{field}} templates against messages.
 package patternkey
 
 import (
 	"regexp"
 	"strings"
 
-	"github.com/geniusrabbit/eventstream/internal/message"
+	"github.com/geniusrabbit/eventstream/pkg/message"
 )
 
 var metricNames = regexp.MustCompile(`\{\{([^\}]*)\}\}`)

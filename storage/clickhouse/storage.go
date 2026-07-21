@@ -1,21 +1,16 @@
-//
-// @project geniusrabbit::eventstream 2017 - 2023
-// @author Dmitry Ponomarev <demdxx@gmail.com> 2017 - 2023
-//
-
+// Package clickhouse provides a ClickHouse Storager backed by storage/sql streams.
 package clickhouse
 
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"strings"
 
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
-	"github.com/geniusrabbit/eventstream"
-	"github.com/geniusrabbit/eventstream/internal/metrics"
-	"github.com/geniusrabbit/eventstream/internal/zlogger"
+	"github.com/geniusrabbit/blaze-api/pkg/context/ctxlogger"
 	"github.com/geniusrabbit/eventstream/storage"
 	sqlstore "github.com/geniusrabbit/eventstream/storage/sql"
 	"github.com/geniusrabbit/eventstream/stream"
@@ -25,7 +20,7 @@ const (
 	queryPattern = `INSERT INTO {{target}} ({{fields}}) VALUES({{values}})`
 )
 
-// Clickhouse storage object
+// Clickhouse is a ClickHouse connection that opens SQL insert streams.
 type Clickhouse struct {
 	debug   bool
 	connect string
@@ -35,30 +30,21 @@ type Clickhouse struct {
 }
 
 // Open new clickhouse storage stream
-func Open(ctx context.Context, connect string, options ...any) (*Clickhouse, error) {
+func Open(ctx context.Context, connect string, options ...Option) (*Clickhouse, error) {
 	var (
-		err    error
-		conn   *sql.DB
-		config storage.Config
-		store  = Clickhouse{connect: connect}
+		err   error
+		conn  *sql.DB
+		store = Clickhouse{connect: connect}
 	)
 	for _, opt := range options {
-		switch o := opt.(type) {
-		case storage.Option:
-			o(&config)
-		case Option:
-			o(&store)
-		default:
-			return nil, errors.Wrapf(storage.ErrInvalidOption, `%+v`, opt)
-		}
+		opt(&store)
 	}
 	if conn, err = sql.Open("clickhouse", connect); err != nil {
 		return nil, err
 	}
-	store.debug = config.Debug
 	store.conn = conn
 	if len(store.initQuery) > 0 {
-		zlogger.FromContext(ctx).Debug("init query",
+		ctxlogger.Get(ctx).Debug("init query",
 			zap.String(`storage`, `clickhouse`),
 			zap.String(`connect`, connect),
 			zap.String(`init_query`, strings.Join(store.initQuery, "\n")),
@@ -81,35 +67,20 @@ func Open(ctx context.Context, connect string, options ...any) (*Clickhouse, err
 }
 
 // Stream clickhouse processor
-func (c *Clickhouse) Stream(options ...any) (strm eventstream.Streamer, err error) {
-	var (
-		conf         stream.Config
-		storeOptions []sqlstore.Option
-		metricExec   metrics.Metricer
-	)
+func (c *Clickhouse) Stream(options ...any) (stream.Streamer, error) {
+	storeOptions := []sqlstore.Option{sqlstore.WithDebug(c.debug)}
 	for _, opt := range options {
 		switch o := opt.(type) {
-		case stream.Option:
-			o(&conf)
 		case sqlstore.Option:
 			storeOptions = append(storeOptions, o)
-		case *stream.Config:
-			conf = *o
 		default:
-			stream.WithObjectConfig(o)(&conf)
+			return nil, errors.Wrapf(storage.ErrInvalidOption, `clickhouse stream: %T`, opt)
 		}
 	}
-	if metricExec, err = conf.Metrics.Metric(); err != nil {
-		return nil, err
+	if len(storeOptions) == 1 {
+		return nil, fmt.Errorf("clickhouse: stream requires sql options (query)")
 	}
-	if strm, err = sqlstore.New(c, queryPattern, &conf, storeOptions...); err != nil {
-		return nil, err
-	}
-	cond, err := conf.Condition()
-	if err != nil {
-		return nil, err
-	}
-	return eventstream.NewStreamWrapper(strm, cond, metricExec), nil
+	return sqlstore.NewStreamSQL(c, storeOptions...)
 }
 
 // Connection to clickhouse DB
@@ -117,7 +88,7 @@ func (c *Clickhouse) Connection() (_ *sql.DB, err error) {
 	// Check current connection
 	if c.conn != nil {
 		if err = c.conn.Ping(); err != nil {
-			c.conn.Close()
+			_ = c.conn.Close()
 			err = nil
 			c.conn = nil
 		}
