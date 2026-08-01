@@ -21,8 +21,9 @@ env:
 jobs:
   build:
     if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      startsWith(github.event.workflow_run.head_branch, 'v')
+      (github.event.workflow_run.conclusion == 'success' &&
+      startsWith(github.event.workflow_run.head_branch, 'v')) ||
+      github.event_name == 'workflow_dispatch'
 
     runs-on: ubuntu-latest
     environment: "docker hub"
