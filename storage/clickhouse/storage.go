@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
@@ -22,6 +23,8 @@ const (
 
 // Clickhouse is a ClickHouse connection that opens SQL insert streams.
 type Clickhouse struct {
+	mu sync.Mutex
+
 	debug   bool
 	connect string
 	conn    *sql.DB
@@ -83,23 +86,53 @@ func (c *Clickhouse) Stream(options ...any) (stream.Streamer, error) {
 	return sqlstore.NewStreamSQL(c, storeOptions...)
 }
 
-// Connection to clickhouse DB
+// Connection to clickhouse DB.
+// Safe for concurrent use from multiple SQL streams sharing one storage handle.
 func (c *Clickhouse) Connection() (_ *sql.DB, err error) {
-	// Check current connection
-	if c.conn != nil {
-		if err = c.conn.Ping(); err != nil {
-			_ = c.conn.Close()
-			err = nil
+	c.mu.Lock()
+	conn := c.conn
+	c.mu.Unlock()
+
+	if conn != nil {
+		if err = conn.Ping(); err == nil {
+			return conn, nil
+		}
+		c.mu.Lock()
+		if c.conn == conn {
 			c.conn = nil
 		}
+		c.mu.Unlock()
+		_ = conn.Close()
 	}
-	if c.conn == nil {
-		c.conn, err = sql.Open("clickhouse", c.connect)
+
+	newConn, err := sql.Open("clickhouse", c.connect)
+	if err != nil {
+		return nil, err
 	}
-	return c.conn, err
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.conn != nil {
+		if err = c.conn.Ping(); err == nil {
+			_ = newConn.Close()
+			return c.conn, nil
+		}
+		old := c.conn
+		c.conn = nil
+		_ = old.Close()
+	}
+	c.conn = newConn
+	return c.conn, nil
 }
 
 // Close clickhouse connection
 func (c *Clickhouse) Close() error {
-	return c.conn.Close()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.conn == nil {
+		return nil
+	}
+	err := c.conn.Close()
+	c.conn = nil
+	return err
 }

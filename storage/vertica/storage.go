@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -27,6 +28,8 @@ const (
 
 // Vertica is a Vertica connection that opens SQL COPY streams.
 type Vertica struct {
+	mu sync.Mutex
+
 	debug     bool
 	connect   string
 	initQuery []string
@@ -91,27 +94,56 @@ func (st *Vertica) Stream(options ...any) (stream.Streamer, error) {
 	return sqlstore.NewStreamSQL(st, storeOptions...)
 }
 
-// Connection to vertica DB
+// Connection to vertica DB.
+// Safe for concurrent use from multiple SQL streams sharing one storage handle.
 func (st *Vertica) Connection() (_ *sql.DB, err error) {
-	// Check current connection
-	if st.conn != nil {
-		if err = st.conn.Ping(); err != nil {
-			_ = st.conn.Close()
-			err = nil
+	st.mu.Lock()
+	conn := st.conn
+	st.mu.Unlock()
+
+	if conn != nil {
+		if err = conn.Ping(); err == nil {
+			return conn, nil
+		}
+		st.mu.Lock()
+		if st.conn == conn {
 			st.conn = nil
 		}
+		st.mu.Unlock()
+		_ = conn.Close()
 	}
 
-	if st.conn == nil {
-		urlObj, _ := url.Parse(st.connect)
-		st.conn, err = verticaConnect(urlObj, st.debug)
+	urlObj, _ := url.Parse(st.connect)
+	newConn, err := verticaConnect(urlObj, st.debug)
+	if err != nil {
+		return nil, err
 	}
-	return st.conn, err
+
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	if st.conn != nil {
+		if err = st.conn.Ping(); err == nil {
+			_ = newConn.Close()
+			return st.conn, nil
+		}
+		old := st.conn
+		st.conn = nil
+		_ = old.Close()
+	}
+	st.conn = newConn
+	return st.conn, nil
 }
 
 // Close vertica connection
 func (st *Vertica) Close() error {
-	return st.conn.Close()
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	if st.conn == nil {
+		return nil
+	}
+	err := st.conn.Close()
+	st.conn = nil
+	return err
 }
 
 // verticaConnect opens a Vertica database handle.

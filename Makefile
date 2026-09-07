@@ -7,7 +7,7 @@ include deploy/build.mk
 PROJECT_WORKSPACE := geniusrabbit
 PROJECT_NAME ?= eventstream
 DOCKER_COMPOSE := docker compose -p $(PROJECT_WORKSPACE) -f deploy/develop/docker-compose.yml
-DOCKER_CONTAINER_IMAGE := ${PROJECT_WORKSPACE}/${PROJECT_NAME}
+DOCKER_CONTAINER_IMAGE := ghcr.io/geniusrabbit/eventstream
 
 
 .PHONY: generate-code

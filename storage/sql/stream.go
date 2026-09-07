@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -152,8 +153,12 @@ func (s *StreamSQL) writeBuffer(flush bool) (msg message.Message, err error) {
 
 	defer func() {
 		if rec := recover(); rec != nil {
+			lastMsg := ""
+			if msg != nil {
+				lastMsg = msg.JSON()
+			}
 			s.logger.Error(`write-buffer`,
-				zap.String(`last_message`, msg.JSON()),
+				zap.String(`last_message`, lastMsg),
 				zap.Any(`error`, rec))
 			if tx != nil {
 				_ = tx.Rollback()
@@ -182,9 +187,17 @@ func (s *StreamSQL) writeBuffer(flush bool) (msg message.Message, err error) {
 	if tx, err = conn.Begin(); err != nil {
 		return nil, err
 	}
-	if stmt, err = tx.Prepare(s.query.QueryString()); err != nil {
-		_ = tx.Rollback()
-		return nil, err
+
+	query := s.query.QueryString()
+	// clickhouse-go Prepare() on INSERT treats the column list as a native
+	// batch (Append N values). INSERT … SELECT binds placeholders in
+	// SELECT/WHERE instead — Exec those as ordinary statements.
+	useBatch := queryUsesNativeInsertBatch(query)
+	if useBatch {
+		if stmt, err = tx.Prepare(query); err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
 	}
 
 	// Writing loop of prepared requests
@@ -196,7 +209,12 @@ func (s *StreamSQL) writeBuffer(flush bool) (msg message.Message, err error) {
 			}
 			listParams := s.query.ParamsBy(msg)
 			for _, params := range listParams {
-				if _, err = stmt.Exec(params...); err != nil {
+				if useBatch {
+					_, err = stmt.Exec(params...)
+				} else {
+					_, err = tx.Exec(query, params...)
+				}
+				if err != nil {
 					stop = true
 				}
 			}
@@ -216,4 +234,26 @@ func (s *StreamSQL) writeBuffer(flush bool) (msg message.Message, err error) {
 
 	s.writeLastTime = time.Now()
 	return msg, err
+}
+
+// queryUsesNativeInsertBatch reports whether the query should be sent as a
+// ClickHouse native INSERT batch (Prepare + Append per row).
+//
+// INSERT … VALUES (col placeholders) matches that protocol. INSERT … SELECT
+// binds arguments in SELECT/WHERE; Prepare() still expects one value per
+// INSERT column list and fails with "expected N arguments, got M".
+func queryUsesNativeInsertBatch(query string) bool {
+	u := strings.ToUpper(query)
+	if !strings.Contains(u, "INSERT") {
+		return false
+	}
+	selectIdx := strings.Index(u, "SELECT")
+	valuesIdx := strings.Index(u, "VALUES")
+	if valuesIdx < 0 {
+		return false
+	}
+	if selectIdx >= 0 && selectIdx < valuesIdx {
+		return false
+	}
+	return true
 }
