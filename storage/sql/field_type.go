@@ -28,6 +28,7 @@ var typeList = []string{
 	"unixnano",
 	"[]int32",
 	"[]int64",
+	"[]string",
 }
 
 // Field scalar types enum for SQL value casting.
@@ -50,6 +51,7 @@ const (
 	FieldTypeUnixnano
 	FieldTypeArrayInt32
 	FieldTypeArrayInt64
+	FieldTypeArrayString
 )
 
 // FieldType of data represents scalar types supported by SQL templates.
@@ -120,9 +122,11 @@ func (t FieldType) Cast(v any) any {
 	case FieldTypeUnixnano:
 		v = valueUnixNanoToTime(v)
 	case FieldTypeArrayInt32:
-		v = gocast.Cast[[]int32](v)
+		v = gocast.AnySlice[int32](v)
 	case FieldTypeArrayInt64:
-		v = gocast.Cast[[]int64](v)
+		v = gocast.AnySlice[int64](v)
+	case FieldTypeArrayString:
+		return gocast.AnySlice[string](v)
 	}
 	return v
 }

@@ -14,7 +14,7 @@ env:
   BUILD_GOARM_LIST: 6 7
   DEPLOY_COMMIT_NUMBER: ${{ github.sha }}
   APP_BUILD_TAGS: all
-  GO_VERSION: 1.25.x
+  GO_VERSION: 1.27.x
 
 jobs:
   build:

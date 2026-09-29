@@ -21,11 +21,12 @@ var (
 )
 
 var (
-	ipType         = reflect.TypeFor[net.IP]()
-	timeType       = reflect.TypeFor[time.Time]()
-	uuidType       = reflect.TypeFor[uuid.UUID]()
-	int32ArrayType = reflect.TypeFor[[]int32]()
-	int64ArrayType = reflect.TypeFor[[]int64]()
+	ipType          = reflect.TypeFor[net.IP]()
+	timeType        = reflect.TypeFor[time.Time]()
+	uuidType        = reflect.TypeFor[uuid.UUID]()
+	int32ArrayType  = reflect.TypeFor[[]int32]()
+	int64ArrayType  = reflect.TypeFor[[]int64]()
+	stringArrayType = reflect.TypeFor[[]string]()
 )
 
 // ConvertObjectIntoQueryParams returns object which links object Fields and Data Fields
@@ -186,6 +187,8 @@ func typeByValue(tp reflect.Type, fieldType, size string) FieldType {
 			return FieldTypeArrayInt32
 		case int64ArrayType:
 			return FieldTypeArrayInt64
+		case stringArrayType:
+			return FieldTypeArrayString
 		}
 	}
 	return FieldTypeString

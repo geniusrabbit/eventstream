@@ -49,6 +49,29 @@ func TestFieldTypeCastExt(t *testing.T) {
 	assert.Equal(t, []int64{1, 2, 3, 4}, FieldTypeArrayInt64.CastExt(values["props"], 0, ""))
 }
 
+func TestFieldTypeArrayString(t *testing.T) {
+	assert.Equal(t, []string{"a", "b"}, FieldTypeArrayString.CastExt([]any{"a", "b"}, 0, ""))
+	assert.Equal(t, []string{"a", "b"}, FieldTypeArrayString.CastExt([]string{"a", "b"}, 0, ""))
+	assert.Equal(t, []string{}, FieldTypeArrayString.CastExt(nil, 0, ""))
+	assert.NotEqual(t, []string{"sss", "ddd"}, FieldTypeArrayString.Cast("sss,ddd"))
+
+	values, fields, inserts := PrepareFieldsByArray([]string{"tags=t:[]string"})
+	assert.Equal(t, []Value{{
+		Key:       "t",
+		TargetKey: "tags",
+		Type:      FieldTypeArrayString,
+	}}, values)
+	assert.Equal(t, []string{"tags"}, fields)
+	assert.Equal(t, []string{"?"}, inserts)
+
+	got, _, _, err := ConvertObjectIntoQueryParams(struct {
+		Tags []string `field:"tags"`
+	}{})
+	assert.NoError(t, err)
+	assert.Equal(t, FieldTypeArrayString, got[0].Type)
+	assert.Equal(t, "tags", got[0].Key)
+}
+
 func normTimeHours(t int64) int64 {
 	return t - t%3600
 }
